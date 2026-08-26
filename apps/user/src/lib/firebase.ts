@@ -1,11 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getApp, getApps, initializeApp } from "firebase/app";
-import {
-  type Auth,
-  getAuth,
-  getReactNativePersistence,
-  initializeAuth,
-} from "firebase/auth";
+import type { Auth, Persistence } from "firebase/auth";
+import * as FirebaseAuth from "firebase/auth";
+import { Platform } from "react-native";
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -20,17 +17,29 @@ export const firebaseConfigured = Object.values(firebaseConfig).every(
   (value) => typeof value === "string" && value.length > 0,
 );
 
+type ReactNativePersistenceFactory = (
+  storage: typeof AsyncStorage,
+) => Persistence;
+
+const getReactNativePersistence = (
+  FirebaseAuth as typeof FirebaseAuth & {
+    getReactNativePersistence: ReactNativePersistenceFactory;
+  }
+).getReactNativePersistence;
+
 let authInstance: Auth | null = null;
 
 if (firebaseConfigured) {
   const appAlreadyExists = getApps().length > 0;
   const app = appAlreadyExists ? getApp() : initializeApp(firebaseConfig);
 
-  authInstance = appAlreadyExists
-    ? getAuth(app)
-    : initializeAuth(app, {
-        persistence: getReactNativePersistence(AsyncStorage),
-      });
+  if (appAlreadyExists || Platform.OS === "web") {
+    authInstance = FirebaseAuth.getAuth(app);
+  } else {
+    authInstance = FirebaseAuth.initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  }
 }
 
 export const firebaseAuth = authInstance;

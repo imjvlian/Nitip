@@ -3,7 +3,7 @@ import type {
   NitipAddress,
   UpdateNitipAddressInput,
 } from "@nitip/domain";
-import type { Collection, WithId } from "mongodb";
+import type { Collection, UpdateFilter, WithId } from "mongodb";
 import { ObjectId } from "mongodb";
 
 import { getMongoDb } from "../lib/mongodb.js";
@@ -191,7 +191,7 @@ export async function updateUserAddress(
     set.isDefault = true;
   }
 
-  const update = unsetLocation
+  const update: UpdateFilter<AddressDocument> = unsetLocation
     ? { $set: set, $unset: { location: "" } }
     : { $set: set };
 

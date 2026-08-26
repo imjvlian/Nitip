@@ -22,12 +22,16 @@ export class ApiError extends Error {
 }
 
 async function apiRequest<T>(
-  user: User,
+  user: User | null,
   path: string,
   init?: RequestInit,
 ): Promise<T> {
   if (!apiConfigured) {
     throw new Error("EXPO_PUBLIC_API_URL is not configured");
+  }
+
+  if (!user) {
+    throw new Error("Authentication is required");
   }
 
   const idToken = await user.getIdToken();
@@ -58,22 +62,22 @@ async function apiRequest<T>(
   return body as unknown as T;
 }
 
-export function getMe(user: User) {
+export function getMe(user: User | null) {
   return apiRequest<NitipUserProfile>(user, "/me");
 }
 
-export function updateMe(user: User, input: UpdateNitipProfileInput) {
+export function updateMe(user: User | null, input: UpdateNitipProfileInput) {
   return apiRequest<NitipUserProfile>(user, "/me", {
     method: "PATCH",
     body: JSON.stringify(input),
   });
 }
 
-export function listAddresses(user: User) {
+export function listAddresses(user: User | null) {
   return apiRequest<NitipAddress[]>(user, "/me/addresses");
 }
 
-export function createAddress(user: User, input: CreateNitipAddressInput) {
+export function createAddress(user: User | null, input: CreateNitipAddressInput) {
   return apiRequest<NitipAddress>(user, "/me/addresses", {
     method: "POST",
     body: JSON.stringify(input),
@@ -81,7 +85,7 @@ export function createAddress(user: User, input: CreateNitipAddressInput) {
 }
 
 export function updateAddress(
-  user: User,
+  user: User | null,
   id: string,
   input: UpdateNitipAddressInput,
 ) {
@@ -91,7 +95,7 @@ export function updateAddress(
   });
 }
 
-export function deleteAddress(user: User, id: string) {
+export function deleteAddress(user: User | null, id: string) {
   return apiRequest<{ ok: boolean }>(user, `/me/addresses/${id}`, {
     method: "DELETE",
   });
