@@ -27,11 +27,10 @@ Nitip adalah ekosistem marketplace lokal yang menghubungkan pembeli, restoran/to
 - Firebase Authentication
 - MongoDB Atlas sebagai primary database
 - Nitip API sebagai server boundary; mobile app tidak mengakses MongoDB menggunakan database credential
-- Cloudflare R2 untuk object storage
-- ImageKit untuk image optimization/transformation/CDN
+- Cloudinary untuk image upload, managed storage, optimization, transformation, dan CDN
 - DOKU sebagai target awal payment adapter
 
-Detail keputusan backend dan media ada di `docs/ARCHITECTURE.md`. Sistem warna ada di `docs/THEME.md` dan `packages/theme`.
+Cloudinary dipilih untuk MVP karena Free plan dapat digunakan tanpa kartu kredit/debit. Detail keputusan backend dan media ada di `docs/ARCHITECTURE.md`. Sistem warna ada di `docs/THEME.md` dan `packages/theme`.
 
 ## Menjalankan project
 
