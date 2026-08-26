@@ -9,6 +9,11 @@ import type {
   NitipCatalogOutlet,
   NitipCatalogOutletSummary,
 } from "@nitip/domain/catalog";
+import type {
+  NitipCheckoutQuote,
+  NitipCheckoutRequest,
+  NitipOrder,
+} from "@nitip/domain/commerce";
 import type { User } from "firebase/auth";
 
 const apiBaseUrl = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
@@ -125,4 +130,29 @@ export function listCatalogOutlets() {
 
 export function getCatalogOutlet(id: string) {
   return publicApiRequest<NitipCatalogOutlet>(`/catalog/outlets/${id}`);
+}
+
+export function getCheckoutQuote(
+  user: User | null,
+  input: NitipCheckoutRequest,
+) {
+  return apiRequest<NitipCheckoutQuote>(user, "/checkout/quote", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function createOrder(user: User | null, input: NitipCheckoutRequest) {
+  return apiRequest<NitipOrder>(user, "/orders", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function getOrder(user: User | null, id: string) {
+  return apiRequest<NitipOrder>(user, `/orders/${id}`);
+}
+
+export function listOrders(user: User | null) {
+  return apiRequest<NitipOrder[]>(user, "/me/orders");
 }

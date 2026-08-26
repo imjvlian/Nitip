@@ -11,8 +11,8 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function requiredId(record: Record<string, unknown>, key: string) {
   const value = record[key];
-  if (typeof value !== "string" || !value.trim()) {
-    throw new ValidationError(`${key} is required`);
+  if (typeof value !== "string" || !/^[a-f\d]{24}$/i.test(value.trim())) {
+    throw new ValidationError(`${key} must be a valid id`);
   }
   return value.trim();
 }
@@ -35,7 +35,12 @@ export function parseCheckoutRequest(body: unknown): NitipCheckoutRequest {
     const productId = requiredId(item, "productId");
     const quantity = item.quantity;
 
-    if (!Number.isInteger(quantity) || Number(quantity) < 1 || Number(quantity) > 99) {
+    if (
+      typeof quantity !== "number" ||
+      !Number.isInteger(quantity) ||
+      quantity < 1 ||
+      quantity > 99
+    ) {
       throw new ValidationError(`items[${index}].quantity must be an integer from 1 to 99`);
     }
     if (seen.has(productId)) {
@@ -45,7 +50,7 @@ export function parseCheckoutRequest(body: unknown): NitipCheckoutRequest {
 
     return {
       productId,
-      quantity: Number(quantity),
+      quantity,
     };
   });
 

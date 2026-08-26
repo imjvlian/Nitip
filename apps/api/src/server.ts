@@ -7,6 +7,7 @@ import {
 } from "./config/env.js";
 import { registerAdminRoutes } from "./http/admin-routes.js";
 import { registerCatalogRoutes } from "./http/catalog-routes.js";
+import { registerOrderRoutes } from "./http/order-routes.js";
 import {
   parseCreateMerchant,
   parseCreateOutlet,
@@ -336,6 +337,7 @@ app.delete<{ Params: { id: string } }>(
 
 registerCatalogRoutes(app);
 registerAdminRoutes(app);
+registerOrderRoutes(app);
 
 app.setNotFoundHandler(async (_request, reply) => {
   await reply.code(404).send({
