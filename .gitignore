@@ -12,3 +12,4 @@ coverage/
 Thumbs.db
 apps/*/android/
 apps/*/ios/
+apps/api/secrets/
