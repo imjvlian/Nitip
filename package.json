@@ -1,0 +1,19 @@
+{
+  "name": "nitip",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "dev:user": "npm run start --workspace @nitip/user",
+    "dev:merchant": "npm run start --workspace @nitip/merchant",
+    "dev:driver": "npm run start --workspace @nitip/driver",
+    "dev:admin": "npm run dev --workspace @nitip/admin",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  }
+}
