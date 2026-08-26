@@ -1,7 +1,7 @@
 import "dotenv/config";
 
 export class IntegrationNotConfiguredError extends Error {
-  constructor(public readonly integration: "firebase" | "mongodb") {
+  constructor(public readonly integration: "firebase" | "mongodb" | "cloudinary") {
     super(`${integration} is not configured`);
     this.name = "IntegrationNotConfiguredError";
   }
@@ -28,6 +28,9 @@ export const env = {
   firebaseProjectId: read("FIREBASE_PROJECT_ID"),
   firebaseClientEmail: read("FIREBASE_CLIENT_EMAIL"),
   firebasePrivateKey: read("FIREBASE_PRIVATE_KEY"),
+  cloudinaryCloudName: read("CLOUDINARY_CLOUD_NAME"),
+  cloudinaryApiKey: read("CLOUDINARY_API_KEY"),
+  cloudinaryApiSecret: read("CLOUDINARY_API_SECRET"),
 } as const;
 
 const explicitFirebaseCredentials = Boolean(
@@ -37,4 +40,7 @@ const explicitFirebaseCredentials = Boolean(
 export const integrationStatus = {
   mongodb: Boolean(env.mongodbUri),
   firebase: Boolean(env.googleApplicationCredentials) || explicitFirebaseCredentials,
+  cloudinary: Boolean(
+    env.cloudinaryCloudName && env.cloudinaryApiKey && env.cloudinaryApiSecret,
+  ),
 } as const;

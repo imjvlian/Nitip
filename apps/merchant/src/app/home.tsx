@@ -96,7 +96,7 @@ export default function MerchantHomeScreen() {
   }
 
   function confirmDelete(outlet: NitipOutlet) {
-    Alert.alert("Hapus outlet?", `${outlet.name} akan dihapus.`, [
+    Alert.alert("Hapus outlet?", `${outlet.name} dan seluruh katalog di dalamnya akan dihapus.`, [
       { text: "Batal", style: "cancel" },
       { text: "Hapus", style: "destructive", onPress: () => void (async () => {
         try {
@@ -120,13 +120,13 @@ export default function MerchantHomeScreen() {
 
       <Text style={styles.eyebrow}>MERCHANT CENTER</Text>
       <Text style={styles.title}>{merchant ? merchant.businessName : "Daftarkan usahamu."}</Text>
-      <Text style={styles.subtitle}>Profil usaha dan outlet menjadi fondasi katalog, pesanan, jarak kirim, dan payout.</Text>
+      <Text style={styles.subtitle}>Profil usaha, outlet, dan katalog menjadi fondasi pesanan, jarak kirim, serta payout.</Text>
 
       {loading ? <View style={styles.loadingCard}><ActivityIndicator color={theme.colors.primary} /><Text style={styles.muted}>Memuat merchant...</Text></View> : <>
         {merchant && <View style={styles.statusCard}>
           <Text style={styles.statusLabel}>STATUS ONBOARDING</Text>
           <Text style={styles.statusValue}>{statusCopy(merchant.status)}</Text>
-          <Text style={styles.muted}>{merchant.status === "approved" ? "Merchant sudah siap dipublikasikan." : merchant.status === "pending_review" ? "Data menunggu review Ops." : "Lengkapi data lalu kirim untuk review."}</Text>
+          <Text style={styles.muted}>{merchant.status === "approved" ? "Merchant sudah siap dipublikasikan." : merchant.status === "pending_review" ? "Data menunggu review Ops. Menu tetap bisa disiapkan." : "Lengkapi data lalu kirim untuk review."}</Text>
         </View>}
 
         <View style={styles.card}>
@@ -144,7 +144,11 @@ export default function MerchantHomeScreen() {
           {outlets.length === 0 ? <View style={styles.card}><Text style={styles.cardTitle}>Belum ada outlet</Text><Text style={styles.muted}>Tambahkan lokasi jualan pertama.</Text></View> : outlets.map((outlet) => <View key={outlet.id} style={styles.outletCard}>
             <View style={styles.outletTop}><View style={styles.outletInfo}><Text style={styles.outletName}>{outlet.name}</Text><Text style={styles.muted}>{outlet.addressLine}</Text></View><View style={styles.badge}><Text style={styles.badgeText}>{outlet.acceptingOrders ? "BUKA" : "TUTUP"}</Text></View></View>
             <Text style={styles.meta}>{outlet.isActive ? "Outlet aktif" : "Outlet nonaktif"} · {outlet.latitude != null ? "Lokasi tersimpan" : "Lokasi belum dipilih"}</Text>
-            <View style={styles.actions}><Pressable onPress={() => void toggleOrders(outlet)}><Text style={styles.linkText}>{outlet.acceptingOrders ? "Tutup sementara" : "Buka pesanan"}</Text></Pressable><Pressable onPress={() => confirmDelete(outlet)}><Text style={styles.dangerText}>Hapus</Text></Pressable></View>
+            <View style={styles.actions}>
+              <Pressable onPress={() => router.push({ pathname: "/menu", params: { outletId: outlet.id, outletName: outlet.name } })}><Text style={styles.linkText}>Kelola menu</Text></Pressable>
+              <Pressable onPress={() => void toggleOrders(outlet)}><Text style={styles.linkText}>{outlet.acceptingOrders ? "Tutup sementara" : "Buka pesanan"}</Text></Pressable>
+              <Pressable onPress={() => confirmDelete(outlet)}><Text style={styles.dangerText}>Hapus</Text></Pressable>
+            </View>
           </View>)}
         </>}
       </>}
@@ -189,7 +193,7 @@ function createStyles(colors: { background: string; surface: string; surfaceAcce
     badge: { backgroundColor: colors.surfaceAccent, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5 },
     badgeText: { color: colors.primaryStrong, fontWeight: "900", fontSize: 9 },
     meta: { color: colors.primary, fontSize: 10, fontWeight: "700", marginTop: 11 },
-    actions: { flexDirection: "row", gap: 16, marginTop: 12 },
+    actions: { flexDirection: "row", flexWrap: "wrap", gap: 16, marginTop: 12 },
     linkText: { color: colors.primary, fontWeight: "800", fontSize: 11 },
     dangerText: { color: "#B42318", fontWeight: "800", fontSize: 11 },
     errorCard: { marginTop: 14, padding: 13, borderRadius: 14, backgroundColor: colors.surfaceAccent },

@@ -5,6 +5,7 @@ import {
   integrationStatus,
   IntegrationNotConfiguredError,
 } from "./config/env.js";
+import { registerCatalogRoutes } from "./http/catalog-routes.js";
 import {
   parseCreateMerchant,
   parseCreateOutlet,
@@ -331,6 +332,8 @@ app.delete<{ Params: { id: string } }>(
     }
   },
 );
+
+registerCatalogRoutes(app);
 
 app.setNotFoundHandler(async (_request, reply) => {
   await reply.code(404).send({

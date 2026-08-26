@@ -6,6 +6,15 @@ import type {
   UpdateNitipMerchantInput,
   UpdateNitipOutletInput,
 } from "@nitip/domain";
+import type {
+  CloudinaryUploadSignature,
+  CreateNitipCategoryInput,
+  CreateNitipProductInput,
+  NitipCategory,
+  NitipProduct,
+  UpdateNitipCategoryInput,
+  UpdateNitipProductInput,
+} from "@nitip/domain/catalog";
 import type { User } from "firebase/auth";
 
 const apiBaseUrl = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
@@ -66,20 +75,14 @@ export function getMerchantMe(user: User | null) {
   return apiRequest<NitipMerchantProfile | null>(user, "/merchant/me");
 }
 
-export function createMerchant(
-  user: User | null,
-  input: CreateNitipMerchantInput,
-) {
+export function createMerchant(user: User | null, input: CreateNitipMerchantInput) {
   return apiRequest<NitipMerchantProfile>(user, "/merchant/onboarding", {
     method: "POST",
     body: JSON.stringify(input),
   });
 }
 
-export function updateMerchant(
-  user: User | null,
-  input: UpdateNitipMerchantInput,
-) {
+export function updateMerchant(user: User | null, input: UpdateNitipMerchantInput) {
   return apiRequest<NitipMerchantProfile>(user, "/merchant/me", {
     method: "PATCH",
     body: JSON.stringify(input),
@@ -96,21 +99,14 @@ export function listOutlets(user: User | null) {
   return apiRequest<NitipOutlet[]>(user, "/merchant/outlets");
 }
 
-export function createOutlet(
-  user: User | null,
-  input: CreateNitipOutletInput,
-) {
+export function createOutlet(user: User | null, input: CreateNitipOutletInput) {
   return apiRequest<NitipOutlet>(user, "/merchant/outlets", {
     method: "POST",
     body: JSON.stringify(input),
   });
 }
 
-export function updateOutlet(
-  user: User | null,
-  id: string,
-  input: UpdateNitipOutletInput,
-) {
+export function updateOutlet(user: User | null, id: string, input: UpdateNitipOutletInput) {
   return apiRequest<NitipOutlet>(user, `/merchant/outlets/${id}`, {
     method: "PATCH",
     body: JSON.stringify(input),
@@ -121,4 +117,110 @@ export function deleteOutlet(user: User | null, id: string) {
   return apiRequest<{ ok: boolean }>(user, `/merchant/outlets/${id}`, {
     method: "DELETE",
   });
+}
+
+export function listCategories(user: User | null, outletId: string) {
+  return apiRequest<NitipCategory[]>(user, `/merchant/outlets/${outletId}/categories`);
+}
+
+export function createCategory(
+  user: User | null,
+  outletId: string,
+  input: CreateNitipCategoryInput,
+) {
+  return apiRequest<NitipCategory>(user, `/merchant/outlets/${outletId}/categories`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateCategory(
+  user: User | null,
+  outletId: string,
+  id: string,
+  input: UpdateNitipCategoryInput,
+) {
+  return apiRequest<NitipCategory>(user, `/merchant/outlets/${outletId}/categories/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteCategory(user: User | null, outletId: string, id: string) {
+  return apiRequest<{ ok: boolean }>(user, `/merchant/outlets/${outletId}/categories/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export function listProducts(user: User | null, outletId: string) {
+  return apiRequest<NitipProduct[]>(user, `/merchant/outlets/${outletId}/products`);
+}
+
+export function createProduct(
+  user: User | null,
+  outletId: string,
+  input: CreateNitipProductInput,
+) {
+  return apiRequest<NitipProduct>(user, `/merchant/outlets/${outletId}/products`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateProduct(
+  user: User | null,
+  outletId: string,
+  id: string,
+  input: UpdateNitipProductInput,
+) {
+  return apiRequest<NitipProduct>(user, `/merchant/outlets/${outletId}/products/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteProduct(user: User | null, outletId: string, id: string) {
+  return apiRequest<{ ok: boolean }>(user, `/merchant/outlets/${outletId}/products/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export function getProductUploadSignature(user: User | null) {
+  return apiRequest<CloudinaryUploadSignature>(user, "/merchant/media/signature", {
+    method: "POST",
+  });
+}
+
+export async function uploadProductImage(
+  user: User | null,
+  asset: { uri: string; fileName?: string | null; mimeType?: string | null },
+) {
+  const signed = await getProductUploadSignature(user);
+  const form = new FormData();
+  form.append("file", {
+    uri: asset.uri,
+    name: asset.fileName ?? `product-${Date.now()}.jpg`,
+    type: asset.mimeType ?? "image/jpeg",
+  } as unknown as Blob);
+  form.append("api_key", signed.apiKey);
+  form.append("timestamp", String(signed.timestamp));
+  form.append("folder", signed.folder);
+  form.append("signature", signed.signature);
+
+  const response = await fetch(signed.uploadUrl, {
+    method: "POST",
+    body: form,
+  });
+  const body = (await response.json()) as {
+    secure_url?: string;
+    public_id?: string;
+    error?: { message?: string };
+  };
+  if (!response.ok || !body.secure_url || !body.public_id) {
+    throw new Error(body.error?.message ?? "Gagal mengunggah foto produk");
+  }
+  return {
+    imageUrl: body.secure_url,
+    imagePublicId: body.public_id,
+  };
 }

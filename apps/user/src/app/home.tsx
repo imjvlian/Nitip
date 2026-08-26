@@ -1,8 +1,10 @@
 import { calculateOrderQuote, formatRupiah, type NitipUserProfile } from "@nitip/domain";
+import type { NitipCatalogOutletSummary } from "@nitip/domain/catalog";
 import { Redirect, router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,7 +14,7 @@ import {
 
 import { useAuth } from "../context/AuthContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
-import { apiConfigured, getMe } from "../lib/api";
+import { apiConfigured, getMe, listCatalogOutlets } from "../lib/api";
 
 const sample = calculateOrderQuote({ subtotal: 60_000, distanceKm: 3 });
 
@@ -23,6 +25,9 @@ export default function HomeScreen() {
   const [profile, setProfile] = useState<NitipUserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [catalog, setCatalog] = useState<NitipCatalogOutletSummary[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user || !apiConfigured) return;
@@ -37,9 +42,7 @@ export default function HomeScreen() {
       })
       .catch((error: unknown) => {
         if (!active) return;
-        setProfileError(
-          error instanceof Error ? error.message : "Gagal memuat profil Nitip",
-        );
+        setProfileError(error instanceof Error ? error.message : "Gagal memuat profil Nitip");
       })
       .finally(() => {
         if (active) setProfileLoading(false);
@@ -50,12 +53,31 @@ export default function HomeScreen() {
     };
   }, [user]);
 
+  useEffect(() => {
+    if (!apiConfigured) return;
+    let active = true;
+    setCatalogLoading(true);
+    setCatalogError(null);
+    listCatalogOutlets()
+      .then((items) => {
+        if (active) setCatalog(items);
+      })
+      .catch((error: unknown) => {
+        if (active) setCatalogError(error instanceof Error ? error.message : "Gagal memuat katalog");
+      })
+      .finally(() => {
+        if (active) setCatalogLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   if (!user) {
     return <Redirect href="/login" />;
   }
 
-  const firstName =
-    profile?.displayName?.split(" ")[0] ?? user.displayName?.split(" ")[0] ?? "Kamu";
+  const firstName = profile?.displayName?.split(" ")[0] ?? user.displayName?.split(" ")[0] ?? "Kamu";
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -83,16 +105,14 @@ export default function HomeScreen() {
 
       {!apiConfigured && (
         <View style={styles.statusCard}>
-          <Text style={styles.statusTitle}>Firebase Auth sudah siap untuk dipakai</Text>
-          <Text style={styles.statusText}>
-            Set EXPO_PUBLIC_API_URL untuk menghubungkan akun Firebase ke profil MongoDB.
-          </Text>
+          <Text style={styles.statusTitle}>API belum dikonfigurasi</Text>
+          <Text style={styles.statusText}>Set EXPO_PUBLIC_API_URL untuk menghubungkan aplikasi ke Nitip API.</Text>
         </View>
       )}
 
       {profileError && (
         <View style={styles.statusCard}>
-          <Text style={styles.statusTitle}>API belum tersambung</Text>
+          <Text style={styles.statusTitle}>Profil belum tersambung</Text>
           <Text style={styles.statusText}>{profileError}</Text>
         </View>
       )}
@@ -101,9 +121,7 @@ export default function HomeScreen() {
         <Pressable onPress={() => router.push("/profile")} style={styles.identityCard}>
           <Text style={styles.identityLabel}>NITIP PROFILE</Text>
           <Text style={styles.identityValue}>{profile.email ?? "Tanpa email"}</Text>
-          <Text style={styles.identityMeta}>
-            Role: {profile.role} · {profile.phoneNumber ?? "Nomor HP belum diisi"}
-          </Text>
+          <Text style={styles.identityMeta}>Role: {profile.role} · {profile.phoneNumber ?? "Nomor HP belum diisi"}</Text>
         </Pressable>
       )}
 
@@ -120,41 +138,42 @@ export default function HomeScreen() {
         ))}
       </View>
 
-      <Text style={styles.sectionTitle}>Dekat kamu</Text>
-      <View style={styles.card}>
-        <View style={styles.merchantAvatar}>
-          <Text style={styles.avatarText}>N</Text>
+      <Text style={styles.sectionTitle}>Merchant Nitip</Text>
+      {catalogLoading ? (
+        <View style={styles.catalogLoading}><ActivityIndicator color={theme.colors.primary} /><Text style={styles.statusText}>Memuat katalog...</Text></View>
+      ) : catalogError ? (
+        <View style={styles.statusCard}><Text style={styles.statusTitle}>Katalog belum tersedia</Text><Text style={styles.statusText}>{catalogError}</Text></View>
+      ) : catalog.length === 0 ? (
+        <View style={styles.emptyCard}>
+          <Text style={styles.statusTitle}>Belum ada merchant publik</Text>
+          <Text style={styles.statusText}>Katalog hanya menampilkan merchant berstatus approved. Merchant yang masih menunggu review tidak dipublikasikan.</Text>
         </View>
-        <View style={styles.cardContent}>
-          <Text style={styles.cardTitle}>Nasi Ayam Bu Rini</Text>
-          <Text style={styles.cardMeta}>1,2 km · ±25 menit · Buka</Text>
-          <Text style={styles.cardPrice}>Mulai Rp12.000</Text>
-        </View>
-      </View>
+      ) : catalog.map((outlet) => (
+        <Pressable key={outlet.id} onPress={() => router.push(`/outlet/${outlet.id}`)} style={styles.card}>
+          {outlet.imageUrl ? (
+            <Image source={{ uri: outlet.imageUrl }} style={styles.merchantImage} />
+          ) : (
+            <View style={styles.merchantAvatar}><Text style={styles.avatarText}>{outlet.businessName.slice(0, 1).toUpperCase()}</Text></View>
+          )}
+          <View style={styles.cardContent}>
+            <Text style={styles.cardTitle}>{outlet.businessName}</Text>
+            <Text style={styles.cardMeta}>{outlet.name} · {outlet.acceptingOrders ? "Buka" : "Tutup"}</Text>
+            <Text style={styles.cardMeta}>{outlet.productCount} produk</Text>
+            <Text style={styles.cardPrice}>{outlet.minPrice == null ? "Menu segera tersedia" : `Mulai ${formatRupiah(outlet.minPrice)}`}</Text>
+          </View>
+        </Pressable>
+      ))}
 
       <View style={styles.quoteCard}>
         <Text style={styles.quoteLabel}>SIMULASI · Rp60.000 · 3 KM</Text>
         <Text style={styles.quoteValue}>{formatRupiah(sample.customerTotal)}</Text>
-        <Text style={styles.quoteMeta}>
-          Termasuk ongkir {formatRupiah(sample.deliveryFare)} dan biaya layanan {formatRupiah(sample.serviceFee)}.
-        </Text>
+        <Text style={styles.quoteMeta}>Termasuk ongkir {formatRupiah(sample.deliveryFare)} dan biaya layanan {formatRupiah(sample.serviceFee)}.</Text>
       </View>
     </ScrollView>
   );
 }
 
-function createStyles(colors: {
-  background: string;
-  surface: string;
-  surfaceAccent: string;
-  primary: string;
-  primaryStrong: string;
-  secondary: string;
-  text: string;
-  textMuted: string;
-  border: string;
-  onPrimary: string;
-}) {
+function createStyles(colors: { background: string; surface: string; surfaceAccent: string; primary: string; primaryStrong: string; secondary: string; text: string; textMuted: string; border: string; onPrimary: string }) {
   return StyleSheet.create({
     container: { flexGrow: 1, backgroundColor: colors.background, paddingHorizontal: 20, paddingTop: 56, paddingBottom: 40 },
     brandRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 34 },
@@ -179,12 +198,15 @@ function createStyles(colors: {
     categoryRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
     category: { backgroundColor: colors.surface, borderRadius: 14, paddingHorizontal: 13, paddingVertical: 11, borderWidth: 1, borderColor: colors.border },
     categoryText: { color: colors.text, fontWeight: "700" },
-    card: { flexDirection: "row", backgroundColor: colors.surface, borderRadius: 20, padding: 14, borderWidth: 1, borderColor: colors.border },
+    catalogLoading: { backgroundColor: colors.surface, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: colors.border, alignItems: "center", gap: 8 },
+    emptyCard: { backgroundColor: colors.surface, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: colors.border },
+    card: { flexDirection: "row", backgroundColor: colors.surface, borderRadius: 20, padding: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 10 },
     merchantAvatar: { width: 72, height: 72, borderRadius: 16, backgroundColor: colors.surfaceAccent, alignItems: "center", justifyContent: "center" },
+    merchantImage: { width: 72, height: 72, borderRadius: 16, backgroundColor: colors.surfaceAccent },
     avatarText: { color: colors.primaryStrong, fontWeight: "900", fontSize: 28 },
     cardContent: { flex: 1, paddingLeft: 14, justifyContent: "center" },
     cardTitle: { fontWeight: "800", fontSize: 16, color: colors.text },
-    cardMeta: { color: colors.textMuted, marginTop: 4, fontSize: 12 },
+    cardMeta: { color: colors.textMuted, marginTop: 3, fontSize: 11 },
     cardPrice: { color: colors.primary, marginTop: 7, fontWeight: "900" },
     quoteCard: { marginTop: 24, borderRadius: 20, backgroundColor: colors.primaryStrong, padding: 18 },
     quoteLabel: { color: colors.secondary, fontSize: 10, fontWeight: "900", letterSpacing: 1 },

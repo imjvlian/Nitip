@@ -1,0 +1,92 @@
+import type { OutletOpeningHour } from "./index";
+
+export interface NitipCategory {
+  id: string;
+  outletId: string;
+  name: string;
+  description: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateNitipCategoryInput {
+  name: string;
+  description?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+export type UpdateNitipCategoryInput = Partial<CreateNitipCategoryInput>;
+
+export interface NitipProduct {
+  id: string;
+  outletId: string;
+  categoryId: string;
+  name: string;
+  description: string | null;
+  price: number;
+  imageUrl: string | null;
+  imagePublicId: string | null;
+  stockQuantity: number | null;
+  isAvailable: boolean;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateNitipProductInput {
+  categoryId: string;
+  name: string;
+  description?: string | null;
+  price: number;
+  imageUrl?: string | null;
+  imagePublicId?: string | null;
+  stockQuantity?: number | null;
+  isAvailable?: boolean;
+  isActive?: boolean;
+  sortOrder?: number;
+}
+
+export type UpdateNitipProductInput = Partial<CreateNitipProductInput>;
+
+export interface NitipCatalogOutletSummary {
+  id: string;
+  merchantId: string;
+  businessName: string;
+  name: string;
+  addressLine: string;
+  acceptingOrders: boolean;
+  productCount: number;
+  minPrice: number | null;
+  imageUrl: string | null;
+}
+
+export interface NitipCatalogCategory extends NitipCategory {
+  products: NitipProduct[];
+}
+
+export interface NitipCatalogOutlet {
+  id: string;
+  merchantId: string;
+  businessName: string;
+  name: string;
+  addressLine: string;
+  phoneNumber: string;
+  latitude: number | null;
+  longitude: number | null;
+  acceptingOrders: boolean;
+  openingHours: OutletOpeningHour[];
+  categories: NitipCatalogCategory[];
+}
+
+export interface CloudinaryUploadSignature {
+  cloudName: string;
+  apiKey: string;
+  timestamp: number;
+  folder: string;
+  signature: string;
+  uploadUrl: string;
+}

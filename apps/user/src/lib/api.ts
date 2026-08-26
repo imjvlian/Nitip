@@ -5,6 +5,10 @@ import type {
   UpdateNitipAddressInput,
   UpdateNitipProfileInput,
 } from "@nitip/domain";
+import type {
+  NitipCatalogOutlet,
+  NitipCatalogOutletSummary,
+} from "@nitip/domain/catalog";
 import type { User } from "firebase/auth";
 
 const apiBaseUrl = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
@@ -19,6 +23,25 @@ export class ApiError extends Error {
     super(message);
     this.name = "ApiError";
   }
+}
+
+type ApiBody<T> = {
+  data?: T;
+  ok?: boolean;
+  message?: string;
+  error?: string;
+};
+
+async function readResponse<T>(response: Response): Promise<T> {
+  const body = (await response.json()) as ApiBody<T>;
+  if (!response.ok) {
+    throw new ApiError(
+      body.message ?? body.error ?? "Nitip API request failed",
+      response.status,
+    );
+  }
+  if (body.data !== undefined) return body.data;
+  return body as unknown as T;
 }
 
 async function apiRequest<T>(
@@ -44,22 +67,17 @@ async function apiRequest<T>(
     },
   });
 
-  const body = (await response.json()) as {
-    data?: T;
-    ok?: boolean;
-    message?: string;
-    error?: string;
-  };
+  return readResponse<T>(response);
+}
 
-  if (!response.ok) {
-    throw new ApiError(
-      body.message ?? body.error ?? "Nitip API request failed",
-      response.status,
-    );
+async function publicApiRequest<T>(path: string): Promise<T> {
+  if (!apiConfigured) {
+    throw new Error("EXPO_PUBLIC_API_URL is not configured");
   }
-
-  if (body.data !== undefined) return body.data;
-  return body as unknown as T;
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    headers: { Accept: "application/json" },
+  });
+  return readResponse<T>(response);
 }
 
 export function getMe(user: User | null) {
@@ -99,4 +117,12 @@ export function deleteAddress(user: User | null, id: string) {
   return apiRequest<{ ok: boolean }>(user, `/me/addresses/${id}`, {
     method: "DELETE",
   });
+}
+
+export function listCatalogOutlets() {
+  return publicApiRequest<NitipCatalogOutletSummary[]>("/catalog/outlets");
+}
+
+export function getCatalogOutlet(id: string) {
+  return publicApiRequest<NitipCatalogOutlet>(`/catalog/outlets/${id}`);
 }

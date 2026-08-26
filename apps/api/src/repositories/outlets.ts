@@ -90,6 +90,20 @@ function outletObjectId(id: string) {
   return ObjectId.isValid(id) ? new ObjectId(id) : null;
 }
 
+export async function getMerchantOutlet(
+  merchantId: string,
+  id: string,
+): Promise<NitipOutlet | null> {
+  const objectId = outletObjectId(id);
+  if (!objectId) return null;
+  const outlets = await getOutletsCollection();
+  const document = await outlets.findOne({
+    _id: objectId,
+    merchantId: merchantObjectId(merchantId),
+  });
+  return document ? serializeOutlet(document) : null;
+}
+
 export async function listMerchantOutlets(
   merchantId: string,
 ): Promise<NitipOutlet[]> {
@@ -210,11 +224,20 @@ export async function deleteMerchantOutlet(
   const objectId = outletObjectId(id);
   if (!objectId) return false;
 
+  const db = await getMongoDb();
   const outlets = await getOutletsCollection();
   const result = await outlets.deleteOne({
     _id: objectId,
     merchantId: merchantObjectId(merchantId),
   });
 
-  return result.deletedCount === 1;
+  if (result.deletedCount === 1) {
+    await Promise.all([
+      db.collection("categories").deleteMany({ outletId: objectId }),
+      db.collection("products").deleteMany({ outletId: objectId }),
+    ]);
+    return true;
+  }
+
+  return false;
 }
