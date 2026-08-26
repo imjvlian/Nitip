@@ -7,7 +7,17 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Nitip Mitra memerlukan akses foto untuk memilih gambar produk.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
+    ],
     "android": { "package": "id.nitip.merchant" },
     "ios": { "bundleIdentifier": "id.nitip.merchant" }
   }
