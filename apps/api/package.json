@@ -1,0 +1,23 @@
+{
+  "name": "@nitip/api",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nitip/domain": "*",
+    "dotenv": "17.4.2",
+    "fastify": "5.12.1",
+    "firebase-admin": "14.3.0",
+    "mongodb": "7.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.0",
+    "tsx": "4.23.12",
+    "typescript": "5.9.2"
+  }
+}

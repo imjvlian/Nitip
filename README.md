@@ -8,6 +8,7 @@ Nitip adalah ekosistem marketplace lokal yang menghubungkan pembeli, restoran/to
 - `apps/merchant` — aplikasi restoran/toko (Expo / React Native)
 - `apps/driver` — aplikasi driver (Expo / React Native)
 - `apps/admin` — dashboard operasi Nitip (Next.js)
+- `apps/api` — Nitip API (Fastify)
 - `packages/domain` — tipe data dan aturan bisnis bersama
 - `packages/theme` — brand palette + semantic light/dark theme
 - `docs` — keputusan arsitektur dan dokumentasi produk
@@ -22,22 +23,28 @@ Nitip adalah ekosistem marketplace lokal yang menghubungkan pembeli, restoran/to
 - npm workspaces (monorepo)
 - TypeScript strict
 
-### Backend direction
+### Backend
 
 - Firebase Authentication
+- Fastify API boundary
 - MongoDB Atlas sebagai primary database
-- Nitip API sebagai server boundary; mobile app tidak mengakses MongoDB menggunakan database credential
 - Cloudinary untuk image upload, managed storage, optimization, transformation, dan CDN
 - DOKU sebagai target awal payment adapter
 
-Cloudinary dipilih untuk MVP karena Free plan dapat digunakan tanpa kartu kredit/debit. Detail keputusan backend dan media ada di `docs/ARCHITECTURE.md`. Sistem warna ada di `docs/THEME.md` dan `packages/theme`.
+Aplikasi mobile tidak menyimpan MongoDB credential, Firebase Admin secret, Cloudinary API secret, atau payment secret.
 
 ## Menjalankan project
 
-Persyaratan: Node.js 22 disarankan.
+Persyaratan: Node.js 22.13+ disarankan.
 
 ```bash
 npm install
+```
+
+Nitip API:
+
+```bash
+npm run dev:api
 ```
 
 Aplikasi User:
@@ -69,6 +76,14 @@ Type check seluruh workspace:
 ```bash
 npm run typecheck
 ```
+
+Setup Firebase + MongoDB ada di `docs/BACKEND_SETUP.md`.
+
+## Auth flow v0.2
+
+`Firebase login/register -> Firebase ID token -> Nitip API -> verifyIdToken -> MongoDB users -> Nitip profile`
+
+User baru selalu dibuat dengan role `customer`. Role merchant, driver, dan admin tidak diterima dari client dan akan menggunakan onboarding/authorization terpisah.
 
 ## Aturan bisnis awal
 

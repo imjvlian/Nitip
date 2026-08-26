@@ -1,4 +1,17 @@
 export type UserRole = "customer" | "merchant" | "driver" | "admin";
+export type UserStatus = "active" | "suspended";
+
+export interface NitipUserProfile {
+  id: string;
+  firebaseUid: string;
+  email: string | null;
+  displayName: string | null;
+  photoUrl: string | null;
+  role: UserRole;
+  status: UserStatus;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export type OrderStatus =
   | "pending_payment"
@@ -116,8 +129,6 @@ export function calculateOrderQuote({
   const driver = calculateDriverFare(distanceKm, waitingMinutes, driverRules);
   const merchantCommission = Math.round(subtotal * marketplaceRules.merchantCommissionRate);
 
-  // Waiting fee default-nya disubsidi platform, bukan dibebankan ke customer.
-  // Payment gateway fee juga belum dimasukkan dan akan menjadi komponen settlement terpisah.
   const customerTotal = subtotal + driver.deliveryFare + marketplaceRules.serviceFee;
   const merchantNet = subtotal - merchantCommission;
   const platformGross = merchantCommission + marketplaceRules.serviceFee - driver.waitingFee;
