@@ -86,6 +86,14 @@ export async function upsertUserFromFirebase(
   return serializeUser(document);
 }
 
+export async function getUserByFirebaseUid(
+  firebaseUid: string,
+): Promise<NitipUserProfile | null> {
+  const users = await getUsersCollection();
+  const document = await users.findOne({ firebaseUid });
+  return document ? serializeUser(document) : null;
+}
+
 export async function updateUserProfile(
   firebaseUid: string,
   input: UpdateNitipProfileInput,

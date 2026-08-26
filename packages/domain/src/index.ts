@@ -65,8 +65,17 @@ export interface NitipMerchantProfile {
   description: string | null;
   status: MerchantOnboardingStatus;
   submittedAt: string | null;
+  reviewedAt: string | null;
+  rejectionReason: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export type MerchantReviewDecision = "approve" | "reject";
+
+export interface ReviewNitipMerchantInput {
+  decision: MerchantReviewDecision;
+  reason?: string | null;
 }
 
 export interface CreateNitipMerchantInput {

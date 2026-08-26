@@ -12,6 +12,16 @@ function read(name: string) {
   return value ? value : null;
 }
 
+function readCsv(name: string) {
+  const value = read(name);
+  if (!value) return [] as string[];
+
+  return value
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 const parsedPort = Number(process.env.PORT ?? "3001");
 
 if (!Number.isInteger(parsedPort) || parsedPort <= 0 || parsedPort > 65535) {
@@ -31,6 +41,7 @@ export const env = {
   cloudinaryCloudName: read("CLOUDINARY_CLOUD_NAME"),
   cloudinaryApiKey: read("CLOUDINARY_API_KEY"),
   cloudinaryApiSecret: read("CLOUDINARY_API_SECRET"),
+  adminEmails: readCsv("ADMIN_EMAILS"),
 } as const;
 
 const explicitFirebaseCredentials = Boolean(

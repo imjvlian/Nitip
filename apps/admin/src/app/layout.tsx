@@ -6,10 +6,19 @@ export const metadata: Metadata = {
   description: "Operations dashboard for Nitip",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="id">
-      <body style={{ margin: 0, background: "#F5F7F3", color: "#17251D", fontFamily: "Arial, Helvetica, sans-serif" }}>
+      <body
+        style={{
+          margin: 0,
+          background: "#F7FFF9",
+          color: "#14216D",
+          fontFamily: "Arial, Helvetica, sans-serif",
+        }}
+      >
         {children}
       </body>
     </html>

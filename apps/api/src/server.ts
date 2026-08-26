@@ -5,6 +5,7 @@ import {
   integrationStatus,
   IntegrationNotConfiguredError,
 } from "./config/env.js";
+import { registerAdminRoutes } from "./http/admin-routes.js";
 import { registerCatalogRoutes } from "./http/catalog-routes.js";
 import {
   parseCreateMerchant,
@@ -334,6 +335,7 @@ app.delete<{ Params: { id: string } }>(
 );
 
 registerCatalogRoutes(app);
+registerAdminRoutes(app);
 
 app.setNotFoundHandler(async (_request, reply) => {
   await reply.code(404).send({
