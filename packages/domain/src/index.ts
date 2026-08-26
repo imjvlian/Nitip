@@ -50,6 +50,90 @@ export interface CreateNitipAddressInput {
 
 export type UpdateNitipAddressInput = Partial<CreateNitipAddressInput>;
 
+export type MerchantOnboardingStatus =
+  | "draft"
+  | "pending_review"
+  | "approved"
+  | "rejected";
+
+export interface NitipMerchantProfile {
+  id: string;
+  ownerFirebaseUid: string;
+  businessName: string;
+  contactName: string;
+  phoneNumber: string;
+  description: string | null;
+  status: MerchantOnboardingStatus;
+  submittedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateNitipMerchantInput {
+  businessName: string;
+  contactName: string;
+  phoneNumber: string;
+  description?: string | null;
+}
+
+export type UpdateNitipMerchantInput = Partial<CreateNitipMerchantInput>;
+
+export const WEEKDAYS = [
+  "mon",
+  "tue",
+  "wed",
+  "thu",
+  "fri",
+  "sat",
+  "sun",
+] as const;
+
+export type Weekday = (typeof WEEKDAYS)[number];
+
+export interface OutletOpeningHour {
+  day: Weekday;
+  isOpen: boolean;
+  opensAt: string | null;
+  closesAt: string | null;
+}
+
+export function createDefaultOutletOpeningHours(): OutletOpeningHour[] {
+  return WEEKDAYS.map((day) => ({
+    day,
+    isOpen: true,
+    opensAt: "08:00",
+    closesAt: "20:00",
+  }));
+}
+
+export interface NitipOutlet {
+  id: string;
+  merchantId: string;
+  name: string;
+  phoneNumber: string;
+  addressLine: string;
+  latitude: number | null;
+  longitude: number | null;
+  isActive: boolean;
+  acceptingOrders: boolean;
+  openingHours: OutletOpeningHour[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateNitipOutletInput {
+  name: string;
+  phoneNumber: string;
+  addressLine: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  isActive?: boolean;
+  acceptingOrders?: boolean;
+  openingHours?: OutletOpeningHour[];
+}
+
+export type UpdateNitipOutletInput = Partial<CreateNitipOutletInput>;
+
 export type OrderStatus =
   | "pending_payment"
   | "paid"

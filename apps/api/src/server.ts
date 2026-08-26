@@ -6,6 +6,12 @@ import {
   IntegrationNotConfiguredError,
 } from "./config/env.js";
 import {
+  parseCreateMerchant,
+  parseCreateOutlet,
+  parseUpdateMerchant,
+  parseUpdateOutlet,
+} from "./http/merchant-validation.js";
+import {
   parseCreateAddress,
   parseProfilePatch,
   parseUpdateAddress,
@@ -19,6 +25,18 @@ import {
   listUserAddresses,
   updateUserAddress,
 } from "./repositories/addresses.js";
+import {
+  createMerchantProfile,
+  getMerchantProfileByOwner,
+  submitMerchantProfile,
+  updateMerchantProfile,
+} from "./repositories/merchants.js";
+import {
+  createMerchantOutlet,
+  deleteMerchantOutlet,
+  listMerchantOutlets,
+  updateMerchantOutlet,
+} from "./repositories/outlets.js";
 import { updateUserProfile, upsertUserFromFirebase } from "./repositories/users.js";
 
 const app = Fastify({
@@ -149,6 +167,162 @@ app.delete<{ Params: { id: string } }>(
       const deleted = await deleteUserAddress(identity.uid, request.params.id);
       if (!deleted) {
         return reply.code(404).send({ error: "address_not_found" });
+      }
+
+      return { ok: true };
+    } catch (error) {
+      return handleRouteError(request, reply, error);
+    }
+  },
+);
+
+app.get("/merchant/me", async (request, reply) => {
+  const identity = await authenticateRequest(request, reply);
+  if (!identity) return;
+
+  try {
+    await upsertUserFromFirebase(identity);
+    const merchant = await getMerchantProfileByOwner(identity.uid);
+    return { data: merchant };
+  } catch (error) {
+    return handleRouteError(request, reply, error);
+  }
+});
+
+app.post("/merchant/onboarding", async (request, reply) => {
+  const identity = await authenticateRequest(request, reply);
+  if (!identity) return;
+
+  try {
+    await upsertUserFromFirebase(identity);
+    const input = parseCreateMerchant(request.body);
+    const merchant = await createMerchantProfile(identity.uid, input);
+    return reply.code(201).send({ data: merchant });
+  } catch (error) {
+    return handleRouteError(request, reply, error);
+  }
+});
+
+app.patch("/merchant/me", async (request, reply) => {
+  const identity = await authenticateRequest(request, reply);
+  if (!identity) return;
+
+  try {
+    const input = parseUpdateMerchant(request.body);
+    const merchant = await updateMerchantProfile(identity.uid, input);
+
+    if (!merchant) {
+      return reply.code(409).send({
+        error: "merchant_profile_not_editable",
+        message: "Profil hanya dapat diedit saat draft atau ditolak",
+      });
+    }
+
+    return { data: merchant };
+  } catch (error) {
+    return handleRouteError(request, reply, error);
+  }
+});
+
+app.post("/merchant/me/submit", async (request, reply) => {
+  const identity = await authenticateRequest(request, reply);
+  if (!identity) return;
+
+  try {
+    const merchant = await submitMerchantProfile(identity.uid);
+    if (!merchant) {
+      return reply.code(404).send({ error: "merchant_profile_not_found" });
+    }
+
+    return { data: merchant };
+  } catch (error) {
+    return handleRouteError(request, reply, error);
+  }
+});
+
+app.get("/merchant/outlets", async (request, reply) => {
+  const identity = await authenticateRequest(request, reply);
+  if (!identity) return;
+
+  try {
+    const merchant = await getMerchantProfileByOwner(identity.uid);
+    if (!merchant) {
+      return reply.code(404).send({ error: "merchant_profile_not_found" });
+    }
+
+    const outlets = await listMerchantOutlets(merchant.id);
+    return { data: outlets };
+  } catch (error) {
+    return handleRouteError(request, reply, error);
+  }
+});
+
+app.post("/merchant/outlets", async (request, reply) => {
+  const identity = await authenticateRequest(request, reply);
+  if (!identity) return;
+
+  try {
+    const merchant = await getMerchantProfileByOwner(identity.uid);
+    if (!merchant) {
+      return reply.code(404).send({ error: "merchant_profile_not_found" });
+    }
+
+    const input = parseCreateOutlet(request.body);
+    const outlet = await createMerchantOutlet(merchant.id, input);
+    return reply.code(201).send({ data: outlet });
+  } catch (error) {
+    return handleRouteError(request, reply, error);
+  }
+});
+
+app.patch<{ Params: { id: string } }>(
+  "/merchant/outlets/:id",
+  async (request, reply) => {
+    const identity = await authenticateRequest(request, reply);
+    if (!identity) return;
+
+    try {
+      const merchant = await getMerchantProfileByOwner(identity.uid);
+      if (!merchant) {
+        return reply.code(404).send({ error: "merchant_profile_not_found" });
+      }
+
+      const input = parseUpdateOutlet(request.body);
+      const outlet = await updateMerchantOutlet(
+        merchant.id,
+        request.params.id,
+        input,
+      );
+
+      if (!outlet) {
+        return reply.code(404).send({ error: "outlet_not_found" });
+      }
+
+      return { data: outlet };
+    } catch (error) {
+      return handleRouteError(request, reply, error);
+    }
+  },
+);
+
+app.delete<{ Params: { id: string } }>(
+  "/merchant/outlets/:id",
+  async (request, reply) => {
+    const identity = await authenticateRequest(request, reply);
+    if (!identity) return;
+
+    try {
+      const merchant = await getMerchantProfileByOwner(identity.uid);
+      if (!merchant) {
+        return reply.code(404).send({ error: "merchant_profile_not_found" });
+      }
+
+      const deleted = await deleteMerchantOutlet(
+        merchant.id,
+        request.params.id,
+      );
+      if (!deleted) {
+        return reply.code(404).send({ error: "outlet_not_found" });
       }
 
       return { ok: true };
