@@ -1,4 +1,10 @@
-import type { NitipUserProfile } from "@nitip/domain";
+import type {
+  CreateNitipAddressInput,
+  NitipAddress,
+  NitipUserProfile,
+  UpdateNitipAddressInput,
+  UpdateNitipProfileInput,
+} from "@nitip/domain";
 import type { User } from "firebase/auth";
 
 const apiBaseUrl = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
@@ -15,31 +21,78 @@ export class ApiError extends Error {
   }
 }
 
-export async function getMe(user: User): Promise<NitipUserProfile> {
+async function apiRequest<T>(
+  user: User,
+  path: string,
+  init?: RequestInit,
+): Promise<T> {
   if (!apiConfigured) {
     throw new Error("EXPO_PUBLIC_API_URL is not configured");
   }
 
   const idToken = await user.getIdToken();
-  const response = await fetch(`${apiBaseUrl}/me`, {
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    ...init,
     headers: {
       Accept: "application/json",
       Authorization: `Bearer ${idToken}`,
+      ...(init?.body ? { "Content-Type": "application/json" } : {}),
     },
   });
 
   const body = (await response.json()) as {
-    data?: NitipUserProfile;
+    data?: T;
+    ok?: boolean;
     message?: string;
     error?: string;
   };
 
-  if (!response.ok || !body.data) {
+  if (!response.ok) {
     throw new ApiError(
       body.message ?? body.error ?? "Nitip API request failed",
       response.status,
     );
   }
 
-  return body.data;
+  if (body.data !== undefined) return body.data;
+  return body as unknown as T;
+}
+
+export function getMe(user: User) {
+  return apiRequest<NitipUserProfile>(user, "/me");
+}
+
+export function updateMe(user: User, input: UpdateNitipProfileInput) {
+  return apiRequest<NitipUserProfile>(user, "/me", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function listAddresses(user: User) {
+  return apiRequest<NitipAddress[]>(user, "/me/addresses");
+}
+
+export function createAddress(user: User, input: CreateNitipAddressInput) {
+  return apiRequest<NitipAddress>(user, "/me/addresses", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateAddress(
+  user: User,
+  id: string,
+  input: UpdateNitipAddressInput,
+) {
+  return apiRequest<NitipAddress>(user, `/me/addresses/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteAddress(user: User, id: string) {
+  return apiRequest<{ ok: boolean }>(user, `/me/addresses/${id}`, {
+    method: "DELETE",
+  });
 }

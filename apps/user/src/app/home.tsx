@@ -1,5 +1,5 @@
 import { calculateOrderQuote, formatRupiah, type NitipUserProfile } from "@nitip/domain";
-import { Redirect } from "expo-router";
+import { Redirect, router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -61,9 +61,14 @@ export default function HomeScreen() {
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.brandRow}>
         <Text style={styles.brand}>nitip.</Text>
-        <Pressable onPress={() => void signOut()} style={styles.logoutButton}>
-          <Text style={styles.logoutText}>Keluar</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable onPress={() => router.push("/profile")} style={styles.profileButton}>
+            <Text style={styles.profileButtonText}>Profil</Text>
+          </Pressable>
+          <Pressable onPress={() => void signOut()} style={styles.logoutButton}>
+            <Text style={styles.logoutText}>Keluar</Text>
+          </Pressable>
+        </View>
       </View>
 
       <Text style={styles.eyebrow}>Halo, {firstName} 👋</Text>
@@ -93,11 +98,13 @@ export default function HomeScreen() {
       )}
 
       {profile && (
-        <View style={styles.identityCard}>
+        <Pressable onPress={() => router.push("/profile")} style={styles.identityCard}>
           <Text style={styles.identityLabel}>NITIP PROFILE</Text>
           <Text style={styles.identityValue}>{profile.email ?? "Tanpa email"}</Text>
-          <Text style={styles.identityMeta}>Role: {profile.role}</Text>
-        </View>
+          <Text style={styles.identityMeta}>
+            Role: {profile.role} · {profile.phoneNumber ?? "Nomor HP belum diisi"}
+          </Text>
+        </Pressable>
       )}
 
       <View style={styles.searchBox}>
@@ -149,194 +156,39 @@ function createStyles(colors: {
   onPrimary: string;
 }) {
   return StyleSheet.create({
-    container: {
-      flexGrow: 1,
-      backgroundColor: colors.background,
-      paddingHorizontal: 20,
-      paddingTop: 56,
-      paddingBottom: 40,
-    },
-    brandRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: 34,
-    },
-    brand: {
-      fontSize: 29,
-      fontWeight: "900",
-      color: colors.primaryStrong,
-      letterSpacing: -1.2,
-    },
-    logoutButton: {
-      borderColor: colors.border,
-      borderWidth: 1,
-      borderRadius: 999,
-      paddingHorizontal: 13,
-      paddingVertical: 8,
-    },
-    logoutText: {
-      color: colors.text,
-      fontWeight: "800",
-      fontSize: 12,
-    },
-    eyebrow: {
-      color: colors.primary,
-      fontSize: 14,
-      fontWeight: "700",
-    },
-    title: {
-      marginTop: 4,
-      fontSize: 32,
-      lineHeight: 38,
-      fontWeight: "900",
-      color: colors.text,
-      letterSpacing: -1.1,
-    },
-    statusCard: {
-      marginTop: 18,
-      borderRadius: 18,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surfaceAccent,
-      padding: 15,
-      gap: 6,
-    },
-    statusTitle: {
-      color: colors.text,
-      fontWeight: "900",
-      fontSize: 13,
-    },
-    statusText: {
-      color: colors.textMuted,
-      lineHeight: 18,
-      fontSize: 12,
-    },
-    identityCard: {
-      marginTop: 18,
-      borderRadius: 18,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      padding: 15,
-    },
-    identityLabel: {
-      color: colors.primary,
-      fontWeight: "900",
-      fontSize: 10,
-      letterSpacing: 1.2,
-    },
-    identityValue: {
-      color: colors.text,
-      fontWeight: "800",
-      fontSize: 14,
-      marginTop: 5,
-    },
-    identityMeta: {
-      color: colors.textMuted,
-      fontSize: 12,
-      marginTop: 3,
-    },
-    searchBox: {
-      marginTop: 22,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 18,
-      paddingHorizontal: 16,
-      paddingVertical: 16,
-    },
-    searchText: {
-      color: colors.textMuted,
-    },
-    sectionTitle: {
-      marginTop: 30,
-      marginBottom: 12,
-      color: colors.text,
-      fontWeight: "900",
-      fontSize: 18,
-    },
-    categoryRow: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 8,
-    },
-    category: {
-      backgroundColor: colors.surface,
-      borderRadius: 14,
-      paddingHorizontal: 13,
-      paddingVertical: 11,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    categoryText: {
-      color: colors.text,
-      fontWeight: "700",
-    },
-    card: {
-      flexDirection: "row",
-      backgroundColor: colors.surface,
-      borderRadius: 20,
-      padding: 14,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    merchantAvatar: {
-      width: 72,
-      height: 72,
-      borderRadius: 16,
-      backgroundColor: colors.surfaceAccent,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    avatarText: {
-      color: colors.primaryStrong,
-      fontWeight: "900",
-      fontSize: 28,
-    },
-    cardContent: {
-      flex: 1,
-      paddingLeft: 14,
-      justifyContent: "center",
-    },
-    cardTitle: {
-      fontWeight: "800",
-      fontSize: 16,
-      color: colors.text,
-    },
-    cardMeta: {
-      color: colors.textMuted,
-      marginTop: 4,
-      fontSize: 12,
-    },
-    cardPrice: {
-      color: colors.primary,
-      marginTop: 7,
-      fontWeight: "900",
-    },
-    quoteCard: {
-      marginTop: 24,
-      borderRadius: 20,
-      backgroundColor: colors.primaryStrong,
-      padding: 18,
-    },
-    quoteLabel: {
-      color: colors.secondary,
-      fontSize: 10,
-      fontWeight: "900",
-      letterSpacing: 1,
-    },
-    quoteValue: {
-      color: "#FFFFFF",
-      fontSize: 28,
-      fontWeight: "900",
-      marginTop: 6,
-    },
-    quoteMeta: {
-      color: colors.secondary,
-      lineHeight: 19,
-      marginTop: 8,
-      fontSize: 12,
-    },
+    container: { flexGrow: 1, backgroundColor: colors.background, paddingHorizontal: 20, paddingTop: 56, paddingBottom: 40 },
+    brandRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 34 },
+    brand: { fontSize: 29, fontWeight: "900", color: colors.primaryStrong, letterSpacing: -1.2 },
+    headerActions: { flexDirection: "row", gap: 8 },
+    profileButton: { backgroundColor: colors.surfaceAccent, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 8 },
+    profileButtonText: { color: colors.primaryStrong, fontWeight: "900", fontSize: 12 },
+    logoutButton: { borderColor: colors.border, borderWidth: 1, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 8 },
+    logoutText: { color: colors.text, fontWeight: "800", fontSize: 12 },
+    eyebrow: { color: colors.primary, fontSize: 14, fontWeight: "700" },
+    title: { marginTop: 4, fontSize: 32, lineHeight: 38, fontWeight: "900", color: colors.text, letterSpacing: -1.1 },
+    statusCard: { marginTop: 18, borderRadius: 18, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceAccent, padding: 15, gap: 6 },
+    statusTitle: { color: colors.text, fontWeight: "900", fontSize: 13 },
+    statusText: { color: colors.textMuted, lineHeight: 18, fontSize: 12 },
+    identityCard: { marginTop: 18, borderRadius: 18, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 15 },
+    identityLabel: { color: colors.primary, fontWeight: "900", fontSize: 10, letterSpacing: 1.2 },
+    identityValue: { color: colors.text, fontWeight: "800", fontSize: 14, marginTop: 5 },
+    identityMeta: { color: colors.textMuted, fontSize: 12, marginTop: 3 },
+    searchBox: { marginTop: 22, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 18, paddingHorizontal: 16, paddingVertical: 16 },
+    searchText: { color: colors.textMuted },
+    sectionTitle: { marginTop: 30, marginBottom: 12, color: colors.text, fontWeight: "900", fontSize: 18 },
+    categoryRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    category: { backgroundColor: colors.surface, borderRadius: 14, paddingHorizontal: 13, paddingVertical: 11, borderWidth: 1, borderColor: colors.border },
+    categoryText: { color: colors.text, fontWeight: "700" },
+    card: { flexDirection: "row", backgroundColor: colors.surface, borderRadius: 20, padding: 14, borderWidth: 1, borderColor: colors.border },
+    merchantAvatar: { width: 72, height: 72, borderRadius: 16, backgroundColor: colors.surfaceAccent, alignItems: "center", justifyContent: "center" },
+    avatarText: { color: colors.primaryStrong, fontWeight: "900", fontSize: 28 },
+    cardContent: { flex: 1, paddingLeft: 14, justifyContent: "center" },
+    cardTitle: { fontWeight: "800", fontSize: 16, color: colors.text },
+    cardMeta: { color: colors.textMuted, marginTop: 4, fontSize: 12 },
+    cardPrice: { color: colors.primary, marginTop: 7, fontWeight: "900" },
+    quoteCard: { marginTop: 24, borderRadius: 20, backgroundColor: colors.primaryStrong, padding: 18 },
+    quoteLabel: { color: colors.secondary, fontSize: 10, fontWeight: "900", letterSpacing: 1 },
+    quoteValue: { color: "#FFFFFF", fontSize: 28, fontWeight: "900", marginTop: 6 },
+    quoteMeta: { color: colors.secondary, lineHeight: 19, marginTop: 8, fontSize: 12 },
   });
 }

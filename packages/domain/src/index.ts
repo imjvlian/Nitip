@@ -6,12 +6,49 @@ export interface NitipUserProfile {
   firebaseUid: string;
   email: string | null;
   displayName: string | null;
+  phoneNumber: string | null;
   photoUrl: string | null;
   role: UserRole;
   status: UserStatus;
   createdAt: string;
   updatedAt: string;
 }
+
+export interface UpdateNitipProfileInput {
+  displayName?: string | null;
+  phoneNumber?: string | null;
+}
+
+export type AddressLabel = "home" | "office" | "other";
+
+export interface NitipAddress {
+  id: string;
+  label: AddressLabel;
+  customLabel: string | null;
+  recipientName: string;
+  phoneNumber: string;
+  addressLine: string;
+  notes: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateNitipAddressInput {
+  label: AddressLabel;
+  customLabel?: string | null;
+  recipientName: string;
+  phoneNumber: string;
+  addressLine: string;
+  notes?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  isDefault?: boolean;
+}
+
+export type UpdateNitipAddressInput = Partial<CreateNitipAddressInput>;
 
 export type OrderStatus =
   | "pending_payment"

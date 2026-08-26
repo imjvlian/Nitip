@@ -1,4 +1,9 @@
-import type { NitipUserProfile, UserRole, UserStatus } from "@nitip/domain";
+import type {
+  NitipUserProfile,
+  UpdateNitipProfileInput,
+  UserRole,
+  UserStatus,
+} from "@nitip/domain";
 import type { DecodedIdToken } from "firebase-admin/auth";
 import type { Collection, WithId } from "mongodb";
 
@@ -8,6 +13,7 @@ interface UserDocument {
   firebaseUid: string;
   email: string | null;
   displayName: string | null;
+  phoneNumber: string | null;
   photoUrl: string | null;
   role: UserRole;
   status: UserStatus;
@@ -34,8 +40,9 @@ function serializeUser(document: WithId<UserDocument>): NitipUserProfile {
     id: document._id.toHexString(),
     firebaseUid: document.firebaseUid,
     email: document.email,
-    displayName: document.displayName,
-    photoUrl: document.photoUrl,
+    displayName: document.displayName ?? null,
+    phoneNumber: document.phoneNumber ?? null,
+    photoUrl: document.photoUrl ?? null,
     role: document.role,
     status: document.status,
     createdAt: document.createdAt.toISOString(),
@@ -54,12 +61,13 @@ export async function upsertUserFromFirebase(
     {
       $set: {
         email: identity.email ?? null,
-        displayName: identity.name ?? null,
         photoUrl: identity.picture ?? null,
         updatedAt: now,
       },
       $setOnInsert: {
         firebaseUid: identity.uid,
+        displayName: identity.name ?? null,
+        phoneNumber: identity.phone_number ?? null,
         role: "customer",
         status: "active",
         createdAt: now,
@@ -76,4 +84,29 @@ export async function upsertUserFromFirebase(
   }
 
   return serializeUser(document);
+}
+
+export async function updateUserProfile(
+  firebaseUid: string,
+  input: UpdateNitipProfileInput,
+): Promise<NitipUserProfile | null> {
+  const users = await getUsersCollection();
+  const now = new Date();
+  const set: Partial<UserDocument> = { updatedAt: now };
+
+  if (Object.prototype.hasOwnProperty.call(input, "displayName")) {
+    set.displayName = input.displayName ?? null;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(input, "phoneNumber")) {
+    set.phoneNumber = input.phoneNumber ?? null;
+  }
+
+  const document = await users.findOneAndUpdate(
+    { firebaseUid },
+    { $set: set },
+    { returnDocument: "after" },
+  );
+
+  return document ? serializeUser(document) : null;
 }
