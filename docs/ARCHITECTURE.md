@@ -2,7 +2,7 @@
 
 ## Tujuan
 
-Satu source of truth untuk tiga aplikasi mobile dan satu dashboard operasi tanpa menduplikasi aturan bisnis.
+Satu source of truth untuk tiga aplikasi mobile, satu dashboard operasi, dan satu API tanpa menduplikasi aturan bisnis.
 
 ## Apps
 
@@ -18,11 +18,14 @@ Availability, dispatch, pickup, navigation, proof of delivery, earnings, payout.
 ### Admin / Ops
 Order control tower, merchant/driver management, pricing rules, refund/dispute, settlement, promo, fraud signals, support.
 
+### API
+`apps/api` adalah server boundary Nitip. Client tidak boleh mengakses MongoDB atau secret provider secara langsung.
+
 ## Shared packages
 
 `@nitip/domain` menyimpan kontrak yang harus sama di seluruh app:
 
-- role
+- role dan user profile
 - order status
 - formula ongkir/upah driver
 - komisi merchant
@@ -37,9 +40,9 @@ Nilai uang disimpan sebagai integer Rupiah. Jangan gunakan floating point untuk 
 
 ### Authentication — Firebase Authentication
 
-Firebase menjadi identity provider utama. MVP memprioritaskan email/password dan Google sign-in. Phone OTP tidak dijadikan metode default karena memiliki biaya per verifikasi dan kompleksitas tambahan di mobile.
+Firebase menjadi identity provider utama. Fondasi v0.2 mengaktifkan email/password terlebih dahulu agar dapat dites lewat Expo Go. Google sign-in ditambahkan setelah OAuth client Firebase dikonfigurasi. Phone OTP tidak dijadikan metode default karena memiliki biaya per verifikasi dan kompleksitas tambahan di mobile.
 
-Client mendapatkan Firebase ID token, lalu backend memverifikasi token dengan Firebase Admin SDK. Role dan authorization aplikasi tetap diputuskan backend/database, bukan dipercaya dari data yang dapat diedit client.
+Client mendapatkan Firebase ID token, lalu `apps/api` memverifikasi token dengan Firebase Admin SDK. Role dan authorization aplikasi tetap diputuskan backend/database, bukan dipercaya dari data yang dapat diedit client.
 
 ### Primary database — MongoDB Atlas
 
@@ -58,20 +61,18 @@ MongoDB menjadi system of record untuk:
 
 Aplikasi mobile tidak boleh terhubung langsung menggunakan MongoDB database credentials. Semua akses privileged melewati Nitip API.
 
-Firebase UID disimpan sebagai external identity key pada user document sehingga Authentication dan domain data tetap terpisah.
+Firebase UID disimpan sebagai external identity key pada user document sehingga Authentication dan domain data tetap terpisah. `users.firebaseUid` memakai unique index.
 
 ### API layer
 
-Tambahkan service `apps/api` pada fase backend. API bertanggung jawab untuk:
+`apps/api` menggunakan Fastify. Fondasi v0.2 menyediakan:
 
-- verifikasi Firebase ID token
-- authorization berbasis role/resource ownership
-- akses MongoDB
-- signature/policy upload media bila dibutuhkan
-- payment gateway adapter
-- order state transition
-- dispatch
-- ledger dan settlement
+- `GET /health` untuk status service dan konfigurasi integrasi
+- `GET /me` untuk verifikasi Firebase ID token dan bootstrap profil user MongoDB
+- Firebase Admin server-side
+- MongoDB connection boundary
+
+Fase berikutnya menambahkan authorization berbasis role/resource ownership, merchant/product/order endpoints, signature/policy upload media, payment gateway adapter, order state transition, dispatch, ledger, dan settlement.
 
 Secret Firebase Admin, MongoDB, Cloudinary API secret, dan payment gateway tidak boleh berada di aplikasi mobile.
 
@@ -94,7 +95,7 @@ Untuk mobile, upload dapat dilakukan langsung ke Cloudinary. MVP dapat memakai u
 
 Simpan hanya metadata yang diperlukan di MongoDB, misalnya `publicId`, `secureUrl`, ukuran, tipe media, dan owner/resource id. Jangan simpan binary image di MongoDB.
 
-Cloudflare R2 + ImageKit tidak dipakai selama keduanya mensyaratkan metode pembayaran untuk setup yang tersedia kepada tim. Appwrite tetap menjadi alternatif cadangan, tetapi Cloudinary dipilih karena alur image marketplace lebih sederhana dan Free plan-nya secara eksplisit tidak memerlukan kartu.
+Cloudflare R2 + ImageKit tidak dipakai selama keduanya mensyaratkan metode pembayaran untuk setup yang tersedia kepada tim. Appwrite tetap menjadi alternatif cadangan.
 
 ## Payment boundary
 
