@@ -67,30 +67,34 @@ Tambahkan service `apps/api` pada fase backend. API bertanggung jawab untuk:
 - verifikasi Firebase ID token
 - authorization berbasis role/resource ownership
 - akses MongoDB
-- signed media upload
+- signature/policy upload media bila dibutuhkan
 - payment gateway adapter
 - order state transition
 - dispatch
 - ledger dan settlement
 
-Secret Firebase Admin, MongoDB, payment gateway, dan object-storage tidak boleh berada di aplikasi mobile.
+Secret Firebase Admin, MongoDB, Cloudinary API secret, dan payment gateway tidak boleh berada di aplikasi mobile.
 
 ### Realtime
 
 MongoDB tetap menjadi system of record. Data sangat sementara dan high-frequency seperti live driver coordinates tidak wajib ditulis setiap detik ke collection order utama. Implementasi realtime/ephemeral store ditentukan saat fase tracking agar biaya dan write amplification tetap terkendali.
 
-## Media storage
+## Media storage — Cloudinary
 
-Target pilihan untuk Nitip adalah:
+Cloudinary menjadi pilihan utama untuk MVP Nitip karena Free plan dapat digunakan tanpa kartu kredit/debit dan sudah mencakup upload API, managed storage, image transformation, optimization, dan CDN dalam satu layanan.
 
-1. **Cloudflare R2** sebagai object storage utama.
-2. **ImageKit** sebagai optimization/transformation/CDN layer untuk gambar merchant, menu, avatar, dan proof images.
+Media utama:
 
-Alasan: object storage dan image processing dipisah, file tidak terkunci ke database/backend vendor, URL delivery dapat dioptimalkan berdasarkan ukuran device, dan storage dapat diskalakan secara independen.
+- foto merchant/outlet
+- foto produk/menu
+- avatar user/driver/merchant
+- proof of delivery yang berupa gambar
 
-Appwrite Storage tetap menjadi fallback jika kita membutuhkan solusi all-in-one yang lebih sederhana, tetapi bukan pilihan utama saat ini.
+Untuk mobile, upload dapat dilakukan langsung ke Cloudinary. MVP dapat memakai unsigned upload preset yang dibatasi. Untuk operasi yang memerlukan kontrol lebih ketat, gunakan signed upload dengan signature dari Nitip API. API secret tidak boleh pernah disimpan di aplikasi Expo.
 
-Upload dilakukan menggunakan short-lived signed upload URL dari backend. Jangan menaruh R2 secret/access key di aplikasi.
+Simpan hanya metadata yang diperlukan di MongoDB, misalnya `publicId`, `secureUrl`, ukuran, tipe media, dan owner/resource id. Jangan simpan binary image di MongoDB.
+
+Cloudflare R2 + ImageKit tidak dipakai selama keduanya mensyaratkan metode pembayaran untuk setup yang tersedia kepada tim. Appwrite tetap menjadi alternatif cadangan, tetapi Cloudinary dipilih karena alur image marketplace lebih sederhana dan Free plan-nya secara eksplisit tidak memerlukan kartu.
 
 ## Payment boundary
 
