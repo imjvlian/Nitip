@@ -1,4 +1,4 @@
-import type { OutletOpeningHour } from "./index";
+import type { OutletOpeningHour } from "./index.js";
 
 export interface NitipCategory {
   id: string;
