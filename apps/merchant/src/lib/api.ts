@@ -15,6 +15,7 @@ import type {
   UpdateNitipCategoryInput,
   UpdateNitipProductInput,
 } from "@nitip/domain/catalog";
+import { File, UploadType } from "expo-file-system";
 import type { User } from "firebase/auth";
 
 const apiBaseUrl = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
@@ -196,29 +197,41 @@ export async function uploadProductImage(
   asset: { uri: string; fileName?: string | null; mimeType?: string | null },
 ) {
   const signed = await getProductUploadSignature(user);
-  const form = new FormData();
-  form.append("file", {
-    uri: asset.uri,
-    name: asset.fileName ?? `product-${Date.now()}.jpg`,
-    type: asset.mimeType ?? "image/jpeg",
-  } as unknown as Blob);
-  form.append("api_key", signed.apiKey);
-  form.append("timestamp", String(signed.timestamp));
-  form.append("folder", signed.folder);
-  form.append("signature", signed.signature);
-
-  const response = await fetch(signed.uploadUrl, {
-    method: "POST",
-    body: form,
+  const file = new File(asset.uri);
+  const response = await file.upload(signed.uploadUrl, {
+    httpMethod: "POST",
+    uploadType: UploadType.MULTIPART,
+    fieldName: "file",
+    mimeType: asset.mimeType ?? "image/jpeg",
+    parameters: {
+      api_key: signed.apiKey,
+      timestamp: String(signed.timestamp),
+      folder: signed.folder,
+      signature: signed.signature,
+    },
   });
-  const body = (await response.json()) as {
+
+  let body: {
     secure_url?: string;
     public_id?: string;
     error?: { message?: string };
-  };
-  if (!response.ok || !body.secure_url || !body.public_id) {
+  } = {};
+
+  try {
+    body = JSON.parse(response.body) as typeof body;
+  } catch {
+    throw new Error("Respons upload Cloudinary tidak valid");
+  }
+
+  if (
+    response.status < 200 ||
+    response.status >= 300 ||
+    !body.secure_url ||
+    !body.public_id
+  ) {
     throw new Error(body.error?.message ?? "Gagal mengunggah foto produk");
   }
+
   return {
     imageUrl: body.secure_url,
     imagePublicId: body.public_id,
