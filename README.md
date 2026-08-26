@@ -9,9 +9,12 @@ Nitip adalah ekosistem marketplace lokal yang menghubungkan pembeli, restoran/to
 - `apps/driver` — aplikasi driver (Expo / React Native)
 - `apps/admin` — dashboard operasi Nitip (Next.js)
 - `packages/domain` — tipe data dan aturan bisnis bersama
+- `packages/theme` — brand palette + semantic light/dark theme
 - `docs` — keputusan arsitektur dan dokumentasi produk
 
-## Stack awal
+## Stack
+
+### Frontend
 
 - Expo SDK 57 + Expo Router
 - React Native 0.86 + React 19.2
@@ -19,7 +22,16 @@ Nitip adalah ekosistem marketplace lokal yang menghubungkan pembeli, restoran/to
 - npm workspaces (monorepo)
 - TypeScript strict
 
-Backend, auth, database, realtime, maps, dan payment provider akan ditambahkan bertahap setelah fondasi domain/order stabil.
+### Backend direction
+
+- Firebase Authentication
+- MongoDB Atlas sebagai primary database
+- Nitip API sebagai server boundary; mobile app tidak mengakses MongoDB menggunakan database credential
+- Cloudflare R2 untuk object storage
+- ImageKit untuk image optimization/transformation/CDN
+- DOKU sebagai target awal payment adapter
+
+Detail keputusan backend dan media ada di `docs/ARCHITECTURE.md`. Sistem warna ada di `docs/THEME.md` dan `packages/theme`.
 
 ## Menjalankan project
 

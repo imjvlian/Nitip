@@ -1,4 +1,4 @@
-# Nitip Architecture — v0.1
+# Nitip Architecture — v0.2
 
 ## Tujuan
 
@@ -18,7 +18,7 @@ Availability, dispatch, pickup, navigation, proof of delivery, earnings, payout.
 ### Admin / Ops
 Order control tower, merchant/driver management, pricing rules, refund/dispute, settlement, promo, fraud signals, support.
 
-## Shared domain
+## Shared packages
 
 `@nitip/domain` menyimpan kontrak yang harus sama di seluruh app:
 
@@ -29,17 +29,72 @@ Order control tower, merchant/driver management, pricing rules, refund/dispute, 
 - service fee
 - helper nilai Rupiah
 
+`@nitip/theme` menyimpan brand palette dan semantic theme untuk light/dark mode agar User, Merchant, Driver, dan Admin memakai sistem warna yang sama.
+
 Nilai uang disimpan sebagai integer Rupiah. Jangan gunakan floating point untuk nilai settlement/payment.
 
-## Backend boundary
+## Backend stack
 
-Backend akan dipisahkan dari UI. Kandidat MVP: Supabase untuk Postgres/Auth/Realtime/Storage, dengan server-side integration untuk payment gateway dan operasi privileged.
+### Authentication — Firebase Authentication
 
-Tidak ada secret payment gateway atau service-role key yang boleh berada di aplikasi mobile.
+Firebase menjadi identity provider utama. MVP memprioritaskan email/password dan Google sign-in. Phone OTP tidak dijadikan metode default karena memiliki biaya per verifikasi dan kompleksitas tambahan di mobile.
+
+Client mendapatkan Firebase ID token, lalu backend memverifikasi token dengan Firebase Admin SDK. Role dan authorization aplikasi tetap diputuskan backend/database, bukan dipercaya dari data yang dapat diedit client.
+
+### Primary database — MongoDB Atlas
+
+MongoDB menjadi system of record untuk:
+
+- user profile
+- merchant dan outlet
+- product/menu
+- cart/order
+- driver profile
+- dispatch
+- ledger
+- settlement
+- promo
+- audit metadata
+
+Aplikasi mobile tidak boleh terhubung langsung menggunakan MongoDB database credentials. Semua akses privileged melewati Nitip API.
+
+Firebase UID disimpan sebagai external identity key pada user document sehingga Authentication dan domain data tetap terpisah.
+
+### API layer
+
+Tambahkan service `apps/api` pada fase backend. API bertanggung jawab untuk:
+
+- verifikasi Firebase ID token
+- authorization berbasis role/resource ownership
+- akses MongoDB
+- signed media upload
+- payment gateway adapter
+- order state transition
+- dispatch
+- ledger dan settlement
+
+Secret Firebase Admin, MongoDB, payment gateway, dan object-storage tidak boleh berada di aplikasi mobile.
+
+### Realtime
+
+MongoDB tetap menjadi system of record. Data sangat sementara dan high-frequency seperti live driver coordinates tidak wajib ditulis setiap detik ke collection order utama. Implementasi realtime/ephemeral store ditentukan saat fase tracking agar biaya dan write amplification tetap terkendali.
+
+## Media storage
+
+Target pilihan untuk Nitip adalah:
+
+1. **Cloudflare R2** sebagai object storage utama.
+2. **ImageKit** sebagai optimization/transformation/CDN layer untuk gambar merchant, menu, avatar, dan proof images.
+
+Alasan: object storage dan image processing dipisah, file tidak terkunci ke database/backend vendor, URL delivery dapat dioptimalkan berdasarkan ukuran device, dan storage dapat diskalakan secara independen.
+
+Appwrite Storage tetap menjadi fallback jika kita membutuhkan solusi all-in-one yang lebih sederhana, tetapi bukan pilihan utama saat ini.
+
+Upload dilakukan menggunakan short-lived signed upload URL dari backend. Jangan menaruh R2 secret/access key di aplikasi.
 
 ## Payment boundary
 
-Aplikasi hanya mengenal konsep payment intent/status. Adapter provider (target awal: DOKU) akan berada pada backend/edge/server layer sehingga provider bisa diganti tanpa mengubah tiga aplikasi mobile.
+Aplikasi hanya mengenal konsep payment intent/status. Adapter provider (target awal: DOKU) berada pada backend/server layer sehingga provider bisa diganti tanpa mengubah tiga aplikasi mobile.
 
 ## Order state (draft)
 
