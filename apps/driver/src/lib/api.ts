@@ -98,7 +98,7 @@ export function updateDriverLocation(
   });
 }
 
-async function captureForegroundLocation(
+export async function refreshDriverLocation(
   user: User | null,
 ): Promise<NitipDriverProfile | null> {
   const permission = await Location.requestForegroundPermissionsAsync();
@@ -120,7 +120,7 @@ export async function setDriverOnline(user: User | null, isOnline: boolean) {
 
   if (isOnline) {
     try {
-      capturedLocation = await captureForegroundLocation(user);
+      capturedLocation = await refreshDriverLocation(user);
     } catch {
       capturedLocation = null;
     }
@@ -138,7 +138,13 @@ export async function setDriverOnline(user: User | null, isOnline: boolean) {
   return capturedLocation ? { ...capturedLocation, isOnline: profile.isOnline } : profile;
 }
 
-export function listDriverOffers(user: User | null) {
+export async function listDriverOffers(user: User | null) {
+  try {
+    await refreshDriverLocation(user);
+  } catch {
+    // Dispatch still works without a fresh coordinate; unranked offers stay available.
+  }
+
   return apiRequest<NitipDriverOffer[]>(user, "/driver/orders/available");
 }
 

@@ -201,7 +201,7 @@ export default function DriverHomeScreen() {
 
       <Text style={styles.eyebrow}>DRIVER CENTER</Text>
       <Text style={styles.title}>{profile ? `Halo, ${profile.fullName.split(" ")[0]}.` : "Lengkapi profilmu."}</Text>
-      <Text style={styles.subtitle}>Online untuk melihat order yang sudah siap diambil dari merchant.</Text>
+      <Text style={styles.subtitle}>Online untuk melihat order siap pickup yang diurutkan dari lokasi terdekat.</Text>
 
       {!apiConfigured ? (
         <View style={styles.notice}>
@@ -259,7 +259,7 @@ export default function DriverHomeScreen() {
                   {currentOrder
                     ? "Kamu punya order aktif. Offline hanya menghentikan penawaran baru; assignment tetap tersimpan."
                     : profile.isOnline
-                      ? "Kamu sedang menerima penawaran order."
+                      ? "Kamu sedang menerima penawaran order. Lokasi diperbarui saat daftar dispatch dimuat."
                       : "Aktifkan online untuk melihat order tersedia."}
                 </Text>
                 <Pressable
@@ -290,7 +290,7 @@ export default function DriverHomeScreen() {
               {dispatchLoading && !currentOrder ? (
                 <View style={styles.centerCard}>
                   <ActivityIndicator color="#08349C" />
-                  <Text style={styles.muted}>Mencari order siap pickup...</Text>
+                  <Text style={styles.muted}>Mencari order siap pickup terdekat...</Text>
                 </View>
               ) : currentOrder ? (
                 <Pressable
@@ -324,32 +324,44 @@ export default function DriverHomeScreen() {
                   <Text style={styles.muted}>Order akan muncul setelah merchant menandainya siap diambil driver.</Text>
                 </View>
               ) : (
-                offers.map((offer) => (
-                  <View key={offer.id} style={styles.offerCard}>
-                    <View style={styles.orderTop}>
-                      <View>
-                        <Text style={styles.offerLabel}>SIAP DIAMBIL</Text>
-                        <Text style={styles.orderCode}>{offer.orderCode}</Text>
+                offers.map((offer) => {
+                  const deliveryDistanceKm = offer.deliveryDistanceKm ?? offer.distanceKm;
+                  return (
+                    <View key={offer.id} style={styles.offerCard}>
+                      <View style={styles.orderTop}>
+                        <View>
+                          <Text style={styles.offerLabel}>SIAP DIAMBIL</Text>
+                          <Text style={styles.orderCode}>{offer.orderCode}</Text>
+                        </View>
+                        <Text style={styles.orderFare}>{formatRupiah(offer.deliveryFare)}</Text>
                       </View>
-                      <Text style={styles.orderFare}>{formatRupiah(offer.deliveryFare)}</Text>
+                      <Text style={styles.routeLabel}>PICKUP</Text>
+                      <Text style={styles.routeTitle}>{offer.pickup.businessName} · {offer.pickup.outletName}</Text>
+                      <Text style={styles.routeMeta}>{offer.pickup.addressLine}</Text>
+                      <View style={styles.offerMetaRow}>
+                        <Text style={styles.offerMeta}>{offer.itemCount} item</Text>
+                        <Text style={styles.offerMeta}>
+                          {offer.pickupDistanceKm == null
+                            ? "Jarak ke pickup belum tersedia"
+                            : `${offer.pickupDistanceKm.toFixed(2)} km ke pickup`}
+                        </Text>
+                        <Text style={styles.offerMeta}>
+                          {deliveryDistanceKm == null
+                            ? "Jarak antar belum tersedia"
+                            : `${deliveryDistanceKm.toFixed(2)} km merchant → customer`}
+                        </Text>
+                      </View>
+                      <Text style={styles.privacyNote}>Alamat lengkap dan kontak customer dibuka setelah assignment berhasil.</Text>
+                      <Pressable
+                        disabled={takingId !== null}
+                        onPress={() => void takeOffer(offer)}
+                        style={[styles.takeButton, takingId !== null && styles.disabled]}
+                      >
+                        {takingId === offer.id ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.takeButtonText}>Ambil order</Text>}
+                      </Pressable>
                     </View>
-                    <Text style={styles.routeLabel}>PICKUP</Text>
-                    <Text style={styles.routeTitle}>{offer.pickup.businessName} · {offer.pickup.outletName}</Text>
-                    <Text style={styles.routeMeta}>{offer.pickup.addressLine}</Text>
-                    <View style={styles.offerMetaRow}>
-                      <Text style={styles.offerMeta}>{offer.itemCount} item</Text>
-                      <Text style={styles.offerMeta}>{offer.distanceKm == null ? "Jarak belum tersedia" : `${offer.distanceKm.toFixed(2)} km pengantaran`}</Text>
-                    </View>
-                    <Text style={styles.privacyNote}>Alamat lengkap dan kontak customer dibuka setelah assignment berhasil.</Text>
-                    <Pressable
-                      disabled={takingId !== null}
-                      onPress={() => void takeOffer(offer)}
-                      style={[styles.takeButton, takingId !== null && styles.disabled]}
-                    >
-                      {takingId === offer.id ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.takeButtonText}>Ambil order</Text>}
-                    </Pressable>
-                  </View>
-                ))
+                  );
+                })
               )}
             </>
           ) : null}

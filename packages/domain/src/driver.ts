@@ -71,6 +71,8 @@ export interface NitipDriverOffer {
   status: "ready_for_pickup";
   pickup: NitipDriverPickup;
   distanceKm: number | null;
+  pickupDistanceKm?: number | null;
+  deliveryDistanceKm?: number | null;
   deliveryFare: number;
   itemCount: number;
   createdAt: string;
