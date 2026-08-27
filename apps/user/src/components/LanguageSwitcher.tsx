@@ -22,15 +22,19 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
     <View>
       {!compact ? (
         <View className="mb-2 flex-row items-center gap-2">
-          <NitipIcon color={theme.colors.textMuted} name="language" size={16} />
-          <Text className="text-xs font-extrabold" style={{ color: theme.colors.textMuted }}>
+          <NitipIcon color={theme.colors.textMuted} name="language" size={15} />
+          <Text className="text-[10px] font-extrabold" style={{ color: theme.colors.textMuted }}>
             {t("common.language")}
           </Text>
         </View>
       ) : null}
       <View
         className="flex-row rounded-2xl p-1"
-        style={{ backgroundColor: theme.colors.surfaceAccent }}
+        style={{
+          backgroundColor: theme.colors.surfaceRaised,
+          borderColor: theme.colors.border,
+          borderWidth: 1,
+        }}
       >
         {NITIP_LANGUAGES.map((option) => {
           const active = option === language;
@@ -44,7 +48,7 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
               style={{ backgroundColor: active ? theme.colors.primary : "transparent" }}
             >
               <Text
-                className="text-center text-xs font-extrabold"
+                className="text-center text-[10px] font-extrabold"
                 style={{ color: active ? "#FFFFFF" : theme.colors.text }}
               >
                 {languageLabel(option, t)}

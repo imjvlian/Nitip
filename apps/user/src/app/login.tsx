@@ -94,39 +94,33 @@ export default function LoginScreen() {
       <ScrollView
         contentContainerStyle={{
           flexGrow: 1,
-          paddingHorizontal: 22,
-          paddingTop: insets.top + 18,
+          paddingHorizontal: 20,
+          paddingTop: insets.top + 16,
           paddingBottom: Math.max(insets.bottom + 24, 36),
         }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <View className="flex-row items-center justify-between gap-4">
-          <Text className="text-3xl font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>
+          <Text className="text-[26px] font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>
             nitip.
           </Text>
-          <View className="w-44">
+          <View className="w-40">
             <LanguageSwitcher compact />
           </View>
         </View>
 
         <View className="mt-12">
-          <Text className="text-[10px] font-black uppercase tracking-[2px]" style={{ color: theme.colors.primary }}>
-            {t("auth.eyebrow")}
-          </Text>
-          <Text className="mt-3 max-w-[360px] text-4xl font-black leading-[42px] tracking-tighter" style={{ color: theme.colors.text }}>
+          <Text className="text-[28px] font-black leading-[34px] tracking-tighter" style={{ color: theme.colors.text }}>
             {mode === "login" ? t("auth.titleLogin") : t("auth.titleRegister")}
           </Text>
-          <Text className="mt-3 max-w-[440px] text-sm leading-6" style={{ color: theme.colors.textMuted }}>
+          <Text className="mt-2 max-w-[420px] text-xs leading-5" style={{ color: theme.colors.textMuted }}>
             {mode === "login" ? t("auth.subtitleLogin") : t("auth.subtitleRegister")}
           </Text>
         </View>
 
         {!configured ? (
-          <View
-            className="mt-6 rounded-3xl border p-4"
-            style={{ backgroundColor: theme.colors.warningSurface, borderColor: theme.colors.border }}
-          >
+          <View className="mt-5 rounded-[22px] p-4" style={{ backgroundColor: theme.colors.warningSurface }}>
             <Text className="text-sm font-black" style={{ color: theme.colors.warning }}>
               {t("auth.firebaseNotConfigured")}
             </Text>
@@ -136,91 +130,75 @@ export default function LoginScreen() {
           </View>
         ) : null}
 
-        <View
-          className="mt-8 rounded-[28px] border p-5"
-          style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
-        >
+        <View className="mt-7 rounded-[26px] p-4" style={{ backgroundColor: theme.colors.surface }}>
           {mode === "register" ? (
             <View>
-              <Text className="mb-2 text-xs font-extrabold" style={{ color: theme.colors.text }}>
+              <Text className="mb-2 text-[10px] font-extrabold" style={{ color: theme.colors.textMuted }}>
                 {t("auth.nameLabel")}
               </Text>
               <TextInput
                 autoCapitalize="words"
-                className="rounded-2xl border px-4 py-4 text-sm"
+                className="rounded-2xl px-4 py-4 text-sm"
                 editable={!submitting}
                 onChangeText={setDisplayName}
                 placeholder={t("auth.namePlaceholder")}
                 placeholderTextColor={theme.colors.textMuted}
-                style={{
-                  backgroundColor: theme.colors.background,
-                  borderColor: theme.colors.border,
-                  color: theme.colors.text,
-                }}
+                style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text }}
                 value={displayName}
               />
             </View>
           ) : null}
 
-          <View className={mode === "register" ? "mt-5" : ""}>
-            <Text className="mb-2 text-xs font-extrabold" style={{ color: theme.colors.text }}>
+          <View className={mode === "register" ? "mt-4" : ""}>
+            <Text className="mb-2 text-[10px] font-extrabold" style={{ color: theme.colors.textMuted }}>
               {t("auth.emailLabel")}
             </Text>
             <TextInput
               autoCapitalize="none"
               autoCorrect={false}
-              className="rounded-2xl border px-4 py-4 text-sm"
+              className="rounded-2xl px-4 py-4 text-sm"
               editable={!submitting}
               keyboardType="email-address"
               onChangeText={setEmail}
               placeholder="nama@email.com"
               placeholderTextColor={theme.colors.textMuted}
-              style={{
-                backgroundColor: theme.colors.background,
-                borderColor: theme.colors.border,
-                color: theme.colors.text,
-              }}
+              style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text }}
               value={email}
             />
           </View>
 
-          <View className="mt-5">
-            <Text className="mb-2 text-xs font-extrabold" style={{ color: theme.colors.text }}>
+          <View className="mt-4">
+            <Text className="mb-2 text-[10px] font-extrabold" style={{ color: theme.colors.textMuted }}>
               {t("auth.passwordLabel")}
             </Text>
             <TextInput
               autoCapitalize="none"
-              className="rounded-2xl border px-4 py-4 text-sm"
+              className="rounded-2xl px-4 py-4 text-sm"
               editable={!submitting}
               onChangeText={setPassword}
               placeholder={t("auth.passwordPlaceholder")}
               placeholderTextColor={theme.colors.textMuted}
               secureTextEntry
-              style={{
-                backgroundColor: theme.colors.background,
-                borderColor: theme.colors.border,
-                color: theme.colors.text,
-              }}
+              style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text }}
               value={password}
             />
           </View>
 
           {error ? (
             <View className="mt-4 rounded-2xl p-3" style={{ backgroundColor: theme.colors.dangerSurface }}>
-              <Text className="text-xs leading-5" style={{ color: theme.colors.danger }}>{error}</Text>
+              <Text className="text-xs leading-5" style={{ color: theme.colors.danger }}>
+                {error}
+              </Text>
             </View>
           ) : null}
 
           <Pressable
-            className="mt-6 min-h-[54px] items-center justify-center rounded-2xl px-4"
+            className="mt-5 min-h-[52px] items-center justify-center rounded-2xl px-4"
             disabled={!configured || submitting}
             onPress={() => void submit()}
-            style={{
-              backgroundColor: theme.colors.primary,
-              opacity: !configured || submitting ? 0.45 : 1,
-            }}
+            style={{ backgroundColor: theme.colors.primary, opacity: !configured || submitting ? 0.45 : 1 }}
           >
-            <Text className="text-sm font-black" style={{ color: "#FFFFFF" }}>
+            <Text className="text-xs font-black text-white">
               {submitting
                 ? t("common.processing")
                 : mode === "login"
@@ -230,8 +208,8 @@ export default function LoginScreen() {
           </Pressable>
         </View>
 
-        <Pressable className="mt-6 items-center py-3" onPress={switchMode}>
-          <Text className="text-sm" style={{ color: theme.colors.textMuted }}>
+        <Pressable className="mt-5 items-center py-3" onPress={switchMode}>
+          <Text className="text-xs" style={{ color: theme.colors.textMuted }}>
             {mode === "login" ? t("auth.noAccount") : t("auth.hasAccount")} {" "}
             <Text className="font-black" style={{ color: theme.colors.primary }}>
               {mode === "login" ? t("auth.register") : t("auth.login")}

@@ -26,41 +26,41 @@ export function BottomNavigation({ active }: { active: RootTab }) {
 
   return (
     <View
-      className="border-t px-3 pt-2"
+      className="px-5 pt-2"
       style={{
-        backgroundColor: theme.colors.surface,
-        borderTopColor: theme.colors.border,
+        backgroundColor: theme.colors.surfaceRaised,
         paddingBottom: Math.max(insets.bottom, 10),
+        shadowColor: theme.colors.shadow,
+        shadowOffset: { width: 0, height: -5 },
+        shadowOpacity: theme.mode === "dark" ? 0.24 : 0.07,
+        shadowRadius: 16,
+        elevation: 12,
       }}
     >
-      <View className="flex-row">
+      <View className="flex-row items-end">
         {tabs.map((tab) => {
           const selected = tab.key === active;
-          const color = selected ? theme.colors.primary : theme.colors.textMuted;
+          const iconColor = selected ? theme.colors.onPrimary : theme.colors.textMuted;
+          const labelColor = selected ? theme.colors.primary : theme.colors.textMuted;
 
           return (
             <Pressable
               accessibilityRole="tab"
               accessibilityState={{ selected }}
               accessibilityLabel={t(tab.label)}
-              className="flex-1 items-center justify-center py-1"
+              className="flex-1 items-center justify-end py-1"
               key={tab.key}
               onPress={() => {
                 if (!selected) router.replace(tab.href);
               }}
             >
               <View
-                className="h-9 min-w-14 items-center justify-center rounded-full px-4"
-                style={{
-                  backgroundColor: selected ? theme.colors.surfaceAccent : "transparent",
-                }}
+                className="h-10 w-10 items-center justify-center rounded-full"
+                style={{ backgroundColor: selected ? theme.colors.primary : "transparent" }}
               >
-                <NitipIcon color={color} name={tab.icon} size={21} />
+                <NitipIcon color={iconColor} name={tab.icon} size={20} />
               </View>
-              <Text
-                className="mt-1 text-[10px] font-extrabold"
-                style={{ color }}
-              >
+              <Text className="mt-1.5 text-[9px] font-extrabold" style={{ color: labelColor }}>
                 {t(tab.label)}
               </Text>
             </Pressable>

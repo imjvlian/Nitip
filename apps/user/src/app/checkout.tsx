@@ -38,9 +38,7 @@ export default function CheckoutScreen() {
         setAddressId((current) => current || preferred?.id || "");
       })
       .catch((nextError: unknown) => {
-        if (active) {
-          setError(nextError instanceof Error ? nextError.message : t("checkout.addressError"));
-        }
+        if (active) setError(nextError instanceof Error ? nextError.message : t("checkout.addressError"));
       })
       .finally(() => {
         if (active) setLoadingAddresses(false);
@@ -55,10 +53,7 @@ export default function CheckoutScreen() {
     return {
       outletId: cart.outlet.id,
       addressId,
-      items: cart.items.map((item) => ({
-        productId: item.product.id,
-        quantity: item.quantity,
-      })),
+      items: cart.items.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
     };
   }, [addressId, cart.items, cart.outlet]);
 
@@ -115,22 +110,15 @@ export default function CheckoutScreen() {
 
   if (cart.items.length === 0 || !cart.outlet) {
     return (
-      <View
-        className="flex-1 items-center justify-center px-6"
-        style={{ backgroundColor: theme.colors.background, paddingTop: insets.top, paddingBottom: insets.bottom }}
-      >
-        <View className="mb-4 h-12 w-12 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surfaceAccent }}>
-          <NitipIcon color={theme.colors.primary} name="cart" size={24} />
+      <View className="flex-1 items-center justify-center px-6" style={{ backgroundColor: theme.colors.background, paddingTop: insets.top, paddingBottom: insets.bottom }}>
+        <View className="mb-4 h-11 w-11 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surface }}>
+          <NitipIcon color={theme.colors.primary} name="cart" size={21} />
         </View>
-        <Text className="text-center text-3xl font-black tracking-tighter" style={{ color: theme.colors.text }}>
+        <Text className="text-center text-[26px] font-black tracking-tighter" style={{ color: theme.colors.text }}>
           {t("checkout.emptyCart")}
         </Text>
-        <Pressable
-          className="mt-5 min-h-12 w-full flex-row items-center justify-center gap-2 rounded-2xl"
-          onPress={() => router.replace("/home")}
-          style={{ backgroundColor: theme.colors.primary }}
-        >
-          <NitipIcon color="#FFFFFF" name="home" size={18} />
+        <Pressable className="mt-5 min-h-12 w-full flex-row items-center justify-center gap-2 rounded-2xl" onPress={() => router.replace("/home")} style={{ backgroundColor: theme.colors.primary }}>
+          <NitipIcon color="#FFFFFF" name="home" size={17} />
           <Text className="text-xs font-black text-white">{t("checkout.backHome")}</Text>
         </Pressable>
       </View>
@@ -140,71 +128,44 @@ export default function CheckoutScreen() {
   return (
     <View className="flex-1" style={{ backgroundColor: theme.colors.background }}>
       <ScrollView
-        contentContainerStyle={{
-          paddingHorizontal: 20,
-          paddingTop: insets.top + 14,
-          paddingBottom: 165,
-        }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: insets.top + 14, paddingBottom: 165 }}
         showsVerticalScrollIndicator={false}
       >
         <View className="flex-row items-center justify-between">
-          <Pressable className="min-h-10 flex-row items-center justify-center pr-4" onPress={() => router.back()}>
-            <NitipIcon color={theme.colors.primary} name="back" size={18} />
-            <Text className="ml-1 text-xs font-black" style={{ color: theme.colors.primary }}>
-              {t("common.cart")}
-            </Text>
+          <Pressable className="h-10 w-10 items-center justify-center rounded-full" onPress={() => router.back()} style={{ backgroundColor: theme.colors.surface }}>
+            <NitipIcon color={theme.colors.text} name="back" size={18} />
           </Pressable>
-          <Text className="text-2xl font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>
-            nitip.
-          </Text>
-        </View>
-
-        <View className="mt-8">
-          <Text className="text-[10px] font-black uppercase tracking-[2px]" style={{ color: theme.colors.primary }}>
+          <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
             {t("checkout.eyebrow")}
           </Text>
-          <Text className="mt-2 text-3xl font-black tracking-tighter" style={{ color: theme.colors.text }}>
+          <View className="h-10 w-10" />
+        </View>
+
+        <View className="mt-7">
+          <Text className="text-[26px] font-black tracking-tighter" style={{ color: theme.colors.text }}>
             {t("checkout.title")}
           </Text>
-          <Text className="mt-1 text-sm" style={{ color: theme.colors.textMuted }}>
+          <Text className="mt-1 text-xs" style={{ color: theme.colors.textMuted }}>
             {cart.outlet.businessName} · {cart.outlet.name}
           </Text>
         </View>
 
-        <Text className="mt-8 text-lg font-black" style={{ color: theme.colors.text }}>
+        <Text className="mt-7 text-sm font-black" style={{ color: theme.colors.text }}>
           {t("checkout.deliveryAddress")}
         </Text>
 
         {loadingAddresses ? (
-          <View
-            className="mt-3 items-center rounded-3xl border p-5"
-            style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
-          >
+          <View className="mt-3 items-center rounded-[24px] p-5" style={{ backgroundColor: theme.colors.surface }}>
             <ActivityIndicator color={theme.colors.primary} />
-            <Text className="mt-2 text-xs" style={{ color: theme.colors.textMuted }}>
-              {t("checkout.loadingAddresses")}
-            </Text>
+            <Text className="mt-2 text-xs" style={{ color: theme.colors.textMuted }}>{t("checkout.loadingAddresses")}</Text>
           </View>
         ) : addresses.length === 0 ? (
-          <View
-            className="mt-3 rounded-3xl border p-5"
-            style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
-          >
-            <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
-              {t("checkout.noAddressTitle")}
-            </Text>
-            <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
-              {t("checkout.noAddressDescription")}
-            </Text>
-            <Pressable
-              className="mt-4 min-h-11 flex-row items-center justify-center gap-2 rounded-2xl"
-              onPress={() => router.push("/address/new")}
-              style={{ backgroundColor: theme.colors.surfaceAccent }}
-            >
-              <NitipIcon color={theme.colors.primary} name="plus" size={17} />
-              <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
-                {t("checkout.addAddress")}
-              </Text>
+          <View className="mt-3 rounded-[24px] p-5" style={{ backgroundColor: theme.colors.surface }}>
+            <Text className="text-sm font-black" style={{ color: theme.colors.text }}>{t("checkout.noAddressTitle")}</Text>
+            <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>{t("checkout.noAddressDescription")}</Text>
+            <Pressable className="mt-4 min-h-11 flex-row items-center justify-center gap-2 rounded-2xl" onPress={() => router.push("/address/new")} style={{ backgroundColor: theme.colors.surfaceRaised }}>
+              <NitipIcon color={theme.colors.primary} name="plus" size={16} />
+              <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>{t("checkout.addAddress")}</Text>
             </Pressable>
           </View>
         ) : (
@@ -213,90 +174,55 @@ export default function CheckoutScreen() {
               const selected = addressId === address.id;
               return (
                 <Pressable
-                  className="rounded-3xl border p-4"
+                  className="rounded-[24px] p-4"
                   key={address.id}
                   onPress={() => setAddressId(address.id)}
                   style={{
                     backgroundColor: selected ? theme.colors.surfaceAccent : theme.colors.surface,
-                    borderColor: selected ? theme.colors.primary : theme.colors.border,
-                    borderWidth: selected ? 2 : 1,
+                    borderColor: selected ? theme.colors.primary : "transparent",
+                    borderWidth: selected ? 1.5 : 0,
                   }}
                 >
                   <View className="flex-row items-center justify-between gap-3">
-                    <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
-                      {addressLabel(address)}
-                    </Text>
+                    <Text className="text-xs font-black" style={{ color: theme.colors.text }}>{addressLabel(address)}</Text>
                     {selected ? (
-                      <View className="flex-row items-center gap-1.5 rounded-full px-2.5 py-1.5" style={{ backgroundColor: theme.colors.surface }}>
-                        <NitipIcon color={theme.colors.primary} name="check" size={14} />
-                        <Text className="text-[9px] font-black" style={{ color: theme.colors.primary }}>
-                          {t("checkout.selected")}
-                        </Text>
+                      <View className="h-7 w-7 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.primary }}>
+                        <NitipIcon color="#FFFFFF" name="check" size={13} />
                       </View>
                     ) : null}
                   </View>
-                  <Text className="mt-2 text-xs font-extrabold" style={{ color: theme.colors.primary }}>
-                    {address.recipientName} · {address.phoneNumber}
-                  </Text>
-                  <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
-                    {address.addressLine}
-                  </Text>
+                  <Text className="mt-2 text-[11px] font-extrabold" style={{ color: theme.colors.primary }}>{address.recipientName} · {address.phoneNumber}</Text>
+                  <Text className="mt-1 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>{address.addressLine}</Text>
                 </Pressable>
               );
             })}
           </View>
         )}
 
-        <Text className="mt-8 text-lg font-black" style={{ color: theme.colors.text }}>
-          {t("checkout.summary")}
-        </Text>
+        <Text className="mt-7 text-sm font-black" style={{ color: theme.colors.text }}>{t("checkout.summary")}</Text>
 
         {loadingQuote ? (
-          <View
-            className="mt-3 items-center rounded-3xl border p-5"
-            style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
-          >
+          <View className="mt-3 items-center rounded-[24px] p-5" style={{ backgroundColor: theme.colors.surface }}>
             <ActivityIndicator color={theme.colors.primary} />
-            <Text className="mt-2 text-xs" style={{ color: theme.colors.textMuted }}>
-              {t("checkout.validating")}
-            </Text>
+            <Text className="mt-2 text-xs" style={{ color: theme.colors.textMuted }}>{t("checkout.validating")}</Text>
           </View>
         ) : quote ? (
-          <View
-            className="mt-3 rounded-3xl border p-5"
-            style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
-          >
+          <View className="mt-3 rounded-[24px] p-5" style={{ backgroundColor: theme.colors.surface }}>
             {quote.items.map((item) => (
               <View className="flex-row justify-between gap-4 py-1.5" key={item.productId}>
-                <Text className="flex-1 text-xs" style={{ color: theme.colors.textMuted }}>
-                  {item.quantity}× {item.name}
-                </Text>
-                <Text className="text-xs font-extrabold" style={{ color: theme.colors.text }}>
-                  {formatRupiah(item.lineTotal)}
-                </Text>
+                <Text className="flex-1 text-[10px]" style={{ color: theme.colors.textMuted }}>{item.quantity}× {item.name}</Text>
+                <Text className="text-[10px] font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(item.lineTotal)}</Text>
               </View>
             ))}
-
             <View className="my-3 h-px" style={{ backgroundColor: theme.colors.border }} />
-            <View className="flex-row justify-between py-1.5">
-              <Text className="text-xs" style={{ color: theme.colors.textMuted }}>{t("common.subtotal")}</Text>
-              <Text className="text-xs font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(quote.subtotal)}</Text>
-            </View>
-            <View className="flex-row justify-between py-1.5">
-              <Text className="text-xs" style={{ color: theme.colors.textMuted }}>{t("common.deliveryFee")}</Text>
-              <Text className="text-xs font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(quote.deliveryFare)}</Text>
-            </View>
-            <View className="flex-row justify-between py-1.5">
-              <Text className="text-xs" style={{ color: theme.colors.textMuted }}>{t("common.serviceFee")}</Text>
-              <Text className="text-xs font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(quote.serviceFee)}</Text>
-            </View>
-
+            <View className="flex-row justify-between py-1.5"><Text className="text-[10px]" style={{ color: theme.colors.textMuted }}>{t("common.subtotal")}</Text><Text className="text-[10px] font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(quote.subtotal)}</Text></View>
+            <View className="flex-row justify-between py-1.5"><Text className="text-[10px]" style={{ color: theme.colors.textMuted }}>{t("common.deliveryFee")}</Text><Text className="text-[10px] font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(quote.deliveryFare)}</Text></View>
+            <View className="flex-row justify-between py-1.5"><Text className="text-[10px]" style={{ color: theme.colors.textMuted }}>{t("common.serviceFee")}</Text><Text className="text-[10px] font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(quote.serviceFee)}</Text></View>
             <View className="mt-3 flex-row justify-between border-t pt-4" style={{ borderTopColor: theme.colors.border }}>
-              <Text className="text-base font-black" style={{ color: theme.colors.text }}>{t("common.total")}</Text>
-              <Text className="text-lg font-black" style={{ color: theme.colors.primary }}>{formatRupiah(quote.customerTotal)}</Text>
+              <Text className="text-sm font-black" style={{ color: theme.colors.text }}>{t("common.total")}</Text>
+              <Text className="text-base font-black" style={{ color: theme.colors.primary }}>{formatRupiah(quote.customerTotal)}</Text>
             </View>
-
-            <Text className="mt-4 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
+            <Text className="mt-4 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>
               {quote.distanceMethod === "minimum_fare_fallback"
                 ? t("checkout.distanceFallback")
                 : t("checkout.distanceHaversine", { distance: quote.distanceKm?.toFixed(2) ?? "-" })}
@@ -310,25 +236,25 @@ export default function CheckoutScreen() {
           </View>
         ) : null}
 
-        <Text className="mt-4 text-center text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
-          {t("checkout.paymentNote")}
-        </Text>
+        <Text className="mt-4 text-center text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{t("checkout.paymentNote")}</Text>
       </ScrollView>
 
       <View
-        className="absolute bottom-0 left-0 right-0 border-t px-5 pt-3"
+        className="absolute bottom-0 left-0 right-0 px-5 pt-3"
         style={{
-          backgroundColor: theme.colors.surface,
-          borderTopColor: theme.colors.border,
+          backgroundColor: theme.colors.surfaceRaised,
           paddingBottom: Math.max(insets.bottom, 12),
+          shadowColor: theme.colors.shadow,
+          shadowOffset: { width: 0, height: -5 },
+          shadowOpacity: theme.mode === "dark" ? 0.22 : 0.06,
+          shadowRadius: 14,
+          elevation: 10,
         }}
       >
         <View className="flex-row items-center gap-4">
           <View className="flex-1">
-            <Text className="text-[10px] font-bold" style={{ color: theme.colors.textMuted }}>{t("common.total")}</Text>
-            <Text className="mt-0.5 text-base font-black" style={{ color: theme.colors.text }}>
-              {quote ? formatRupiah(quote.customerTotal) : "—"}
-            </Text>
+            <Text className="text-[9px] font-bold" style={{ color: theme.colors.textMuted }}>{t("common.total")}</Text>
+            <Text className="mt-0.5 text-sm font-black" style={{ color: theme.colors.text }}>{quote ? formatRupiah(quote.customerTotal) : "—"}</Text>
           </View>
           <Pressable
             className="min-h-[52px] flex-[1.45] flex-row items-center justify-center gap-2 rounded-2xl px-4"
@@ -336,14 +262,7 @@ export default function CheckoutScreen() {
             onPress={() => void submitOrder()}
             style={{ backgroundColor: theme.colors.primary, opacity: !quote || creating ? 0.45 : 1 }}
           >
-            {creating ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <>
-                <NitipIcon color="#FFFFFF" name="receipt" size={18} />
-                <Text className="text-center text-xs font-black text-white">{t("checkout.createOrder")}</Text>
-              </>
-            )}
+            {creating ? <ActivityIndicator color="#FFFFFF" /> : <><NitipIcon color="#FFFFFF" name="receipt" size={17} /><Text className="text-center text-xs font-black text-white">{t("checkout.createOrder")}</Text></>}
           </Pressable>
         </View>
       </View>

@@ -126,6 +126,8 @@ export default function ProfileScreen() {
     );
   }
 
+  const initial = (displayName || profile?.email || user.email || "N").trim().slice(0, 1).toUpperCase();
+
   return (
     <View className="flex-1" style={{ backgroundColor: theme.colors.background }}>
       <ScrollView
@@ -137,27 +139,28 @@ export default function ProfileScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text className="text-3xl font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>
-          nitip.
-        </Text>
-
-        <View className="mt-8">
-          <Text className="text-[10px] font-black uppercase tracking-[2px]" style={{ color: theme.colors.primary }}>
-            {t("profile.eyebrow")}
+        <View className="flex-row items-center justify-between">
+          <Text className="text-[26px] font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>
+            nitip.
           </Text>
-          <Text className="mt-2 text-4xl font-black tracking-tighter" style={{ color: theme.colors.text }}>
+          <View className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surface }}>
+            <Text className="text-sm font-black" style={{ color: theme.colors.primary }}>
+              {initial}
+            </Text>
+          </View>
+        </View>
+
+        <View className="mt-7">
+          <Text className="text-[28px] font-black tracking-tighter" style={{ color: theme.colors.text }}>
             {t("profile.title")}
           </Text>
-          <Text className="mt-2 text-sm leading-6" style={{ color: theme.colors.textMuted }}>
+          <Text className="mt-1.5 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
             {t("profile.subtitle")}
           </Text>
         </View>
 
         {loading ? (
-          <View
-            className="mt-6 items-center rounded-3xl border p-6"
-            style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
-          >
+          <View className="mt-5 items-center rounded-[24px] p-6" style={{ backgroundColor: theme.colors.surface }}>
             <ActivityIndicator color={theme.colors.primary} />
             <Text className="mt-3 text-xs" style={{ color: theme.colors.textMuted }}>
               {t("profile.loading")}
@@ -165,96 +168,90 @@ export default function ProfileScreen() {
           </View>
         ) : (
           <>
-            <View
-              className="mt-6 rounded-3xl border p-5"
-              style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
-            >
-              <Text className="text-lg font-black" style={{ color: theme.colors.text }}>
+            <View className="mt-5">
+              <Text className="mb-2 text-sm font-black" style={{ color: theme.colors.text }}>
                 {t("profile.account")}
               </Text>
+              <View className="rounded-[24px] p-4" style={{ backgroundColor: theme.colors.surface }}>
+                <View className="flex-row items-center gap-3">
+                  <View className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surfaceRaised }}>
+                    <NitipIcon color={theme.colors.primary} name="profile" size={18} />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-[10px] font-extrabold" style={{ color: theme.colors.textMuted }}>
+                      {t("common.email")}
+                    </Text>
+                    <Text className="mt-0.5 text-xs font-black" numberOfLines={1} style={{ color: theme.colors.text }}>
+                      {profile?.email ?? user.email ?? "-"}
+                    </Text>
+                  </View>
+                </View>
 
-              <Text className="mb-2 mt-5 text-xs font-extrabold" style={{ color: theme.colors.textMuted }}>
-                {t("common.email")}
-              </Text>
-              <View className="rounded-2xl px-4 py-3.5" style={{ backgroundColor: theme.colors.surfaceAccent }}>
-                <Text className="text-sm" style={{ color: theme.colors.textMuted }}>
-                  {profile?.email ?? user.email ?? "-"}
+                <View className="my-4 h-px" style={{ backgroundColor: theme.colors.border }} />
+
+                <Text className="mb-2 text-[10px] font-extrabold" style={{ color: theme.colors.textMuted }}>
+                  {t("profile.displayName")}
                 </Text>
+                <TextInput
+                  className="rounded-2xl px-4 py-3.5 text-sm"
+                  maxLength={80}
+                  onChangeText={setDisplayName}
+                  placeholder={t("profile.displayNamePlaceholder")}
+                  placeholderTextColor={theme.colors.textMuted}
+                  style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text }}
+                  value={displayName}
+                />
+
+                <Text className="mb-2 mt-4 text-[10px] font-extrabold" style={{ color: theme.colors.textMuted }}>
+                  {t("profile.phone")}
+                </Text>
+                <TextInput
+                  className="rounded-2xl px-4 py-3.5 text-sm"
+                  keyboardType="phone-pad"
+                  maxLength={30}
+                  onChangeText={setPhoneNumber}
+                  placeholder="08xxxxxxxxxx"
+                  placeholderTextColor={theme.colors.textMuted}
+                  style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text }}
+                  value={phoneNumber}
+                />
+
+                <Pressable
+                  className="mt-4 min-h-12 items-center justify-center rounded-2xl"
+                  disabled={saving}
+                  onPress={() => void saveProfile()}
+                  style={{ backgroundColor: theme.colors.primary, opacity: saving ? 0.6 : 1 }}
+                >
+                  <Text className="text-xs font-black text-white">
+                    {saving ? t("common.saving") : t("profile.saveProfile")}
+                  </Text>
+                </Pressable>
               </View>
-
-              <Text className="mb-2 mt-4 text-xs font-extrabold" style={{ color: theme.colors.textMuted }}>
-                {t("profile.displayName")}
-              </Text>
-              <TextInput
-                className="rounded-2xl border px-4 py-3.5 text-sm"
-                maxLength={80}
-                onChangeText={setDisplayName}
-                placeholder={t("profile.displayNamePlaceholder")}
-                placeholderTextColor={theme.colors.textMuted}
-                style={{
-                  backgroundColor: theme.colors.background,
-                  borderColor: theme.colors.border,
-                  color: theme.colors.text,
-                }}
-                value={displayName}
-              />
-
-              <Text className="mb-2 mt-4 text-xs font-extrabold" style={{ color: theme.colors.textMuted }}>
-                {t("profile.phone")}
-              </Text>
-              <TextInput
-                className="rounded-2xl border px-4 py-3.5 text-sm"
-                keyboardType="phone-pad"
-                maxLength={30}
-                onChangeText={setPhoneNumber}
-                placeholder="08xxxxxxxxxx"
-                placeholderTextColor={theme.colors.textMuted}
-                style={{
-                  backgroundColor: theme.colors.background,
-                  borderColor: theme.colors.border,
-                  color: theme.colors.text,
-                }}
-                value={phoneNumber}
-              />
-
-              <Pressable
-                className="mt-5 min-h-12 items-center justify-center rounded-2xl"
-                disabled={saving}
-                onPress={() => void saveProfile()}
-                style={{ backgroundColor: theme.colors.primary, opacity: saving ? 0.6 : 1 }}
-              >
-                <Text className="text-xs font-black text-white">
-                  {saving ? t("common.saving") : t("profile.saveProfile")}
-                </Text>
-              </Pressable>
             </View>
 
-            <View className="mt-8 flex-row items-end justify-between">
+            <View className="mt-7 flex-row items-end justify-between">
               <View>
-                <Text className="text-lg font-black" style={{ color: theme.colors.text }}>
+                <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
                   {t("profile.savedAddresses")}
                 </Text>
-                <Text className="mt-1 text-xs" style={{ color: theme.colors.textMuted }}>
+                <Text className="mt-1 text-[10px]" style={{ color: theme.colors.textMuted }}>
                   {t("profile.addressCount", { count: addresses.length })}
                 </Text>
               </View>
               <Pressable
-                className="flex-row items-center gap-1.5 rounded-full px-4 py-2.5"
+                className="h-9 flex-row items-center gap-1.5 rounded-full px-3.5"
                 onPress={() => router.push("/address/new")}
-                style={{ backgroundColor: theme.colors.surfaceAccent }}
+                style={{ backgroundColor: theme.colors.surface }}
               >
-                <NitipIcon color={theme.colors.primary} name="plus" size={16} />
-                <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
+                <NitipIcon color={theme.colors.primary} name="plus" size={14} />
+                <Text className="text-[10px] font-black" style={{ color: theme.colors.primary }}>
                   {t("common.add")}
                 </Text>
               </Pressable>
             </View>
 
             {addresses.length === 0 ? (
-              <View
-                className="mt-3 rounded-3xl border p-5"
-                style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
-              >
+              <View className="mt-3 rounded-[24px] p-5" style={{ backgroundColor: theme.colors.surface }}>
                 <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
                   {t("profile.noAddressTitle")}
                 </Text>
@@ -263,50 +260,59 @@ export default function ProfileScreen() {
                 </Text>
               </View>
             ) : (
-              <View className="mt-3 gap-3">
+              <View className="mt-3 gap-2.5">
                 {addresses.map((address) => (
-                  <View
-                    className="rounded-3xl border p-4"
-                    key={address.id}
-                    style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
-                  >
+                  <View className="rounded-[24px] p-4" key={address.id} style={{ backgroundColor: theme.colors.surface }}>
                     <View className="flex-row items-center justify-between gap-3">
-                      <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
-                        {addressLabel(address)}
-                      </Text>
+                      <View className="flex-row items-center gap-2.5">
+                        <View className="h-9 w-9 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surfaceRaised }}>
+                          <NitipIcon
+                            color={theme.colors.primary}
+                            name={address.label === "home" ? "home" : address.label === "office" ? "office" : "location"}
+                            size={16}
+                          />
+                        </View>
+                        <View>
+                          <Text className="text-xs font-black" style={{ color: theme.colors.text }}>
+                            {addressLabel(address)}
+                          </Text>
+                          <Text className="mt-0.5 text-[10px]" style={{ color: theme.colors.textMuted }}>
+                            {address.recipientName}
+                          </Text>
+                        </View>
+                      </View>
                       {address.isDefault ? (
                         <View className="flex-row items-center gap-1 rounded-full px-2.5 py-1.5" style={{ backgroundColor: theme.colors.successSurface }}>
-                          <NitipIcon color={theme.colors.success} name="check" size={13} />
-                          <Text className="text-[9px] font-black" style={{ color: theme.colors.success }}>
+                          <NitipIcon color={theme.colors.success} name="check" size={12} />
+                          <Text className="text-[8px] font-black" style={{ color: theme.colors.success }}>
                             {t("profile.main")}
                           </Text>
                         </View>
                       ) : null}
                     </View>
-                    <Text className="mt-3 text-sm font-extrabold" style={{ color: theme.colors.text }}>
-                      {address.recipientName}
-                    </Text>
-                    <Text className="mt-1 text-xs" style={{ color: theme.colors.textMuted }}>
-                      {address.phoneNumber}
-                    </Text>
-                    <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+
+                    <Text className="mt-3 text-[11px] leading-5" style={{ color: theme.colors.textMuted }}>
                       {address.addressLine}
                     </Text>
+                    <Text className="mt-1 text-[10px]" style={{ color: theme.colors.textMuted }}>
+                      {address.phoneNumber}
+                    </Text>
                     {address.notes ? (
-                      <Text className="mt-2 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+                      <Text className="mt-1 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
                         {t("profile.notesPrefix", { notes: address.notes })}
                       </Text>
                     ) : null}
+
                     <View className="mt-3 flex-row items-center gap-1.5">
-                      <NitipIcon color={theme.colors.primary} name="location" size={14} />
-                      <Text className="text-[10px] font-extrabold" style={{ color: theme.colors.primary }}>
+                      <NitipIcon color={theme.colors.primary} name="location" size={13} />
+                      <Text className="flex-1 text-[9px] font-extrabold" numberOfLines={1} style={{ color: theme.colors.primary }}>
                         {address.latitude != null && address.longitude != null
                           ? `${address.latitude.toFixed(6)}, ${address.longitude.toFixed(6)}`
                           : t("profile.mapMissing")}
                       </Text>
                     </View>
 
-                    <View className="mt-4 flex-row flex-wrap gap-x-5 gap-y-3">
+                    <View className="mt-4 flex-row flex-wrap gap-x-4 gap-y-3">
                       <Pressable
                         className="flex-row items-center gap-1.5"
                         onPress={() =>
@@ -316,22 +322,22 @@ export default function ProfileScreen() {
                           })
                         }
                       >
-                        <NitipIcon color={theme.colors.primary} name="location" size={15} />
-                        <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
+                        <NitipIcon color={theme.colors.primary} name="location" size={14} />
+                        <Text className="text-[10px] font-black" style={{ color: theme.colors.primary }}>
                           {address.latitude != null ? t("profile.changeMap") : t("profile.setMap")}
                         </Text>
                       </Pressable>
                       {!address.isDefault ? (
                         <Pressable className="flex-row items-center gap-1.5" onPress={() => void makeDefault(address)}>
-                          <NitipIcon color={theme.colors.primary} name="check" size={15} />
-                          <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
+                          <NitipIcon color={theme.colors.primary} name="check" size={14} />
+                          <Text className="text-[10px] font-black" style={{ color: theme.colors.primary }}>
                             {t("profile.makeDefault")}
                           </Text>
                         </Pressable>
                       ) : null}
                       <Pressable className="flex-row items-center gap-1.5" onPress={() => confirmDelete(address)}>
-                        <NitipIcon color={theme.colors.danger} name="trash" size={15} />
-                        <Text className="text-xs font-black" style={{ color: theme.colors.danger }}>
+                        <NitipIcon color={theme.colors.danger} name="trash" size={14} />
+                        <Text className="text-[10px] font-black" style={{ color: theme.colors.danger }}>
                           {t("common.delete")}
                         </Text>
                       </Pressable>
@@ -341,50 +347,42 @@ export default function ProfileScreen() {
               </View>
             )}
 
-            <View className="mt-8">
-              <Text className="text-lg font-black" style={{ color: theme.colors.text }}>
+            <View className="mt-7">
+              <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
                 {t("profile.preferences")}
               </Text>
-              <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+              <Text className="mt-1 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
                 {t("profile.preferencesDescription")}
               </Text>
-            </View>
-
-            <View
-              className="mt-3 rounded-3xl border p-5"
-              style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
-            >
-              <LanguageSwitcher />
-              <View className="my-5 h-px" style={{ backgroundColor: theme.colors.border }} />
-              <ThemeSwitcher />
-              <Text className="mt-2 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
-                {t("profile.appearanceDescription")}
-              </Text>
-            </View>
-
-            <View
-              className="mt-8 rounded-3xl border p-5"
-              style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
-            >
-              <View className="flex-row items-center gap-2">
-                <NitipIcon color={theme.colors.text} name="logout" size={18} />
-                <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
-                  {t("common.signOut")}
+              <View className="mt-3 rounded-[24px] p-4" style={{ backgroundColor: theme.colors.surface }}>
+                <LanguageSwitcher />
+                <View className="my-4 h-px" style={{ backgroundColor: theme.colors.border }} />
+                <ThemeSwitcher />
+                <Text className="mt-2 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>
+                  {t("profile.appearanceDescription")}
                 </Text>
               </View>
-              <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
-                {t("profile.signOutDescription")}
-              </Text>
-              <Pressable
-                className="mt-4 min-h-12 flex-row items-center justify-center gap-2 rounded-2xl"
-                onPress={() => void signOut()}
-                style={{ backgroundColor: theme.colors.dangerSurface }}
-              >
-                <NitipIcon color={theme.colors.danger} name="logout" size={17} />
-                <Text className="text-xs font-black" style={{ color: theme.colors.danger }}>
-                  {t("common.signOut")}
-                </Text>
-              </Pressable>
+            </View>
+
+            <View className="mt-7 rounded-[24px] p-4" style={{ backgroundColor: theme.colors.surface }}>
+              <View className="flex-row items-center gap-3">
+                <View className="h-9 w-9 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.dangerSurface }}>
+                  <NitipIcon color={theme.colors.danger} name="logout" size={16} />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-xs font-black" style={{ color: theme.colors.text }}>
+                    {t("common.signOut")}
+                  </Text>
+                  <Text className="mt-0.5 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
+                    {t("profile.signOutDescription")}
+                  </Text>
+                </View>
+                <Pressable className="h-9 items-center justify-center rounded-full px-3" onPress={() => void signOut()} style={{ backgroundColor: theme.colors.dangerSurface }}>
+                  <Text className="text-[10px] font-black" style={{ color: theme.colors.danger }}>
+                    {t("common.signOut")}
+                  </Text>
+                </Pressable>
+              </View>
             </View>
           </>
         )}

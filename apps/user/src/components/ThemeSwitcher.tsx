@@ -26,18 +26,22 @@ export function ThemeSwitcher() {
   return (
     <View>
       <View className="mb-2 flex-row items-center gap-2">
-        <NitipIcon color={theme.colors.textMuted} name="theme" size={16} />
-        <Text className="text-xs font-extrabold" style={{ color: theme.colors.textMuted }}>
+        <NitipIcon color={theme.colors.textMuted} name="theme" size={15} />
+        <Text className="text-[10px] font-extrabold" style={{ color: theme.colors.textMuted }}>
           {t("common.appearance")}
         </Text>
       </View>
       <View
         className="flex-row rounded-2xl p-1"
-        style={{ backgroundColor: theme.colors.surfaceAccent }}
+        style={{
+          backgroundColor: theme.colors.surfaceRaised,
+          borderColor: theme.colors.border,
+          borderWidth: 1,
+        }}
       >
         {options.map((option) => {
           const active = option.value === preference;
-          const color = active ? "#FFFFFF" : theme.colors.text;
+          const color = active ? "#FFFFFF" : theme.colors.textMuted;
           return (
             <Pressable
               accessibilityRole="button"
@@ -47,11 +51,8 @@ export function ThemeSwitcher() {
               onPress={() => void setPreference(option.value)}
               style={{ backgroundColor: active ? theme.colors.primary : "transparent" }}
             >
-              <NitipIcon color={color} name={option.icon} size={16} />
-              <Text
-                className="mt-1 text-center text-[10px] font-extrabold"
-                style={{ color }}
-              >
+              <NitipIcon color={color} name={option.icon} size={15} />
+              <Text className="mt-1 text-center text-[9px] font-extrabold" style={{ color }}>
                 {t(option.label)}
               </Text>
             </Pressable>
