@@ -123,6 +123,7 @@ export default function LocationMap({
   longitude: number | null;
   onLocationChange: (latitude: number, longitude: number) => Promise<void>;
   loadErrorLabel?: string;
+  dom?: unknown;
 }) {
   const [failed, setFailed] = useState(false);
   const html = useMemo(() => buildMapHtml(latitude, longitude), [latitude, longitude]);
