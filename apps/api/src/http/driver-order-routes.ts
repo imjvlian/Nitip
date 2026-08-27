@@ -1,7 +1,9 @@
+import type { DriverDeliveryAction } from "@nitip/domain/driver";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import { IntegrationNotConfiguredError } from "../config/env.js";
 import { authenticateRequest } from "../lib/authenticate.js";
+import { applyDriverDeliveryAction } from "../repositories/driver-deliveries.js";
 import { getDriverProfileByOwner } from "../repositories/drivers.js";
 import {
   acceptDriverOrder,
@@ -35,6 +37,16 @@ function routeError(
     error: "internal_server_error",
     message: "Unable to complete driver order request",
   });
+}
+
+function parseDeliveryAction(body: unknown): DriverDeliveryAction | null {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return null;
+  const action = (body as { action?: unknown }).action;
+  return action === "confirm_pickup" ||
+    action === "start_delivery" ||
+    action === "complete_delivery"
+    ? action
+    : null;
 }
 
 async function resolveDriver(
@@ -123,6 +135,45 @@ export function registerDriverOrderRoutes(app: FastifyInstance) {
             error: "order_already_taken",
             message: "Order sudah diambil driver lain atau tidak lagi tersedia",
           });
+        }
+
+        return { data: order };
+      } catch (error) {
+        return routeError(request, reply, error);
+      }
+    },
+  );
+
+  app.post<{ Params: { id: string } }>(
+    "/driver/orders/:id/action",
+    async (request, reply) => {
+      try {
+        const driver = await resolveDriver(request, reply);
+        if (!driver) return;
+
+        const action = parseDeliveryAction(request.body);
+        if (!action) {
+          return reply.code(400).send({
+            error: "invalid_driver_action",
+            message: "Aksi perjalanan driver tidak valid",
+          });
+        }
+
+        const updated = await applyDriverDeliveryAction(
+          driver.id,
+          request.params.id,
+          action,
+        );
+        if (!updated) {
+          return reply.code(409).send({
+            error: "driver_action_not_allowed",
+            message: "Status order sudah berubah atau aksi ini belum tersedia",
+          });
+        }
+
+        const order = await getDriverOrder(driver.id, request.params.id);
+        if (!order) {
+          return reply.code(404).send({ error: "driver_order_not_found" });
         }
 
         return { data: order };

@@ -1,5 +1,6 @@
 import type {
   CreateNitipDriverInput,
+  DriverDeliveryAction,
   NitipDriverOffer,
   NitipDriverOrder,
   NitipDriverProfile,
@@ -107,5 +108,16 @@ export function getDriverOrder(user: User | null, id: string) {
 export function acceptDriverOffer(user: User | null, id: string) {
   return apiRequest<NitipDriverOrder>(user, `/driver/orders/${id}/accept`, {
     method: "POST",
+  });
+}
+
+export function actOnDriverOrder(
+  user: User | null,
+  id: string,
+  action: DriverDeliveryAction,
+) {
+  return apiRequest<NitipDriverOrder>(user, `/driver/orders/${id}/action`, {
+    method: "POST",
+    body: JSON.stringify({ action }),
   });
 }

@@ -86,6 +86,15 @@ export type DriverDeliveryStatus = Extract<
   "driver_assigned" | "picked_up" | "on_delivery" | "delivered"
 >;
 
+export type DriverDeliveryAction =
+  | "confirm_pickup"
+  | "start_delivery"
+  | "complete_delivery";
+
+export interface DriverDeliveryActionInput {
+  action: DriverDeliveryAction;
+}
+
 export interface NitipDriverOrder extends Omit<NitipDriverOffer, "status"> {
   status: DriverDeliveryStatus;
   destination: NitipDriverDestination;
