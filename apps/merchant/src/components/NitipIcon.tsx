@@ -59,7 +59,6 @@ export function NitipIcon({ color, name, size = 20 }: { color: ColorValue; name:
     <SymbolView
       name={symbols[name] as never}
       size={size}
-      style={{ height: size, width: size }}
       tintColor={color}
     />
   );
