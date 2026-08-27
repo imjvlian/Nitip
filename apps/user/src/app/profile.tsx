@@ -1,7 +1,7 @@
 import type { NitipAddress, NitipUserProfile } from "@nitip/domain";
 import { useNitipLanguage, useNitipTranslation } from "@nitip/i18n";
-import { Redirect, router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { Redirect, router, useFocusEffect } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -9,6 +9,7 @@ import { AppHeader } from "../components/AppHeader";
 import { BottomNavigation } from "../components/BottomNavigation";
 import { NitipIcon } from "../components/NitipIcon";
 import { SettingsDivider, SettingsGroup, SettingsRow } from "../components/SettingsRow";
+import { UserAvatar } from "../components/UserAvatar";
 import { SETTINGS_COPY } from "../constants/settingsCopy";
 import { useAuth } from "../context/AuthContext";
 import { useUserTheme } from "../context/ThemeContext";
@@ -29,36 +30,37 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!user) return;
-    let active = true;
-    setLoading(true);
-    setError(null);
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) return undefined;
+      let active = true;
+      setLoading(true);
+      setError(null);
 
-    Promise.all([getMe(user), listAddresses(user)])
-      .then(([nextProfile, nextAddresses]) => {
-        if (!active) return;
-        setProfile(nextProfile);
-        setAddresses(nextAddresses);
-      })
-      .catch((nextError: unknown) => {
-        if (active) setError(nextError instanceof Error ? nextError.message : t("profile.loadError"));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+      Promise.all([getMe(user), listAddresses(user)])
+        .then(([nextProfile, nextAddresses]) => {
+          if (!active) return;
+          setProfile(nextProfile);
+          setAddresses(nextAddresses);
+        })
+        .catch((nextError: unknown) => {
+          if (active) {
+            setError(nextError instanceof Error ? nextError.message : t("profile.loadError"));
+          }
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
 
-    return () => {
-      active = false;
-    };
-  }, [t, user]);
+      return () => {
+        active = false;
+      };
+    }, [t, user]),
+  );
 
   if (!user) return <Redirect href="/login" />;
 
-  const initial = (profile?.displayName || profile?.email || user.displayName || user.email || "N")
-    .trim()
-    .slice(0, 1)
-    .toUpperCase();
+  const avatarLabel = profile?.displayName || profile?.email || user.displayName || user.email || "Nitip";
   const normalizedQuery = query.trim().toLowerCase();
   const languageValue = language === "id" ? t("common.indonesia") : t("common.english");
   const appearanceValue = t(`common.${preference}`);
@@ -107,13 +109,7 @@ export default function ProfileScreen() {
         <AppHeader
           title={copy.settings}
           onBack={() => router.replace("/home")}
-          right={
-            <View className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surface }}>
-              <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
-                {initial}
-              </Text>
-            </View>
-          }
+          right={<UserAvatar label={avatarLabel} photoUrl={profile?.photoUrl} size={40} />}
         />
 
         <View

@@ -85,13 +85,13 @@ export async function upsertUserFromFirebase(
     {
       $set: {
         email: identity.email ?? null,
-        photoUrl: identity.picture ?? null,
         updatedAt: now,
       },
       $setOnInsert: {
         firebaseUid: identity.uid,
         displayName: identity.name ?? null,
         phoneNumber: identity.phone_number ?? null,
+        photoUrl: identity.picture ?? null,
         dateOfBirth: null,
         ageVerificationStatus: "unverified",
         ageVerifiedAt: null,
@@ -155,6 +155,25 @@ export async function updateUserProfile(
   const document = await users.findOneAndUpdate(
     { firebaseUid },
     { $set: set },
+    { returnDocument: "after" },
+  );
+
+  return document ? serializeUser(document) : null;
+}
+
+export async function updateUserPhoto(
+  firebaseUid: string,
+  photoUrl: string | null,
+): Promise<NitipUserProfile | null> {
+  const users = await getUsersCollection();
+  const document = await users.findOneAndUpdate(
+    { firebaseUid },
+    {
+      $set: {
+        photoUrl,
+        updatedAt: new Date(),
+      },
+    },
     { returnDocument: "after" },
   );
 

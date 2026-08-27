@@ -1,20 +1,65 @@
 import type { NitipUserProfile } from "@nitip/domain";
 import { useNitipLanguage, useNitipTranslation } from "@nitip/i18n";
+import * as ImagePicker from "expo-image-picker";
 import { Redirect } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppHeader } from "../../components/AppHeader";
+import { NitipIcon } from "../../components/NitipIcon";
+import { UserAvatar } from "../../components/UserAvatar";
 import { SETTINGS_COPY } from "../../constants/settingsCopy";
 import { useAuth } from "../../context/AuthContext";
 import { useNitipTheme } from "../../hooks/useNitipTheme";
-import { getMe, updateMe } from "../../lib/api";
+import {
+  getMe,
+  updateMe,
+  updateProfilePhoto,
+  uploadProfilePhoto,
+} from "../../lib/api";
+
+const PHOTO_COPY = {
+  id: {
+    photo: "Foto profil",
+    photoDescription: "Foto berbentuk persegi akan dipotong menjadi avatar. Maksimal 5 MB.",
+    changePhoto: "Ganti foto",
+    addPhoto: "Tambah foto",
+    removePhoto: "Hapus foto",
+    uploading: "Mengunggah...",
+    permission: "Izin akses galeri diperlukan untuk memilih foto profil.",
+    tooLarge: "Ukuran foto maksimal 5 MB.",
+    uploadError: "Gagal mengunggah foto profil.",
+    removeError: "Gagal menghapus foto profil.",
+  },
+  en: {
+    photo: "Profile photo",
+    photoDescription: "Square photos are cropped into an avatar. Maximum size is 5 MB.",
+    changePhoto: "Change photo",
+    addPhoto: "Add photo",
+    removePhoto: "Remove photo",
+    uploading: "Uploading...",
+    permission: "Photo library permission is required to choose a profile photo.",
+    tooLarge: "Profile photo size is limited to 5 MB.",
+    uploadError: "Failed to upload profile photo.",
+    removeError: "Failed to remove profile photo.",
+  },
+} as const;
 
 export default function AccountSettingsScreen() {
   const { t } = useNitipTranslation();
   const { language } = useNitipLanguage();
   const copy = SETTINGS_COPY[language];
+  const photoCopy = PHOTO_COPY[language];
   const { user } = useAuth();
   const theme = useNitipTheme();
   const insets = useSafeAreaInsets();
@@ -23,6 +68,7 @@ export default function AccountSettingsScreen() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -49,12 +95,67 @@ export default function AccountSettingsScreen() {
   }, [t, user]);
 
   if (!user) return <Redirect href="/login" />;
+  const authenticatedUser = user;
+  const avatarLabel = profile?.displayName || profile?.email || authenticatedUser.displayName || authenticatedUser.email || "Nitip";
+
+  async function pickPhoto() {
+    if (uploadingPhoto) return;
+    setError(null);
+
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        setError(photoCopy.permission);
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+
+      if (result.canceled || !result.assets[0]) return;
+      const asset = result.assets[0];
+      if (asset.fileSize != null && asset.fileSize > 5 * 1024 * 1024) {
+        setError(photoCopy.tooLarge);
+        return;
+      }
+
+      setUploadingPhoto(true);
+      const photoUrl = await uploadProfilePhoto(authenticatedUser, {
+        uri: asset.uri,
+        mimeType: asset.mimeType,
+      });
+      const nextProfile = await updateProfilePhoto(authenticatedUser, photoUrl);
+      setProfile(nextProfile);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : photoCopy.uploadError);
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }
+
+  async function removePhoto() {
+    if (uploadingPhoto || !profile?.photoUrl) return;
+    setUploadingPhoto(true);
+    setError(null);
+    try {
+      const nextProfile = await updateProfilePhoto(authenticatedUser, null);
+      setProfile(nextProfile);
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : photoCopy.removeError);
+    } finally {
+      setUploadingPhoto(false);
+    }
+  }
 
   async function save() {
     setSaving(true);
     setError(null);
     try {
-      const nextProfile = await updateMe(user, {
+      const nextProfile = await updateMe(authenticatedUser, {
         displayName: displayName.trim() || null,
         phoneNumber: phoneNumber.trim() || null,
       });
@@ -103,12 +204,66 @@ export default function AccountSettingsScreen() {
           </View>
         ) : (
           <View className="mt-5 rounded-[22px] p-4" style={{ backgroundColor: theme.colors.surface }}>
+            <View className="items-center py-2">
+              <View className="relative">
+                <UserAvatar label={avatarLabel} photoUrl={profile?.photoUrl} size={92} />
+                <View
+                  className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center rounded-full"
+                  style={{ backgroundColor: theme.colors.primary }}
+                >
+                  {uploadingPhoto ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <NitipIcon color="#FFFFFF" name="camera" size={15} />
+                  )}
+                </View>
+              </View>
+              <Text className="mt-4 text-xs font-black" style={{ color: theme.colors.text }}>
+                {photoCopy.photo}
+              </Text>
+              <Text className="mt-1 max-w-[270px] text-center text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>
+                {photoCopy.photoDescription}
+              </Text>
+
+              <View className="mt-4 flex-row items-center gap-2">
+                <Pressable
+                  className="min-h-[42px] flex-row items-center justify-center gap-2 rounded-[14px] px-4"
+                  disabled={uploadingPhoto}
+                  onPress={() => void pickPhoto()}
+                  style={{ backgroundColor: theme.colors.primary, opacity: uploadingPhoto ? 0.55 : 1 }}
+                >
+                  <NitipIcon color="#FFFFFF" name="camera" size={15} />
+                  <Text className="text-[10px] font-black text-white">
+                    {uploadingPhoto
+                      ? photoCopy.uploading
+                      : profile?.photoUrl
+                        ? photoCopy.changePhoto
+                        : photoCopy.addPhoto}
+                  </Text>
+                </Pressable>
+                {profile?.photoUrl ? (
+                  <Pressable
+                    className="min-h-[42px] items-center justify-center rounded-[14px] px-4"
+                    disabled={uploadingPhoto}
+                    onPress={() => void removePhoto()}
+                    style={{ backgroundColor: theme.colors.dangerSurface, opacity: uploadingPhoto ? 0.55 : 1 }}
+                  >
+                    <Text className="text-[10px] font-black" style={{ color: theme.colors.danger }}>
+                      {photoCopy.removePhoto}
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            </View>
+
+            <View className="my-5 h-px" style={{ backgroundColor: theme.colors.border }} />
+
             <Text className="mb-2 text-[10px] font-extrabold" style={{ color: theme.colors.textMuted }}>
               {t("common.email")}
             </Text>
             <View className="rounded-[16px] px-4 py-3.5" style={{ backgroundColor: theme.colors.surfaceRaised }}>
               <Text className="text-xs" style={{ color: theme.colors.textMuted }}>
-                {profile?.email ?? user.email ?? "-"}
+                {profile?.email ?? authenticatedUser.email ?? "-"}
               </Text>
             </View>
 
@@ -149,11 +304,13 @@ export default function AccountSettingsScreen() {
 
             <Pressable
               className="mt-5 min-h-[50px] items-center justify-center rounded-[16px]"
-              disabled={saving}
+              disabled={saving || uploadingPhoto}
               onPress={() => void save()}
-              style={{ backgroundColor: theme.colors.primary, opacity: saving ? 0.55 : 1 }}
+              style={{ backgroundColor: theme.colors.primary, opacity: saving || uploadingPhoto ? 0.55 : 1 }}
             >
-              {saving ? <ActivityIndicator color="#FFFFFF" /> : (
+              {saving ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
                 <Text className="text-xs font-black text-white">{t("profile.saveProfile")}</Text>
               )}
             </Pressable>

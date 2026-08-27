@@ -12,6 +12,7 @@ import { registerDriverRoutes } from "./http/driver-routes.js";
 import { registerMerchantOrderRoutes } from "./http/merchant-order-routes.js";
 import { registerOrderRoutes } from "./http/order-routes.js";
 import { registerSupportRoutes } from "./http/support-routes.js";
+import { registerUserMediaRoutes } from "./http/user-media-routes.js";
 import {
   parseCreateMerchant,
   parseCreateOutlet,
@@ -271,6 +272,7 @@ registerMerchantOrderRoutes(app);
 registerDriverRoutes(app);
 registerDriverOrderRoutes(app);
 registerSupportRoutes(app);
+registerUserMediaRoutes(app);
 
 app.setNotFoundHandler(async (_request, reply) => {
   await reply.code(404).send({ error: "not_found" });

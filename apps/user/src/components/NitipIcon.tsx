@@ -31,7 +31,8 @@ export type NitipIconName =
   | "password"
   | "age"
   | "document"
-  | "privacy";
+  | "privacy"
+  | "camera";
 
 const symbols: Record<
   NitipIconName,
@@ -71,6 +72,7 @@ const symbols: Record<
   age: { ios: "checkmark.seal.fill", android: "verified_user", web: "verified_user" },
   document: { ios: "doc.text.fill", android: "description", web: "description" },
   privacy: { ios: "lock.shield.fill", android: "privacy_tip", web: "privacy_tip" },
+  camera: { ios: "camera.fill", android: "photo_camera", web: "photo_camera" },
 };
 
 export function NitipIcon({

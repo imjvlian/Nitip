@@ -10,6 +10,14 @@
     "plugins": [
       "expo-router",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Nitip memerlukan akses foto untuk memilih foto profil.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-location",
         {
           "locationWhenInUsePermission": "Nitip memerlukan lokasi untuk menentukan titik alamat pengantaran."

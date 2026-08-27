@@ -16,6 +16,7 @@ import type {
   NitipCheckoutRequest,
   NitipOrder,
 } from "@nitip/domain/commerce";
+import { File, UploadType } from "expo-file-system";
 import type { User } from "firebase/auth";
 
 const apiBaseUrl = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
@@ -37,6 +38,17 @@ type ApiBody<T> = {
   ok?: boolean;
   message?: string;
   error?: string;
+};
+
+type ProfilePhotoUploadSignature = {
+  cloudName: string;
+  apiKey: string;
+  timestamp: number;
+  folder: string;
+  publicId: string;
+  overwrite: true;
+  signature: string;
+  uploadUrl: string;
 };
 
 async function readResponse<T>(response: Response): Promise<T> {
@@ -95,6 +107,58 @@ export function updateMe(user: User | null, input: UpdateNitipProfileInput) {
   return apiRequest<NitipUserProfile>(user, "/me", {
     method: "PATCH",
     body: JSON.stringify(input),
+  });
+}
+
+export function getProfilePhotoUploadSignature(user: User | null) {
+  return apiRequest<ProfilePhotoUploadSignature>(user, "/me/media/signature", {
+    method: "POST",
+  });
+}
+
+export async function uploadProfilePhoto(
+  user: User | null,
+  asset: { uri: string; mimeType?: string | null },
+) {
+  const signed = await getProfilePhotoUploadSignature(user);
+  const file = new File(asset.uri);
+  const response = await file.upload(signed.uploadUrl, {
+    httpMethod: "POST",
+    uploadType: UploadType.MULTIPART,
+    fieldName: "file",
+    mimeType: asset.mimeType ?? "image/jpeg",
+    parameters: {
+      api_key: signed.apiKey,
+      timestamp: String(signed.timestamp),
+      folder: signed.folder,
+      public_id: signed.publicId,
+      overwrite: String(signed.overwrite),
+      signature: signed.signature,
+    },
+  });
+
+  let body: {
+    secure_url?: string;
+    error?: { message?: string };
+  } = {};
+
+  try {
+    body = JSON.parse(response.body) as typeof body;
+  } catch {
+    throw new Error("Respons upload Cloudinary tidak valid");
+  }
+
+  if (response.status < 200 || response.status >= 300 || !body.secure_url) {
+    throw new Error(body.error?.message ?? "Gagal mengunggah foto profil");
+  }
+
+  return body.secure_url;
+}
+
+export function updateProfilePhoto(user: User | null, photoUrl: string | null) {
+  return apiRequest<NitipUserProfile>(user, "/me/photo", {
+    method: "PATCH",
+    body: JSON.stringify({ photoUrl }),
   });
 }
 
