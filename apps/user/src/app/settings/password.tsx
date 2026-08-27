@@ -43,16 +43,17 @@ export default function PasswordSettingsScreen() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const accountEmail = user?.email ?? null;
 
   if (!user) return <Redirect href="/login" />;
 
   async function send() {
-    if (!user.email || sending) return;
+    if (!accountEmail || sending) return;
     setSending(true);
     setSent(false);
     setError(null);
     try {
-      await resetPassword(user.email);
+      await resetPassword(accountEmail);
       setSent(true);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : copy.error);
@@ -93,7 +94,7 @@ export default function PasswordSettingsScreen() {
               {copy.email}
             </Text>
             <Text className="mt-0.5 text-[11px] font-black" style={{ color: theme.colors.text }}>
-              {user.email ?? copy.unavailable}
+              {accountEmail ?? copy.unavailable}
             </Text>
           </View>
         </View>
@@ -112,9 +113,9 @@ export default function PasswordSettingsScreen() {
 
         <Pressable
           className="mt-5 min-h-[50px] flex-row items-center justify-center gap-2 rounded-[16px]"
-          disabled={!user.email || sending}
+          disabled={!accountEmail || sending}
           onPress={() => void send()}
-          style={{ backgroundColor: theme.colors.primary, opacity: !user.email || sending ? 0.45 : 1 }}
+          style={{ backgroundColor: theme.colors.primary, opacity: !accountEmail || sending ? 0.45 : 1 }}
         >
           {sending ? <ActivityIndicator color="#FFFFFF" /> : <NitipIcon color="#FFFFFF" name="password" size={17} />}
           <Text className="text-xs font-black text-white">{sending ? copy.sending : copy.send}</Text>
