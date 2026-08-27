@@ -5,7 +5,7 @@ import {
   useContext,
   type ReactNode,
 } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useNitipTheme } from "../hooks/useNitipTheme";
@@ -34,6 +34,17 @@ const tabs: {
   { key: "profile", href: "/profile", icon: "profile", label: "navigation.profile" },
 ];
 
+const styles = StyleSheet.create({
+  iconBubble: {
+    alignItems: "center",
+    justifyContent: "center",
+    height: 38,
+    width: 38,
+    borderRadius: 999,
+    overflow: "hidden",
+  },
+});
+
 export function BottomNavigation({ active }: { active: RootTab }) {
   const suppressed = useContext(SuppressBottomNavigationContext);
   const { t } = useNitipTranslation();
@@ -48,7 +59,7 @@ export function BottomNavigation({ active }: { active: RootTab }) {
       style={{
         backgroundColor: theme.colors.background,
         borderTopColor: theme.colors.border,
-        borderTopWidth: 1,
+        borderTopWidth: StyleSheet.hairlineWidth,
         paddingBottom: Math.max(insets.bottom, 10),
       }}
     >
@@ -70,13 +81,10 @@ export function BottomNavigation({ active }: { active: RootTab }) {
               }}
             >
               <View
-                className="items-center justify-center"
-                style={{
-                  backgroundColor: selected ? theme.colors.primary : "transparent",
-                  borderRadius: 19,
-                  height: 38,
-                  width: 38,
-                }}
+                style={[
+                  styles.iconBubble,
+                  { backgroundColor: selected ? theme.colors.primary : "transparent" },
+                ]}
               >
                 <NitipIcon color={iconColor} name={tab.icon} size={19} />
               </View>
