@@ -105,10 +105,11 @@ export default function MerchantNotificationsScreen() {
   );
 
   if (!user) return <Redirect href="/login" />;
+  const userId = user.uid;
 
   async function markAllRead() {
     const next = await markMerchantNotificationsRead(
-      user.uid,
+      userId,
       notifications.map((notification) => notification.id),
     );
     setReadIds(new Set(next));
@@ -116,7 +117,7 @@ export default function MerchantNotificationsScreen() {
 
   async function openNotification(notification: MerchantNotification) {
     try {
-      const next = await markMerchantNotificationRead(user.uid, notification.id);
+      const next = await markMerchantNotificationRead(userId, notification.id);
       setReadIds(new Set(next));
     } catch {
       // Navigation should still work even if local read-state persistence fails.
