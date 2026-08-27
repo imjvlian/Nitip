@@ -1,14 +1,9 @@
 import type { NitipAddress } from "@nitip/domain";
+import { useNitipTranslation } from "@nitip/i18n";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import LocationPicker from "../../../components/LocationPicker";
 import { useAuth } from "../../../context/AuthContext";
@@ -16,10 +11,11 @@ import { useNitipTheme } from "../../../hooks/useNitipTheme";
 import { listAddresses, updateAddress } from "../../../lib/api";
 
 export default function AddressLocationScreen() {
+  const { t } = useNitipTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const theme = useNitipTheme();
-  const styles = useMemo(() => createStyles(theme.colors), [theme]);
+  const insets = useSafeAreaInsets();
   const [address, setAddress] = useState<NitipAddress | null>(null);
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
@@ -43,11 +39,7 @@ export default function AddressLocationScreen() {
       })
       .catch((nextError: unknown) => {
         if (active) {
-          setError(
-            nextError instanceof Error
-              ? nextError.message
-              : "Gagal memuat alamat",
-          );
+          setError(nextError instanceof Error ? nextError.message : t("location.loadError"));
         }
       })
       .finally(() => {
@@ -57,7 +49,7 @@ export default function AddressLocationScreen() {
     return () => {
       active = false;
     };
-  }, [id, user]);
+  }, [id, t, user]);
 
   if (!user) return <Redirect href="/login" />;
 
@@ -69,45 +61,76 @@ export default function AddressLocationScreen() {
       await updateAddress(user, address.id, { latitude, longitude });
       router.replace("/profile");
     } catch (nextError) {
-      setError(
-        nextError instanceof Error
-          ? nextError.message
-          : "Gagal menyimpan titik lokasi",
-      );
+      setError(nextError instanceof Error ? nextError.message : t("location.saveError"));
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>‹ Kembali</Text>
+    <ScrollView
+      contentContainerStyle={{
+        flexGrow: 1,
+        paddingHorizontal: 20,
+        paddingTop: insets.top + 14,
+        paddingBottom: Math.max(insets.bottom + 24, 40),
+        backgroundColor: theme.colors.background,
+      }}
+      showsVerticalScrollIndicator={false}
+    >
+      <View className="flex-row items-center justify-between">
+        <Pressable className="min-h-10 justify-center pr-4" onPress={() => router.back()}>
+          <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
+            ‹ {t("common.back")}
+          </Text>
         </Pressable>
-        <Text style={styles.brand}>nitip.</Text>
+        <Text className="text-2xl font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>
+          nitip.
+        </Text>
       </View>
 
-      <Text style={styles.eyebrow}>TITIK PENGANTARAN</Text>
-      <Text style={styles.title}>Atur lokasi alamat.</Text>
-      <Text style={styles.subtitle}>
-        Alamat tertulis tetap digunakan sebagai petunjuk. Pin peta dipakai untuk perhitungan jarak dan routing.
-      </Text>
+      <View className="mt-8">
+        <Text className="text-[10px] font-black uppercase tracking-[2px]" style={{ color: theme.colors.primary }}>
+          {t("location.eyebrow")}
+        </Text>
+        <Text className="mt-2 text-3xl font-black tracking-tighter" style={{ color: theme.colors.text }}>
+          {t("location.title")}
+        </Text>
+        <Text className="mt-2 text-sm leading-6" style={{ color: theme.colors.textMuted }}>
+          {t("location.subtitle")}
+        </Text>
+      </View>
 
       {loading ? (
-        <View style={styles.centerCard}>
+        <View
+          className="mt-6 items-center rounded-3xl border p-6"
+          style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+        >
           <ActivityIndicator color={theme.colors.primary} />
-          <Text style={styles.muted}>Memuat alamat...</Text>
+          <Text className="mt-3 text-xs" style={{ color: theme.colors.textMuted }}>
+            {t("location.loading")}
+          </Text>
         </View>
       ) : !address ? (
-        <View style={styles.errorCard}>
-          <Text style={styles.cardTitle}>Alamat tidak ditemukan</Text>
-          <Text style={styles.muted}>{error ?? "Alamat ini sudah tidak tersedia."}</Text>
+        <View className="mt-6 rounded-3xl p-5" style={{ backgroundColor: theme.colors.dangerSurface }}>
+          <Text className="text-sm font-black" style={{ color: theme.colors.danger }}>
+            {t("location.notFound")}
+          </Text>
+          <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+            {error ?? t("location.notFoundDescription")}
+          </Text>
         </View>
       ) : (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{address.addressLine}</Text>
-          <Text style={styles.muted}>{address.recipientName} · {address.phoneNumber}</Text>
+        <View
+          className="mt-6 rounded-3xl border p-5"
+          style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+        >
+          <Text className="text-sm font-black leading-5" style={{ color: theme.colors.text }}>
+            {address.addressLine}
+          </Text>
+          <Text className="mt-1 text-xs" style={{ color: theme.colors.textMuted }}>
+            {address.recipientName} · {address.phoneNumber}
+          </Text>
 
           <LocationPicker
             latitude={latitude}
@@ -118,51 +141,24 @@ export default function AddressLocationScreen() {
             }}
           />
 
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          {error ? (
+            <View className="mt-4 rounded-2xl p-3" style={{ backgroundColor: theme.colors.dangerSurface }}>
+              <Text className="text-xs leading-5" style={{ color: theme.colors.danger }}>{error}</Text>
+            </View>
+          ) : null}
 
           <Pressable
+            className="mt-5 min-h-[52px] items-center justify-center rounded-2xl"
             disabled={saving}
             onPress={() => void save()}
-            style={[styles.primaryButton, saving && styles.disabled]}
+            style={{ backgroundColor: theme.colors.primary, opacity: saving ? 0.55 : 1 }}
           >
-            <Text style={styles.primaryText}>
-              {saving ? "Menyimpan..." : "Simpan titik lokasi"}
+            <Text className="text-sm font-black text-white">
+              {saving ? t("common.saving") : t("location.savePoint")}
             </Text>
           </Pressable>
         </View>
       )}
     </ScrollView>
   );
-}
-
-function createStyles(colors: {
-  background: string;
-  surface: string;
-  surfaceAccent: string;
-  primary: string;
-  primaryStrong: string;
-  secondary: string;
-  text: string;
-  textMuted: string;
-  border: string;
-  onPrimary: string;
-}) {
-  return StyleSheet.create({
-    container: { flexGrow: 1, backgroundColor: colors.background, padding: 20, paddingTop: 54, paddingBottom: 40 },
-    header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 30 },
-    back: { color: colors.primary, fontWeight: "800" },
-    brand: { color: colors.primaryStrong, fontSize: 25, fontWeight: "900", letterSpacing: -1 },
-    eyebrow: { color: colors.primary, fontWeight: "900", fontSize: 10, letterSpacing: 1.4 },
-    title: { color: colors.text, fontWeight: "900", fontSize: 30, letterSpacing: -1, marginTop: 5 },
-    subtitle: { color: colors.textMuted, lineHeight: 20, fontSize: 12, marginTop: 7, marginBottom: 22 },
-    card: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 20, padding: 17 },
-    centerCard: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 18, padding: 18, alignItems: "center", gap: 8 },
-    errorCard: { backgroundColor: colors.surfaceAccent, borderRadius: 18, padding: 17 },
-    cardTitle: { color: colors.text, fontWeight: "900", fontSize: 15 },
-    muted: { color: colors.textMuted, fontSize: 11, lineHeight: 17, marginTop: 4 },
-    errorText: { color: "#B42318", fontSize: 11, lineHeight: 17, marginTop: 12 },
-    primaryButton: { backgroundColor: colors.primaryStrong, borderRadius: 14, alignItems: "center", paddingVertical: 14, marginTop: 18 },
-    primaryText: { color: "#FFFFFF", fontWeight: "900" },
-    disabled: { opacity: 0.55 },
-  });
 }

@@ -1,24 +1,42 @@
 import { useNitipTranslation } from "@nitip/i18n";
 import { router } from "expo-router";
 import { Pressable, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import { useNitipTheme } from "../hooks/useNitipTheme";
 
 export default function LanguageScreen() {
   const { t } = useNitipTranslation();
+  const theme = useNitipTheme();
+  const insets = useSafeAreaInsets();
 
   return (
-    <View className="flex-1 bg-background px-5 pb-10 pt-16">
-      <Pressable onPress={() => router.back()}>
-        <Text className="font-extrabold text-primary">‹ {t("common.back")}</Text>
+    <View
+      className="flex-1 px-5"
+      style={{
+        backgroundColor: theme.colors.background,
+        paddingTop: insets.top + 14,
+        paddingBottom: Math.max(insets.bottom, 24),
+      }}
+    >
+      <Pressable className="min-h-10 justify-center self-start pr-4" onPress={() => router.back()}>
+        <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
+          ‹ {t("common.back")}
+        </Text>
       </Pressable>
-      <Text className="mt-8 text-3xl font-black tracking-tight text-foreground">
+      <Text className="mt-7 text-3xl font-black tracking-tighter" style={{ color: theme.colors.text }}>
         {t("user.languageTitle")}
       </Text>
-      <Text className="mb-6 mt-2 text-sm leading-5 text-muted">
+      <Text className="mb-6 mt-2 text-sm leading-6" style={{ color: theme.colors.textMuted }}>
         {t("user.languageDescription")}
       </Text>
-      <LanguageSwitcher />
+      <View
+        className="rounded-3xl border p-5"
+        style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+      >
+        <LanguageSwitcher />
+      </View>
     </View>
   );
 }

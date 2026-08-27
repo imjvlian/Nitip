@@ -1,27 +1,23 @@
-import { calculateOrderQuote, formatRupiah, type NitipUserProfile } from "@nitip/domain";
+import { formatRupiah, type NitipUserProfile } from "@nitip/domain";
 import type { NitipCatalogOutletSummary } from "@nitip/domain/catalog";
+import { useNitipTranslation } from "@nitip/i18n";
 import { Redirect, router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { BottomNavigation } from "../components/BottomNavigation";
 import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/CartContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
 import { apiConfigured, getMe, listCatalogOutlets } from "../lib/api";
 
-const sample = calculateOrderQuote({ subtotal: 60_000, distanceKm: 3 });
-
 export default function HomeScreen() {
+  const { t } = useNitipTranslation();
   const theme = useNitipTheme();
-  const styles = useMemo(() => createStyles(theme.colors), [theme]);
-  const { signOut, user } = useAuth();
+  const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const cart = useCart();
   const [profile, setProfile] = useState<NitipUserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -35,16 +31,14 @@ export default function HomeScreen() {
     let active = true;
     setProfileLoading(true);
     setProfileError(null);
-
     getMe(user)
       .then((nextProfile) => {
         if (active) setProfile(nextProfile);
       })
       .catch((error: unknown) => {
-        if (!active) return;
-        setProfileError(
-          error instanceof Error ? error.message : "Gagal memuat profil Nitip",
-        );
+        if (active) {
+          setProfileError(error instanceof Error ? error.message : t("home.profileLoadError"));
+        }
       })
       .finally(() => {
         if (active) setProfileLoading(false);
@@ -53,7 +47,7 @@ export default function HomeScreen() {
     return () => {
       active = false;
     };
-  }, [user]);
+  }, [t, user]);
 
   useEffect(() => {
     if (!apiConfigured) return;
@@ -61,16 +55,13 @@ export default function HomeScreen() {
     let active = true;
     setCatalogLoading(true);
     setCatalogError(null);
-
     listCatalogOutlets()
       .then((items) => {
         if (active) setCatalog(items);
       })
       .catch((error: unknown) => {
         if (active) {
-          setCatalogError(
-            error instanceof Error ? error.message : "Gagal memuat katalog",
-          );
+          setCatalogError(error instanceof Error ? error.message : t("home.catalogLoadError"));
         }
       })
       .finally(() => {
@@ -80,406 +71,216 @@ export default function HomeScreen() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [t]);
 
   if (!user) return <Redirect href="/login" />;
 
   const firstName =
     profile?.displayName?.split(" ")[0] ??
     user.displayName?.split(" ")[0] ??
-    "Kamu";
+    t("home.fallbackName");
+
+  const categories = [
+    { icon: "🍜", label: t("home.food") },
+    { icon: "🥤", label: t("home.drinks") },
+    { icon: "🛒", label: t("home.stores") },
+  ];
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.brandRow}>
-        <Text style={styles.brand}>nitip.</Text>
-        <View style={styles.headerActions}>
-          <Pressable
-            onPress={() => router.push("/orders")}
-            style={styles.ordersButton}
-          >
-            <Text style={styles.ordersButtonText}>Pesanan</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/profile")}
-            style={styles.profileButton}
-          >
-            <Text style={styles.profileButtonText}>Profil</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => void signOut()}
-            style={styles.logoutButton}
-          >
-            <Text style={styles.logoutText}>Keluar</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <Text style={styles.eyebrow}>Halo, {firstName} 👋</Text>
-      <Text style={styles.title}>Mau nitip apa hari ini?</Text>
-
-      {profileLoading ? (
-        <View style={styles.statusCard}>
-          <ActivityIndicator color={theme.colors.primary} />
-          <Text style={styles.statusText}>Menyinkronkan profil Nitip...</Text>
-        </View>
-      ) : null}
-
-      {!apiConfigured ? (
-        <View style={styles.statusCard}>
-          <Text style={styles.statusTitle}>API belum dikonfigurasi</Text>
-          <Text style={styles.statusText}>
-            Set EXPO_PUBLIC_API_URL untuk menghubungkan aplikasi ke Nitip API.
-          </Text>
-        </View>
-      ) : null}
-
-      {profileError ? (
-        <View style={styles.statusCard}>
-          <Text style={styles.statusTitle}>Profil belum tersambung</Text>
-          <Text style={styles.statusText}>{profileError}</Text>
-        </View>
-      ) : null}
-
-      {profile ? (
-        <Pressable
-          onPress={() => router.push("/profile")}
-          style={styles.identityCard}
-        >
-          <Text style={styles.identityLabel}>NITIP PROFILE</Text>
-          <Text style={styles.identityValue}>
-            {profile.email ?? "Tanpa email"}
-          </Text>
-          <Text style={styles.identityMeta}>
-            Role: {profile.role} · {profile.phoneNumber ?? "Nomor HP belum diisi"}
-          </Text>
-        </Pressable>
-      ) : null}
-
-      <Pressable
-        onPress={() => router.push("/orders")}
-        style={styles.orderShortcut}
+    <View className="flex-1" style={{ backgroundColor: theme.colors.background }}>
+      <ScrollView
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: insets.top + 14,
+          paddingBottom: 30,
+        }}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.orderShortcutBody}>
-          <Text style={styles.orderShortcutEyebrow}>PESANAN SAYA</Text>
-          <Text style={styles.orderShortcutTitle}>Pantau status & riwayat</Text>
-          <Text style={styles.orderShortcutMeta}>
-            Lihat pesanan aktif, selesai, atau dibatalkan.
+        <View className="flex-row items-center justify-between">
+          <Text className="text-3xl font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>
+            nitip.
           </Text>
-        </View>
-        <Text style={styles.orderShortcutArrow}>→</Text>
-      </Pressable>
-
-      <View style={styles.searchBox}>
-        <Text style={styles.searchText}>Cari makanan, minuman, atau toko…</Text>
-      </View>
-
-      <Text style={styles.sectionTitle}>Jelajahi</Text>
-      <View style={styles.categoryRow}>
-        {["🍜 Makanan", "🥤 Minuman", "🛒 Toko"].map((category) => (
-          <View key={category} style={styles.category}>
-            <Text style={styles.categoryText}>{category}</Text>
-          </View>
-        ))}
-      </View>
-
-      <Text style={styles.sectionTitle}>Merchant Nitip</Text>
-      {catalogLoading ? (
-        <View style={styles.catalogLoading}>
-          <ActivityIndicator color={theme.colors.primary} />
-          <Text style={styles.statusText}>Memuat katalog...</Text>
-        </View>
-      ) : catalogError ? (
-        <View style={styles.statusCard}>
-          <Text style={styles.statusTitle}>Katalog belum tersedia</Text>
-          <Text style={styles.statusText}>{catalogError}</Text>
-        </View>
-      ) : catalog.length === 0 ? (
-        <View style={styles.emptyCard}>
-          <Text style={styles.statusTitle}>Belum ada merchant publik</Text>
-          <Text style={styles.statusText}>
-            Katalog hanya menampilkan merchant berstatus approved. Merchant yang
-            masih menunggu review tidak dipublikasikan.
-          </Text>
-        </View>
-      ) : (
-        catalog.map((outlet) => (
           <Pressable
-            key={outlet.id}
-            onPress={() => router.push(`/outlet/${outlet.id}`)}
-            style={styles.card}
+            className="min-h-11 flex-row items-center justify-center rounded-full px-4"
+            onPress={() => router.push("/cart")}
+            style={{ backgroundColor: theme.colors.surface }}
           >
-            {outlet.imageUrl ? (
-              <Image source={{ uri: outlet.imageUrl }} style={styles.merchantImage} />
-            ) : (
-              <View style={styles.merchantAvatar}>
-                <Text style={styles.avatarText}>
-                  {outlet.businessName.slice(0, 1).toUpperCase()}
-                </Text>
-              </View>
-            )}
-            <View style={styles.cardContent}>
-              <Text style={styles.cardTitle}>{outlet.businessName}</Text>
-              <Text style={styles.cardMeta}>
-                {outlet.name} · {outlet.acceptingOrders ? "Buka" : "Tutup"}
-              </Text>
-              <Text style={styles.cardMeta}>{outlet.productCount} produk</Text>
-              <Text style={styles.cardPrice}>
-                {outlet.minPrice == null
-                  ? "Menu segera tersedia"
-                  : `Mulai ${formatRupiah(outlet.minPrice)}`}
+            <Text className="text-xs font-black" style={{ color: theme.colors.text }}>
+              {cart.itemCount > 0
+                ? t("home.cartButton", { count: cart.itemCount })
+                : t("common.cart")}
+            </Text>
+          </Pressable>
+        </View>
+
+        <View className="mt-8">
+          <Text className="text-sm font-bold" style={{ color: theme.colors.primary }}>
+            {t("home.greeting", { name: firstName })}
+          </Text>
+          <Text className="mt-1 max-w-[340px] text-4xl font-black leading-[42px] tracking-tighter" style={{ color: theme.colors.text }}>
+            {t("home.title")}
+          </Text>
+        </View>
+
+        <View
+          className="mt-6 flex-row items-center rounded-2xl border px-4 py-4"
+          style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+        >
+          <Text className="mr-3 text-xl" style={{ color: theme.colors.textMuted }}>⌕</Text>
+          <Text className="flex-1 text-sm" style={{ color: theme.colors.textMuted }}>
+            {t("home.searchPlaceholder")}
+          </Text>
+        </View>
+
+        <Text className="mt-8 text-lg font-black" style={{ color: theme.colors.text }}>
+          {t("home.explore")}
+        </Text>
+        <View className="mt-3 flex-row gap-2">
+          {categories.map((category) => (
+            <View
+              className="flex-1 items-center rounded-2xl border px-2 py-4"
+              key={category.label}
+              style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+            >
+              <Text className="text-2xl">{category.icon}</Text>
+              <Text className="mt-2 text-xs font-extrabold" style={{ color: theme.colors.text }}>
+                {category.label}
               </Text>
             </View>
-          </Pressable>
-        ))
-      )}
+          ))}
+        </View>
 
-      <View style={styles.quoteCard}>
-        <Text style={styles.quoteLabel}>SIMULASI · Rp60.000 · 3 KM</Text>
-        <Text style={styles.quoteValue}>{formatRupiah(sample.customerTotal)}</Text>
-        <Text style={styles.quoteMeta}>
-          Termasuk ongkir {formatRupiah(sample.deliveryFare)} dan biaya layanan {formatRupiah(sample.serviceFee)}.
-        </Text>
-      </View>
-    </ScrollView>
+        {!apiConfigured ? (
+          <View
+            className="mt-6 rounded-2xl border p-4"
+            style={{ backgroundColor: theme.colors.warningSurface, borderColor: theme.colors.border }}
+          >
+            <Text className="text-sm font-black" style={{ color: theme.colors.warning }}>
+              {t("home.apiNotConfigured")}
+            </Text>
+            <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+              {t("home.apiDescription")}
+            </Text>
+          </View>
+        ) : null}
+
+        {profileError ? (
+          <View
+            className="mt-4 rounded-2xl border p-4"
+            style={{ backgroundColor: theme.colors.dangerSurface, borderColor: theme.colors.border }}
+          >
+            <Text className="text-sm font-black" style={{ color: theme.colors.danger }}>
+              {t("home.profileDisconnected")}
+            </Text>
+            <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+              {profileError}
+            </Text>
+          </View>
+        ) : null}
+
+        <View className="mt-9 flex-row items-end justify-between">
+          <View className="flex-1 pr-4">
+            <Text className="text-xl font-black" style={{ color: theme.colors.text }}>
+              {t("home.merchants")}
+            </Text>
+            <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+              {t("home.merchantsSubtitle")}
+            </Text>
+          </View>
+          {profileLoading ? <ActivityIndicator color={theme.colors.primary} size="small" /> : null}
+        </View>
+
+        {catalogLoading ? (
+          <View
+            className="mt-4 items-center rounded-3xl border p-6"
+            style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+          >
+            <ActivityIndicator color={theme.colors.primary} />
+            <Text className="mt-3 text-xs" style={{ color: theme.colors.textMuted }}>
+              {t("home.loadingCatalog")}
+            </Text>
+          </View>
+        ) : catalogError ? (
+          <View
+            className="mt-4 rounded-3xl border p-5"
+            style={{ backgroundColor: theme.colors.dangerSurface, borderColor: theme.colors.border }}
+          >
+            <Text className="text-sm font-black" style={{ color: theme.colors.danger }}>
+              {t("home.catalogUnavailable")}
+            </Text>
+            <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+              {catalogError}
+            </Text>
+          </View>
+        ) : catalog.length === 0 ? (
+          <View
+            className="mt-4 rounded-3xl border p-5"
+            style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+          >
+            <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
+              {t("home.noMerchants")}
+            </Text>
+            <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+              {t("home.noMerchantsDescription")}
+            </Text>
+          </View>
+        ) : (
+          <View className="mt-4 gap-3">
+            {catalog.map((outlet) => (
+              <Pressable
+                className="flex-row rounded-3xl border p-3"
+                key={outlet.id}
+                onPress={() => router.push(`/outlet/${outlet.id}`)}
+                style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+              >
+                {outlet.imageUrl ? (
+                  <Image
+                    className="h-24 w-24 rounded-2xl"
+                    source={{ uri: outlet.imageUrl }}
+                    style={{ backgroundColor: theme.colors.surfaceAccent }}
+                  />
+                ) : (
+                  <View
+                    className="h-24 w-24 items-center justify-center rounded-2xl"
+                    style={{ backgroundColor: theme.colors.surfaceAccent }}
+                  >
+                    <Text className="text-3xl font-black" style={{ color: theme.colors.primary }}>
+                      {outlet.businessName.slice(0, 1).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+                <View className="flex-1 justify-center pl-4">
+                  <View className="flex-row items-center gap-2">
+                    <View
+                      className="h-2 w-2 rounded-full"
+                      style={{
+                        backgroundColor: outlet.acceptingOrders
+                          ? theme.colors.success
+                          : theme.colors.textMuted,
+                      }}
+                    />
+                    <Text className="text-[10px] font-black uppercase" style={{ color: theme.colors.textMuted }}>
+                      {outlet.acceptingOrders ? t("common.open") : t("common.closed")}
+                    </Text>
+                  </View>
+                  <Text className="mt-1 text-base font-black" numberOfLines={1} style={{ color: theme.colors.text }}>
+                    {outlet.businessName}
+                  </Text>
+                  <Text className="mt-0.5 text-xs" numberOfLines={1} style={{ color: theme.colors.textMuted }}>
+                    {outlet.name} · {t("home.productCount", { count: outlet.productCount })}
+                  </Text>
+                  <Text className="mt-2 text-xs font-black" style={{ color: theme.colors.primary }}>
+                    {outlet.minPrice == null
+                      ? t("home.menuSoon")
+                      : t("home.fromPrice", { price: formatRupiah(outlet.minPrice) })}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+      <BottomNavigation active="home" />
+    </View>
   );
-}
-
-function createStyles(colors: {
-  background: string;
-  surface: string;
-  surfaceAccent: string;
-  primary: string;
-  primaryStrong: string;
-  secondary: string;
-  text: string;
-  textMuted: string;
-  border: string;
-  onPrimary: string;
-}) {
-  return StyleSheet.create({
-    container: {
-      flexGrow: 1,
-      backgroundColor: colors.background,
-      paddingHorizontal: 20,
-      paddingTop: 56,
-      paddingBottom: 40,
-    },
-    brandRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: 34,
-    },
-    brand: {
-      fontSize: 29,
-      fontWeight: "900",
-      color: colors.primaryStrong,
-      letterSpacing: -1.2,
-    },
-    headerActions: { flexDirection: "row", gap: 6 },
-    ordersButton: {
-      backgroundColor: colors.primaryStrong,
-      borderRadius: 999,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-    },
-    ordersButtonText: {
-      color: colors.onPrimary,
-      fontWeight: "900",
-      fontSize: 11,
-    },
-    profileButton: {
-      backgroundColor: colors.surfaceAccent,
-      borderRadius: 999,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-    },
-    profileButtonText: {
-      color: colors.primaryStrong,
-      fontWeight: "900",
-      fontSize: 11,
-    },
-    logoutButton: {
-      borderColor: colors.border,
-      borderWidth: 1,
-      borderRadius: 999,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-    },
-    logoutText: { color: colors.text, fontWeight: "800", fontSize: 11 },
-    eyebrow: { color: colors.primary, fontSize: 14, fontWeight: "700" },
-    title: {
-      marginTop: 4,
-      fontSize: 32,
-      lineHeight: 38,
-      fontWeight: "900",
-      color: colors.text,
-      letterSpacing: -1.1,
-    },
-    statusCard: {
-      marginTop: 18,
-      borderRadius: 18,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.surfaceAccent,
-      padding: 15,
-      gap: 6,
-    },
-    statusTitle: { color: colors.text, fontWeight: "900", fontSize: 13 },
-    statusText: { color: colors.textMuted, lineHeight: 18, fontSize: 12 },
-    identityCard: {
-      marginTop: 18,
-      borderRadius: 18,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      padding: 15,
-    },
-    identityLabel: {
-      color: colors.primary,
-      fontWeight: "900",
-      fontSize: 10,
-      letterSpacing: 1.2,
-    },
-    identityValue: {
-      color: colors.text,
-      fontWeight: "800",
-      fontSize: 14,
-      marginTop: 5,
-    },
-    identityMeta: { color: colors.textMuted, fontSize: 12, marginTop: 3 },
-    orderShortcut: {
-      flexDirection: "row",
-      alignItems: "center",
-      marginTop: 14,
-      borderRadius: 18,
-      backgroundColor: colors.primaryStrong,
-      padding: 16,
-    },
-    orderShortcutBody: { flex: 1 },
-    orderShortcutEyebrow: {
-      color: colors.secondary,
-      fontSize: 9,
-      fontWeight: "900",
-      letterSpacing: 1,
-    },
-    orderShortcutTitle: {
-      color: colors.onPrimary,
-      fontSize: 15,
-      fontWeight: "900",
-      marginTop: 4,
-    },
-    orderShortcutMeta: {
-      color: colors.secondary,
-      fontSize: 10,
-      lineHeight: 15,
-      marginTop: 3,
-    },
-    orderShortcutArrow: {
-      color: colors.onPrimary,
-      fontSize: 24,
-      fontWeight: "900",
-      marginLeft: 12,
-    },
-    searchBox: {
-      marginTop: 22,
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 18,
-      paddingHorizontal: 16,
-      paddingVertical: 16,
-    },
-    searchText: { color: colors.textMuted },
-    sectionTitle: {
-      marginTop: 30,
-      marginBottom: 12,
-      color: colors.text,
-      fontWeight: "900",
-      fontSize: 18,
-    },
-    categoryRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-    category: {
-      backgroundColor: colors.surface,
-      borderRadius: 14,
-      paddingHorizontal: 13,
-      paddingVertical: 11,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    categoryText: { color: colors.text, fontWeight: "700" },
-    catalogLoading: {
-      backgroundColor: colors.surface,
-      borderRadius: 18,
-      padding: 18,
-      borderWidth: 1,
-      borderColor: colors.border,
-      alignItems: "center",
-      gap: 8,
-    },
-    emptyCard: {
-      backgroundColor: colors.surface,
-      borderRadius: 18,
-      padding: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    card: {
-      flexDirection: "row",
-      backgroundColor: colors.surface,
-      borderRadius: 20,
-      padding: 14,
-      borderWidth: 1,
-      borderColor: colors.border,
-      marginBottom: 10,
-    },
-    merchantAvatar: {
-      width: 72,
-      height: 72,
-      borderRadius: 16,
-      backgroundColor: colors.surfaceAccent,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    merchantImage: {
-      width: 72,
-      height: 72,
-      borderRadius: 16,
-      backgroundColor: colors.surfaceAccent,
-    },
-    avatarText: {
-      color: colors.primaryStrong,
-      fontWeight: "900",
-      fontSize: 28,
-    },
-    cardContent: { flex: 1, paddingLeft: 14, justifyContent: "center" },
-    cardTitle: { fontWeight: "800", fontSize: 16, color: colors.text },
-    cardMeta: { color: colors.textMuted, marginTop: 3, fontSize: 11 },
-    cardPrice: { color: colors.primary, marginTop: 7, fontWeight: "900" },
-    quoteCard: {
-      marginTop: 24,
-      borderRadius: 20,
-      backgroundColor: colors.primaryStrong,
-      padding: 18,
-    },
-    quoteLabel: {
-      color: colors.secondary,
-      fontSize: 10,
-      fontWeight: "900",
-      letterSpacing: 1,
-    },
-    quoteValue: {
-      color: "#FFFFFF",
-      fontSize: 28,
-      fontWeight: "900",
-      marginTop: 6,
-    },
-    quoteMeta: {
-      color: colors.secondary,
-      lineHeight: 19,
-      marginTop: 8,
-      fontSize: 12,
-    },
-  });
 }

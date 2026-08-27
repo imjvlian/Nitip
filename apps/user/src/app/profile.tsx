@@ -1,17 +1,21 @@
 import type { NitipAddress, NitipUserProfile } from "@nitip/domain";
+import { useNitipTranslation } from "@nitip/i18n";
 import { Redirect, router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { BottomNavigation } from "../components/BottomNavigation";
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import { ThemeSwitcher } from "../components/ThemeSwitcher";
 import { useAuth } from "../context/AuthContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
 import {
@@ -22,16 +26,11 @@ import {
   updateMe,
 } from "../lib/api";
 
-function addressLabel(address: NitipAddress) {
-  if (address.label === "home") return "Rumah";
-  if (address.label === "office") return "Kantor";
-  return address.customLabel || "Lainnya";
-}
-
 export default function ProfileScreen() {
-  const { user } = useAuth();
+  const { t } = useNitipTranslation();
+  const { signOut, user } = useAuth();
   const theme = useNitipTheme();
-  const styles = useMemo(() => createStyles(theme.colors), [theme]);
+  const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<NitipUserProfile | null>(null);
   const [addresses, setAddresses] = useState<NitipAddress[]>([]);
   const [displayName, setDisplayName] = useState("");
@@ -44,7 +43,6 @@ export default function ProfileScreen() {
     if (!user) return;
     setLoading(true);
     setError(null);
-
     try {
       const [nextProfile, nextAddresses] = await Promise.all([
         getMe(user),
@@ -55,7 +53,7 @@ export default function ProfileScreen() {
       setPhoneNumber(nextProfile.phoneNumber ?? "");
       setAddresses(nextAddresses);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Gagal memuat profil");
+      setError(nextError instanceof Error ? nextError.message : t("profile.loadError"));
     } finally {
       setLoading(false);
     }
@@ -63,9 +61,17 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     void load();
+    // The authenticated user identity is the only trigger required here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   if (!user) return <Redirect href="/login" />;
+
+  function addressLabel(address: NitipAddress) {
+    if (address.label === "home") return t("address.home");
+    if (address.label === "office") return t("address.office");
+    return address.customLabel || t("address.other");
+  }
 
   async function saveProfile() {
     setSaving(true);
@@ -79,29 +85,30 @@ export default function ProfileScreen() {
       setDisplayName(nextProfile.displayName ?? "");
       setPhoneNumber(nextProfile.phoneNumber ?? "");
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Gagal menyimpan profil");
+      setError(nextError instanceof Error ? nextError.message : t("profile.saveError"));
     } finally {
       setSaving(false);
     }
   }
 
   async function makeDefault(address: NitipAddress) {
+    setError(null);
     try {
       await updateAddress(user, address.id, { isDefault: true });
       await load();
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Gagal mengubah alamat utama");
+      setError(nextError instanceof Error ? nextError.message : t("profile.defaultError"));
     }
   }
 
   function confirmDelete(address: NitipAddress) {
     Alert.alert(
-      "Hapus alamat?",
-      `${addressLabel(address)} akan dihapus dari akun Nitip.`,
+      t("profile.deleteAddressTitle"),
+      t("profile.deleteAddressDescription", { label: addressLabel(address) }),
       [
-        { text: "Batal", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Hapus",
+          text: t("common.delete"),
           style: "destructive",
           onPress: () => {
             void (async () => {
@@ -109,9 +116,7 @@ export default function ProfileScreen() {
                 await deleteAddress(user, address.id);
                 await load();
               } catch (nextError) {
-                setError(
-                  nextError instanceof Error ? nextError.message : "Gagal menghapus alamat",
-                );
+                setError(nextError instanceof Error ? nextError.message : t("profile.deleteError"));
               }
             })();
           },
@@ -121,194 +126,264 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>‹ Kembali</Text>
-        </Pressable>
-        <Text style={styles.brand}>nitip.</Text>
-      </View>
+    <View className="flex-1" style={{ backgroundColor: theme.colors.background }}>
+      <ScrollView
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: insets.top + 14,
+          paddingBottom: 30,
+        }}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <Text className="text-3xl font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>
+          nitip.
+        </Text>
 
-      <Text style={styles.eyebrow}>AKUN</Text>
-      <Text style={styles.title}>Profil & alamat</Text>
-      <Text style={styles.subtitle}>Data ini akan dipakai saat checkout dan pengantaran.</Text>
-
-      {loading ? (
-        <View style={styles.loadingCard}>
-          <ActivityIndicator color={theme.colors.primary} />
-          <Text style={styles.muted}>Memuat profil...</Text>
+        <View className="mt-8">
+          <Text className="text-[10px] font-black uppercase tracking-[2px]" style={{ color: theme.colors.primary }}>
+            {t("profile.eyebrow")}
+          </Text>
+          <Text className="mt-2 text-4xl font-black tracking-tighter" style={{ color: theme.colors.text }}>
+            {t("profile.title")}
+          </Text>
+          <Text className="mt-2 text-sm leading-6" style={{ color: theme.colors.textMuted }}>
+            {t("profile.subtitle")}
+          </Text>
         </View>
-      ) : (
-        <>
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Profil</Text>
-            <Text style={styles.label}>Email</Text>
-            <View style={styles.readonlyInput}>
-              <Text style={styles.readonlyText}>{profile?.email ?? user.email ?? "-"}</Text>
-            </View>
 
-            <Text style={styles.label}>Nama</Text>
-            <TextInput
-              value={displayName}
-              onChangeText={setDisplayName}
-              placeholder="Nama lengkap"
-              placeholderTextColor={theme.colors.textMuted}
-              style={styles.input}
-              maxLength={80}
-            />
-
-            <Text style={styles.label}>Nomor HP</Text>
-            <TextInput
-              value={phoneNumber}
-              onChangeText={setPhoneNumber}
-              placeholder="08xxxxxxxxxx"
-              placeholderTextColor={theme.colors.textMuted}
-              style={styles.input}
-              keyboardType="phone-pad"
-              maxLength={30}
-            />
-
-            <Pressable
-              disabled={saving}
-              onPress={() => void saveProfile()}
-              style={({ pressed }) => [
-                styles.primaryButton,
-                (pressed || saving) && styles.buttonPressed,
-              ]}
+        {loading ? (
+          <View
+            className="mt-6 items-center rounded-3xl border p-6"
+            style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+          >
+            <ActivityIndicator color={theme.colors.primary} />
+            <Text className="mt-3 text-xs" style={{ color: theme.colors.textMuted }}>
+              {t("profile.loading")}
+            </Text>
+          </View>
+        ) : (
+          <>
+            <View
+              className="mt-6 rounded-3xl border p-5"
+              style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
             >
-              <Text style={styles.primaryButtonText}>
-                {saving ? "Menyimpan..." : "Simpan profil"}
+              <Text className="text-lg font-black" style={{ color: theme.colors.text }}>
+                {t("profile.account")}
               </Text>
-            </Pressable>
-          </View>
 
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={styles.cardTitle}>Alamat tersimpan</Text>
-              <Text style={styles.muted}>{addresses.length} alamat</Text>
-            </View>
-            <Pressable onPress={() => router.push("/address/new")} style={styles.smallButton}>
-              <Text style={styles.smallButtonText}>+ Tambah</Text>
-            </Pressable>
-          </View>
-
-          {addresses.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyTitle}>Belum ada alamat</Text>
-              <Text style={styles.muted}>
-                Tambahkan alamat pertama. Alamat tersebut otomatis menjadi alamat utama.
+              <Text className="mb-2 mt-5 text-xs font-extrabold" style={{ color: theme.colors.textMuted }}>
+                {t("common.email")}
               </Text>
-            </View>
-          ) : (
-            addresses.map((address) => (
-              <View key={address.id} style={styles.addressCard}>
-                <View style={styles.addressTopRow}>
-                  <Text style={styles.addressLabel}>{addressLabel(address)}</Text>
-                  {address.isDefault && (
-                    <View style={styles.defaultBadge}>
-                      <Text style={styles.defaultText}>UTAMA</Text>
-                    </View>
-                  )}
-                </View>
-                <Text style={styles.recipient}>{address.recipientName}</Text>
-                <Text style={styles.addressText}>{address.phoneNumber}</Text>
-                <Text style={styles.addressText}>{address.addressLine}</Text>
-                {address.notes ? <Text style={styles.notes}>Catatan: {address.notes}</Text> : null}
-                <Text style={styles.coordinateText}>
-                  {address.latitude != null && address.longitude != null
-                    ? `${address.latitude.toFixed(6)}, ${address.longitude.toFixed(6)}`
-                    : "Lokasi peta belum ditentukan"}
+              <View className="rounded-2xl px-4 py-3.5" style={{ backgroundColor: theme.colors.surfaceAccent }}>
+                <Text className="text-sm" style={{ color: theme.colors.textMuted }}>
+                  {profile?.email ?? user.email ?? "-"}
                 </Text>
-
-                <View style={styles.addressActions}>
-                  <Pressable
-                    onPress={() =>
-                      router.push({
-                        pathname: "/address/[id]/location",
-                        params: { id: address.id },
-                      })
-                    }
-                    style={styles.linkButton}
-                  >
-                    <Text style={styles.linkText}>
-                      {address.latitude != null ? "Ubah titik peta" : "Atur titik peta"}
-                    </Text>
-                  </Pressable>
-                  {!address.isDefault && (
-                    <Pressable onPress={() => void makeDefault(address)} style={styles.linkButton}>
-                      <Text style={styles.linkText}>Jadikan utama</Text>
-                    </Pressable>
-                  )}
-                  <Pressable onPress={() => confirmDelete(address)} style={styles.linkButton}>
-                    <Text style={styles.dangerText}>Hapus</Text>
-                  </Pressable>
-                </View>
               </View>
-            ))
-          )}
-        </>
-      )}
 
-      {error && (
-        <View style={styles.errorCard}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      )}
-    </ScrollView>
+              <Text className="mb-2 mt-4 text-xs font-extrabold" style={{ color: theme.colors.textMuted }}>
+                {t("profile.displayName")}
+              </Text>
+              <TextInput
+                className="rounded-2xl border px-4 py-3.5 text-sm"
+                maxLength={80}
+                onChangeText={setDisplayName}
+                placeholder={t("profile.displayNamePlaceholder")}
+                placeholderTextColor={theme.colors.textMuted}
+                style={{
+                  backgroundColor: theme.colors.background,
+                  borderColor: theme.colors.border,
+                  color: theme.colors.text,
+                }}
+                value={displayName}
+              />
+
+              <Text className="mb-2 mt-4 text-xs font-extrabold" style={{ color: theme.colors.textMuted }}>
+                {t("profile.phone")}
+              </Text>
+              <TextInput
+                className="rounded-2xl border px-4 py-3.5 text-sm"
+                keyboardType="phone-pad"
+                maxLength={30}
+                onChangeText={setPhoneNumber}
+                placeholder="08xxxxxxxxxx"
+                placeholderTextColor={theme.colors.textMuted}
+                style={{
+                  backgroundColor: theme.colors.background,
+                  borderColor: theme.colors.border,
+                  color: theme.colors.text,
+                }}
+                value={phoneNumber}
+              />
+
+              <Pressable
+                className="mt-5 min-h-12 items-center justify-center rounded-2xl"
+                disabled={saving}
+                onPress={() => void saveProfile()}
+                style={{ backgroundColor: theme.colors.primary, opacity: saving ? 0.6 : 1 }}
+              >
+                <Text className="text-xs font-black text-white">
+                  {saving ? t("common.saving") : t("profile.saveProfile")}
+                </Text>
+              </Pressable>
+            </View>
+
+            <View className="mt-8 flex-row items-end justify-between">
+              <View>
+                <Text className="text-lg font-black" style={{ color: theme.colors.text }}>
+                  {t("profile.savedAddresses")}
+                </Text>
+                <Text className="mt-1 text-xs" style={{ color: theme.colors.textMuted }}>
+                  {t("profile.addressCount", { count: addresses.length })}
+                </Text>
+              </View>
+              <Pressable
+                className="rounded-full px-4 py-2.5"
+                onPress={() => router.push("/address/new")}
+                style={{ backgroundColor: theme.colors.surfaceAccent }}
+              >
+                <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
+                  + {t("common.add")}
+                </Text>
+              </Pressable>
+            </View>
+
+            {addresses.length === 0 ? (
+              <View
+                className="mt-3 rounded-3xl border p-5"
+                style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+              >
+                <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
+                  {t("profile.noAddressTitle")}
+                </Text>
+                <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+                  {t("profile.noAddressDescription")}
+                </Text>
+              </View>
+            ) : (
+              <View className="mt-3 gap-3">
+                {addresses.map((address) => (
+                  <View
+                    className="rounded-3xl border p-4"
+                    key={address.id}
+                    style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+                  >
+                    <View className="flex-row items-center justify-between gap-3">
+                      <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
+                        {addressLabel(address)}
+                      </Text>
+                      {address.isDefault ? (
+                        <View className="rounded-full px-2.5 py-1.5" style={{ backgroundColor: theme.colors.successSurface }}>
+                          <Text className="text-[9px] font-black" style={{ color: theme.colors.success }}>
+                            {t("profile.main")}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <Text className="mt-3 text-sm font-extrabold" style={{ color: theme.colors.text }}>
+                      {address.recipientName}
+                    </Text>
+                    <Text className="mt-1 text-xs" style={{ color: theme.colors.textMuted }}>
+                      {address.phoneNumber}
+                    </Text>
+                    <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+                      {address.addressLine}
+                    </Text>
+                    {address.notes ? (
+                      <Text className="mt-2 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+                        {t("profile.notesPrefix", { notes: address.notes })}
+                      </Text>
+                    ) : null}
+                    <Text className="mt-3 text-[10px] font-extrabold" style={{ color: theme.colors.primary }}>
+                      {address.latitude != null && address.longitude != null
+                        ? `${address.latitude.toFixed(6)}, ${address.longitude.toFixed(6)}`
+                        : t("profile.mapMissing")}
+                    </Text>
+
+                    <View className="mt-4 flex-row flex-wrap gap-x-5 gap-y-3">
+                      <Pressable
+                        onPress={() =>
+                          router.push({
+                            pathname: "/address/[id]/location",
+                            params: { id: address.id },
+                          })
+                        }
+                      >
+                        <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
+                          {address.latitude != null ? t("profile.changeMap") : t("profile.setMap")}
+                        </Text>
+                      </Pressable>
+                      {!address.isDefault ? (
+                        <Pressable onPress={() => void makeDefault(address)}>
+                          <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
+                            {t("profile.makeDefault")}
+                          </Text>
+                        </Pressable>
+                      ) : null}
+                      <Pressable onPress={() => confirmDelete(address)}>
+                        <Text className="text-xs font-black" style={{ color: theme.colors.danger }}>
+                          {t("common.delete")}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <View className="mt-8">
+              <Text className="text-lg font-black" style={{ color: theme.colors.text }}>
+                {t("profile.preferences")}
+              </Text>
+              <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+                {t("profile.preferencesDescription")}
+              </Text>
+            </View>
+
+            <View
+              className="mt-3 rounded-3xl border p-5"
+              style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+            >
+              <LanguageSwitcher />
+              <View className="my-5 h-px" style={{ backgroundColor: theme.colors.border }} />
+              <ThemeSwitcher />
+              <Text className="mt-2 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
+                {t("profile.appearanceDescription")}
+              </Text>
+            </View>
+
+            <View
+              className="mt-8 rounded-3xl border p-5"
+              style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+            >
+              <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
+                {t("common.signOut")}
+              </Text>
+              <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+                {t("profile.signOutDescription")}
+              </Text>
+              <Pressable
+                className="mt-4 min-h-12 items-center justify-center rounded-2xl"
+                onPress={() => void signOut()}
+                style={{ backgroundColor: theme.colors.dangerSurface }}
+              >
+                <Text className="text-xs font-black" style={{ color: theme.colors.danger }}>
+                  {t("common.signOut")}
+                </Text>
+              </Pressable>
+            </View>
+          </>
+        )}
+
+        {error ? (
+          <View className="mt-4 rounded-2xl p-4" style={{ backgroundColor: theme.colors.dangerSurface }}>
+            <Text className="text-xs leading-5" style={{ color: theme.colors.danger }}>
+              {error}
+            </Text>
+          </View>
+        ) : null}
+      </ScrollView>
+      <BottomNavigation active="profile" />
+    </View>
   );
-}
-
-function createStyles(colors: {
-  background: string;
-  surface: string;
-  surfaceAccent: string;
-  primary: string;
-  primaryStrong: string;
-  secondary: string;
-  text: string;
-  textMuted: string;
-  border: string;
-  onPrimary: string;
-}) {
-  return StyleSheet.create({
-    container: { flexGrow: 1, backgroundColor: colors.background, padding: 20, paddingTop: 54, paddingBottom: 40 },
-    header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 30 },
-    backButton: { paddingVertical: 8, paddingRight: 12 },
-    backText: { color: colors.primary, fontWeight: "800" },
-    brand: { color: colors.primaryStrong, fontSize: 25, fontWeight: "900", letterSpacing: -1 },
-    eyebrow: { color: colors.primary, fontSize: 10, fontWeight: "900", letterSpacing: 1.4 },
-    title: { color: colors.text, fontSize: 30, fontWeight: "900", letterSpacing: -1, marginTop: 5 },
-    subtitle: { color: colors.textMuted, lineHeight: 20, marginTop: 7, marginBottom: 22 },
-    loadingCard: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 18, padding: 18, alignItems: "center", gap: 10 },
-    card: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 20, padding: 17 },
-    cardTitle: { color: colors.text, fontSize: 17, fontWeight: "900" },
-    label: { color: colors.textMuted, fontSize: 11, fontWeight: "800", marginTop: 16, marginBottom: 7 },
-    input: { backgroundColor: colors.background, borderColor: colors.border, borderWidth: 1, borderRadius: 14, color: colors.text, paddingHorizontal: 13, paddingVertical: 12 },
-    readonlyInput: { backgroundColor: colors.surfaceAccent, borderRadius: 14, paddingHorizontal: 13, paddingVertical: 12 },
-    readonlyText: { color: colors.textMuted },
-    primaryButton: { backgroundColor: colors.primaryStrong, borderRadius: 14, alignItems: "center", paddingVertical: 14, marginTop: 18 },
-    primaryButtonText: { color: "#FFFFFF", fontWeight: "900" },
-    buttonPressed: { opacity: 0.7 },
-    sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 28, marginBottom: 12 },
-    muted: { color: colors.textMuted, fontSize: 12, lineHeight: 18, marginTop: 3 },
-    smallButton: { backgroundColor: colors.surfaceAccent, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 9 },
-    smallButtonText: { color: colors.primaryStrong, fontWeight: "900", fontSize: 12 },
-    emptyCard: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 18, padding: 17 },
-    emptyTitle: { color: colors.text, fontWeight: "900", marginBottom: 3 },
-    addressCard: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 18, padding: 16, marginBottom: 10 },
-    addressTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-    addressLabel: { color: colors.primary, fontWeight: "900", fontSize: 13 },
-    defaultBadge: { backgroundColor: colors.surfaceAccent, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 },
-    defaultText: { color: colors.primaryStrong, fontSize: 9, fontWeight: "900", letterSpacing: 0.7 },
-    recipient: { color: colors.text, fontSize: 15, fontWeight: "900", marginTop: 10 },
-    addressText: { color: colors.textMuted, fontSize: 12, lineHeight: 18, marginTop: 2 },
-    notes: { color: colors.textMuted, fontSize: 11, lineHeight: 17, marginTop: 7 },
-    coordinateText: { color: colors.primary, fontSize: 10, fontWeight: "700", marginTop: 9 },
-    addressActions: { flexDirection: "row", flexWrap: "wrap", gap: 14, marginTop: 13 },
-    linkButton: { paddingVertical: 4 },
-    linkText: { color: colors.primary, fontWeight: "800", fontSize: 12 },
-    dangerText: { color: "#B42318", fontWeight: "800", fontSize: 12 },
-    errorCard: { backgroundColor: colors.surfaceAccent, borderColor: colors.border, borderWidth: 1, borderRadius: 14, padding: 13, marginTop: 14 },
-    errorText: { color: colors.text, fontSize: 12, lineHeight: 18 },
-  });
 }

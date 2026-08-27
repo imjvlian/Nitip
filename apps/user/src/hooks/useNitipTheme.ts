@@ -1,7 +1,5 @@
-import { getNitipTheme } from "@nitip/theme";
-import { useColorScheme } from "react-native";
+import { useUserTheme } from "../context/ThemeContext";
 
 export function useNitipTheme() {
-  const colorScheme = useColorScheme();
-  return getNitipTheme(colorScheme === "dark" ? "dark" : "light");
+  return useUserTheme().theme;
 }

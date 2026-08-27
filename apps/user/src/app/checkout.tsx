@@ -1,25 +1,22 @@
 import { formatRupiah, type NitipAddress } from "@nitip/domain";
 import type { NitipCheckoutQuote, NitipCheckoutRequest } from "@nitip/domain/commerce";
+import { useNitipTranslation } from "@nitip/i18n";
 import { Redirect, router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
 import { createOrder, getCheckoutQuote, listAddresses } from "../lib/api";
 
-function addressLabel(address: NitipAddress) {
-  if (address.label === "home") return "Rumah";
-  if (address.label === "office") return "Kantor";
-  return address.customLabel || "Lainnya";
-}
-
 export default function CheckoutScreen() {
+  const { t } = useNitipTranslation();
   const { user } = useAuth();
   const cart = useCart();
   const theme = useNitipTheme();
-  const styles = useMemo(() => createStyles(theme.colors), [theme]);
+  const insets = useSafeAreaInsets();
   const [addresses, setAddresses] = useState<NitipAddress[]>([]);
   const [addressId, setAddressId] = useState("");
   const [quote, setQuote] = useState<NitipCheckoutQuote | null>(null);
@@ -40,7 +37,9 @@ export default function CheckoutScreen() {
         setAddressId((current) => current || preferred?.id || "");
       })
       .catch((nextError: unknown) => {
-        if (active) setError(nextError instanceof Error ? nextError.message : "Gagal memuat alamat");
+        if (active) {
+          setError(nextError instanceof Error ? nextError.message : t("checkout.addressError"));
+        }
       })
       .finally(() => {
         if (active) setLoadingAddresses(false);
@@ -48,7 +47,7 @@ export default function CheckoutScreen() {
     return () => {
       active = false;
     };
-  }, [user]);
+  }, [t, user]);
 
   const request = useMemo<NitipCheckoutRequest | null>(() => {
     if (!cart.outlet || !addressId || cart.items.length === 0) return null;
@@ -78,7 +77,7 @@ export default function CheckoutScreen() {
       .catch((nextError: unknown) => {
         if (active) {
           setQuote(null);
-          setError(nextError instanceof Error ? nextError.message : "Gagal menghitung checkout");
+          setError(nextError instanceof Error ? nextError.message : t("checkout.quoteError"));
         }
       })
       .finally(() => {
@@ -88,9 +87,15 @@ export default function CheckoutScreen() {
     return () => {
       active = false;
     };
-  }, [request, user]);
+  }, [request, t, user]);
 
   if (!user) return <Redirect href="/login" />;
+
+  function addressLabel(address: NitipAddress) {
+    if (address.label === "home") return t("address.home");
+    if (address.label === "office") return t("address.office");
+    return address.customLabel || t("address.other");
+  }
 
   async function submitOrder() {
     if (!request) return;
@@ -101,7 +106,7 @@ export default function CheckoutScreen() {
       cart.clearCart();
       router.replace({ pathname: "/order/[id]", params: { id: order.id } });
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Gagal membuat pesanan");
+      setError(nextError instanceof Error ? nextError.message : t("checkout.createError"));
     } finally {
       setCreating(false);
     }
@@ -109,164 +114,226 @@ export default function CheckoutScreen() {
 
   if (cart.items.length === 0 || !cart.outlet) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.title}>Keranjang kosong.</Text>
-        <Pressable onPress={() => router.replace("/home")} style={styles.primaryButton}>
-          <Text style={styles.primaryButtonText}>Kembali ke Home</Text>
+      <View
+        className="flex-1 items-center justify-center px-6"
+        style={{ backgroundColor: theme.colors.background, paddingTop: insets.top, paddingBottom: insets.bottom }}
+      >
+        <Text className="text-center text-3xl font-black tracking-tighter" style={{ color: theme.colors.text }}>
+          {t("checkout.emptyCart")}
+        </Text>
+        <Pressable
+          className="mt-5 min-h-12 w-full items-center justify-center rounded-2xl"
+          onPress={() => router.replace("/home")}
+          style={{ backgroundColor: theme.colors.primary }}
+        >
+          <Text className="text-xs font-black text-white">{t("checkout.backHome")}</Text>
         </Pressable>
       </View>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>‹ Keranjang</Text>
-        </Pressable>
-        <Text style={styles.brand}>nitip.</Text>
-      </View>
-
-      <Text style={styles.eyebrow}>CHECKOUT</Text>
-      <Text style={styles.title}>Konfirmasi pesanan.</Text>
-      <Text style={styles.subtitle}>{cart.outlet.businessName} · {cart.outlet.name}</Text>
-
-      <Text style={styles.sectionTitle}>Alamat pengantaran</Text>
-      {loadingAddresses ? (
-        <View style={styles.loadingCard}>
-          <ActivityIndicator color={theme.colors.primary} />
-          <Text style={styles.muted}>Memuat alamat...</Text>
-        </View>
-      ) : addresses.length === 0 ? (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Belum ada alamat tersimpan</Text>
-          <Text style={styles.muted}>Tambahkan alamat terlebih dahulu untuk melanjutkan checkout.</Text>
-          <Pressable onPress={() => router.push("/address/new")} style={styles.secondaryButton}>
-            <Text style={styles.secondaryButtonText}>+ Tambah alamat</Text>
+    <View className="flex-1" style={{ backgroundColor: theme.colors.background }}>
+      <ScrollView
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: insets.top + 14,
+          paddingBottom: 165,
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View className="flex-row items-center justify-between">
+          <Pressable className="min-h-10 justify-center pr-4" onPress={() => router.back()}>
+            <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
+              ‹ {t("common.cart")}
+            </Text>
           </Pressable>
-        </View>
-      ) : (
-        addresses.map((address) => (
-          <Pressable
-            key={address.id}
-            onPress={() => setAddressId(address.id)}
-            style={[styles.addressCard, addressId === address.id && styles.addressCardActive]}
-          >
-            <View style={styles.rowBetween}>
-              <Text style={styles.cardTitle}>{addressLabel(address)}</Text>
-              {addressId === address.id ? <Text style={styles.selected}>DIPILIH</Text> : null}
-            </View>
-            <Text style={styles.addressName}>{address.recipientName} · {address.phoneNumber}</Text>
-            <Text style={styles.muted}>{address.addressLine}</Text>
-          </Pressable>
-        ))
-      )}
-
-      <Text style={styles.sectionTitle}>Ringkasan</Text>
-      {loadingQuote ? (
-        <View style={styles.loadingCard}>
-          <ActivityIndicator color={theme.colors.primary} />
-          <Text style={styles.muted}>Memvalidasi harga, stok, dan ongkir...</Text>
-        </View>
-      ) : quote ? (
-        <View style={styles.card}>
-          {quote.items.map((item) => (
-            <View key={item.productId} style={styles.lineRow}>
-              <Text style={styles.lineLabel}>{item.quantity}× {item.name}</Text>
-              <Text style={styles.lineValue}>{formatRupiah(item.lineTotal)}</Text>
-            </View>
-          ))}
-          <View style={styles.divider} />
-          <View style={styles.lineRow}>
-            <Text style={styles.lineLabel}>Subtotal</Text>
-            <Text style={styles.lineValue}>{formatRupiah(quote.subtotal)}</Text>
-          </View>
-          <View style={styles.lineRow}>
-            <Text style={styles.lineLabel}>Ongkir</Text>
-            <Text style={styles.lineValue}>{formatRupiah(quote.deliveryFare)}</Text>
-          </View>
-          <View style={styles.lineRow}>
-            <Text style={styles.lineLabel}>Biaya layanan</Text>
-            <Text style={styles.lineValue}>{formatRupiah(quote.serviceFee)}</Text>
-          </View>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>{formatRupiah(quote.customerTotal)}</Text>
-          </View>
-          <Text style={styles.note}>
-            {quote.distanceMethod === "minimum_fare_fallback"
-              ? "Koordinat alamat/outlet belum lengkap, jadi ongkir memakai tarif minimum sementara."
-              : `Estimasi jarak garis lurus ${quote.distanceKm?.toFixed(2)} km. Integrasi routing Maps akan menggantikannya nanti.`}
+          <Text className="text-2xl font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>
+            nitip.
           </Text>
         </View>
-      ) : null}
 
-      {error ? (
-        <View style={styles.errorCard}>
-          <Text style={styles.errorText}>{error}</Text>
+        <View className="mt-8">
+          <Text className="text-[10px] font-black uppercase tracking-[2px]" style={{ color: theme.colors.primary }}>
+            {t("checkout.eyebrow")}
+          </Text>
+          <Text className="mt-2 text-3xl font-black tracking-tighter" style={{ color: theme.colors.text }}>
+            {t("checkout.title")}
+          </Text>
+          <Text className="mt-1 text-sm" style={{ color: theme.colors.textMuted }}>
+            {cart.outlet.businessName} · {cart.outlet.name}
+          </Text>
         </View>
-      ) : null}
 
-      <Pressable
-        disabled={!quote || creating}
-        onPress={() => void submitOrder()}
-        style={[styles.primaryButton, (!quote || creating) && styles.disabled]}
-      >
-        <Text style={styles.primaryButtonText}>
-          {creating ? "Membuat pesanan..." : "Buat pesanan"}
+        <Text className="mt-8 text-lg font-black" style={{ color: theme.colors.text }}>
+          {t("checkout.deliveryAddress")}
         </Text>
-      </Pressable>
-      <Text style={styles.paymentNote}>Pembayaran DOKU belum diaktifkan. Pesanan akan dibuat sebagai pending_payment.</Text>
-    </ScrollView>
-  );
-}
 
-function createStyles(colors: {
-  background: string;
-  surface: string;
-  surfaceAccent: string;
-  primary: string;
-  primaryStrong: string;
-  secondary: string;
-  text: string;
-  textMuted: string;
-  border: string;
-  onPrimary: string;
-}) {
-  return StyleSheet.create({
-    container: { flexGrow: 1, backgroundColor: colors.background, padding: 20, paddingTop: 54, paddingBottom: 42 },
-    centered: { flex: 1, backgroundColor: colors.background, padding: 24, alignItems: "center", justifyContent: "center" },
-    header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 28 },
-    back: { color: colors.primary, fontWeight: "900" },
-    brand: { color: colors.primaryStrong, fontWeight: "900", fontSize: 24, letterSpacing: -1 },
-    eyebrow: { color: colors.primary, fontSize: 10, fontWeight: "900", letterSpacing: 1.3 },
-    title: { color: colors.text, fontSize: 28, fontWeight: "900", letterSpacing: -1, marginTop: 5 },
-    subtitle: { color: colors.textMuted, marginTop: 5 },
-    sectionTitle: { color: colors.text, fontWeight: "900", fontSize: 17, marginTop: 26, marginBottom: 10 },
-    card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 18, padding: 16 },
-    loadingCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 18, padding: 16, alignItems: "center", gap: 8 },
-    addressCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 14, marginBottom: 8 },
-    addressCardActive: { borderColor: colors.primaryStrong, borderWidth: 2 },
-    rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
-    cardTitle: { color: colors.text, fontWeight: "900", fontSize: 14 },
-    selected: { color: colors.primary, fontSize: 9, fontWeight: "900" },
-    addressName: { color: colors.primary, fontSize: 11, fontWeight: "800", marginTop: 5 },
-    muted: { color: colors.textMuted, fontSize: 11, lineHeight: 17, marginTop: 3 },
-    secondaryButton: { borderWidth: 1, borderColor: colors.primary, borderRadius: 13, alignItems: "center", paddingVertical: 11, marginTop: 12 },
-    secondaryButtonText: { color: colors.primary, fontWeight: "900" },
-    lineRow: { flexDirection: "row", justifyContent: "space-between", gap: 12, paddingVertical: 6 },
-    lineLabel: { flex: 1, color: colors.textMuted, fontSize: 11 },
-    lineValue: { color: colors.text, fontWeight: "800", fontSize: 11 },
-    divider: { height: 1, backgroundColor: colors.border, marginVertical: 8 },
-    totalRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 10, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border },
-    totalLabel: { color: colors.text, fontWeight: "900", fontSize: 15 },
-    totalValue: { color: colors.primaryStrong, fontWeight: "900", fontSize: 17 },
-    note: { color: colors.textMuted, fontSize: 9, lineHeight: 15, marginTop: 12 },
-    errorCard: { backgroundColor: colors.surfaceAccent, borderRadius: 14, padding: 13, marginTop: 14 },
-    errorText: { color: colors.text, fontSize: 11, lineHeight: 17 },
-    primaryButton: { backgroundColor: colors.primaryStrong, borderRadius: 14, alignItems: "center", paddingVertical: 14, marginTop: 18, width: "100%" },
-    primaryButtonText: { color: colors.onPrimary, fontWeight: "900" },
-    disabled: { opacity: 0.45 },
-    paymentNote: { color: colors.textMuted, fontSize: 9, lineHeight: 15, textAlign: "center", marginTop: 8 },
-  });
+        {loadingAddresses ? (
+          <View
+            className="mt-3 items-center rounded-3xl border p-5"
+            style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+          >
+            <ActivityIndicator color={theme.colors.primary} />
+            <Text className="mt-2 text-xs" style={{ color: theme.colors.textMuted }}>
+              {t("checkout.loadingAddresses")}
+            </Text>
+          </View>
+        ) : addresses.length === 0 ? (
+          <View
+            className="mt-3 rounded-3xl border p-5"
+            style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+          >
+            <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
+              {t("checkout.noAddressTitle")}
+            </Text>
+            <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+              {t("checkout.noAddressDescription")}
+            </Text>
+            <Pressable
+              className="mt-4 min-h-11 items-center justify-center rounded-2xl"
+              onPress={() => router.push("/address/new")}
+              style={{ backgroundColor: theme.colors.surfaceAccent }}
+            >
+              <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
+                + {t("checkout.addAddress")}
+              </Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View className="mt-3 gap-2">
+            {addresses.map((address) => {
+              const selected = addressId === address.id;
+              return (
+                <Pressable
+                  className="rounded-3xl border p-4"
+                  key={address.id}
+                  onPress={() => setAddressId(address.id)}
+                  style={{
+                    backgroundColor: selected ? theme.colors.surfaceAccent : theme.colors.surface,
+                    borderColor: selected ? theme.colors.primary : theme.colors.border,
+                    borderWidth: selected ? 2 : 1,
+                  }}
+                >
+                  <View className="flex-row items-center justify-between gap-3">
+                    <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
+                      {addressLabel(address)}
+                    </Text>
+                    {selected ? (
+                      <Text className="text-[9px] font-black" style={{ color: theme.colors.primary }}>
+                        {t("checkout.selected")}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Text className="mt-2 text-xs font-extrabold" style={{ color: theme.colors.primary }}>
+                    {address.recipientName} · {address.phoneNumber}
+                  </Text>
+                  <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+                    {address.addressLine}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+
+        <Text className="mt-8 text-lg font-black" style={{ color: theme.colors.text }}>
+          {t("checkout.summary")}
+        </Text>
+
+        {loadingQuote ? (
+          <View
+            className="mt-3 items-center rounded-3xl border p-5"
+            style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+          >
+            <ActivityIndicator color={theme.colors.primary} />
+            <Text className="mt-2 text-xs" style={{ color: theme.colors.textMuted }}>
+              {t("checkout.validating")}
+            </Text>
+          </View>
+        ) : quote ? (
+          <View
+            className="mt-3 rounded-3xl border p-5"
+            style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+          >
+            {quote.items.map((item) => (
+              <View className="flex-row justify-between gap-4 py-1.5" key={item.productId}>
+                <Text className="flex-1 text-xs" style={{ color: theme.colors.textMuted }}>
+                  {item.quantity}× {item.name}
+                </Text>
+                <Text className="text-xs font-extrabold" style={{ color: theme.colors.text }}>
+                  {formatRupiah(item.lineTotal)}
+                </Text>
+              </View>
+            ))}
+
+            <View className="my-3 h-px" style={{ backgroundColor: theme.colors.border }} />
+            <View className="flex-row justify-between py-1.5">
+              <Text className="text-xs" style={{ color: theme.colors.textMuted }}>{t("common.subtotal")}</Text>
+              <Text className="text-xs font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(quote.subtotal)}</Text>
+            </View>
+            <View className="flex-row justify-between py-1.5">
+              <Text className="text-xs" style={{ color: theme.colors.textMuted }}>{t("common.deliveryFee")}</Text>
+              <Text className="text-xs font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(quote.deliveryFare)}</Text>
+            </View>
+            <View className="flex-row justify-between py-1.5">
+              <Text className="text-xs" style={{ color: theme.colors.textMuted }}>{t("common.serviceFee")}</Text>
+              <Text className="text-xs font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(quote.serviceFee)}</Text>
+            </View>
+
+            <View className="mt-3 flex-row justify-between border-t pt-4" style={{ borderTopColor: theme.colors.border }}>
+              <Text className="text-base font-black" style={{ color: theme.colors.text }}>{t("common.total")}</Text>
+              <Text className="text-lg font-black" style={{ color: theme.colors.primary }}>{formatRupiah(quote.customerTotal)}</Text>
+            </View>
+
+            <Text className="mt-4 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
+              {quote.distanceMethod === "minimum_fare_fallback"
+                ? t("checkout.distanceFallback")
+                : t("checkout.distanceHaversine", { distance: quote.distanceKm?.toFixed(2) ?? "-" })}
+            </Text>
+          </View>
+        ) : null}
+
+        {error ? (
+          <View className="mt-4 rounded-2xl p-4" style={{ backgroundColor: theme.colors.dangerSurface }}>
+            <Text className="text-xs leading-5" style={{ color: theme.colors.danger }}>{error}</Text>
+          </View>
+        ) : null}
+
+        <Text className="mt-4 text-center text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
+          {t("checkout.paymentNote")}
+        </Text>
+      </ScrollView>
+
+      <View
+        className="absolute bottom-0 left-0 right-0 border-t px-5 pt-3"
+        style={{
+          backgroundColor: theme.colors.surface,
+          borderTopColor: theme.colors.border,
+          paddingBottom: Math.max(insets.bottom, 12),
+        }}
+      >
+        <View className="flex-row items-center gap-4">
+          <View className="flex-1">
+            <Text className="text-[10px] font-bold" style={{ color: theme.colors.textMuted }}>{t("common.total")}</Text>
+            <Text className="mt-0.5 text-base font-black" style={{ color: theme.colors.text }}>
+              {quote ? formatRupiah(quote.customerTotal) : "—"}
+            </Text>
+          </View>
+          <Pressable
+            className="min-h-[52px] flex-[1.45] items-center justify-center rounded-2xl px-4"
+            disabled={!quote || creating}
+            onPress={() => void submitOrder()}
+            style={{ backgroundColor: theme.colors.primary, opacity: !quote || creating ? 0.45 : 1 }}
+          >
+            {creating ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text className="text-center text-xs font-black text-white">{t("checkout.createOrder")}</Text>
+            )}
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  );
 }

@@ -1,42 +1,46 @@
 import { formatRupiah } from "@nitip/domain";
 import type { NitipOrder } from "@nitip/domain/commerce";
+import { useNitipLanguage, useNitipTranslation } from "@nitip/i18n";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "../../context/AuthContext";
 import { useNitipTheme } from "../../hooks/useNitipTheme";
 import { getOrder, simulateOrderPayment } from "../../lib/api";
 
-function statusLabel(status: NitipOrder["status"]) {
-  if (status === "pending_payment") return "MENUNGGU PEMBAYARAN";
-  if (status === "paid") return "PEMBAYARAN BERHASIL";
-  if (status === "merchant_confirmed") return "DITERIMA MERCHANT";
-  if (status === "preparing") return "SEDANG DISIAPKAN";
-  if (status === "ready_for_pickup") return "SIAP DIAMBIL DRIVER";
-  if (status === "driver_assigned") return "DRIVER DITUGASKAN";
-  if (status === "picked_up") return "SUDAH DIAMBIL DRIVER";
-  if (status === "on_delivery") return "SEDANG DIANTAR";
-  if (status === "cancelled") return "DIBATALKAN";
-  if (status === "delivered") return "SELESAI";
-  return status.replaceAll("_", " ").toUpperCase();
-}
-
-function reservationDeadline(value: string | null) {
+function reservationDeadline(value: string | null, language: "id" | "en") {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleTimeString("id-ID", {
+  return date.toLocaleTimeString(language === "en" ? "en-US" : "id-ID", {
     hour: "2-digit",
     minute: "2-digit",
   });
 }
 
+function orderProgress(status: NitipOrder["status"]) {
+  if (status === "delivered") return 3;
+  if (status === "driver_assigned" || status === "picked_up" || status === "on_delivery") return 2;
+  if (
+    status === "paid" ||
+    status === "merchant_confirmed" ||
+    status === "preparing" ||
+    status === "ready_for_pickup"
+  ) {
+    return 1;
+  }
+  return 0;
+}
+
 export default function OrderDetailScreen() {
+  const { t } = useNitipTranslation();
+  const { language } = useNitipLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const theme = useNitipTheme();
-  const styles = useMemo(() => createStyles(theme.colors), [theme]);
+  const insets = useSafeAreaInsets();
   const [order, setOrder] = useState<NitipOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [simulating, setSimulating] = useState(false);
@@ -46,12 +50,15 @@ export default function OrderDetailScreen() {
     if (!user || !id) return;
     let active = true;
     setLoading(true);
+    setError(null);
     getOrder(user, id)
       .then((next) => {
         if (active) setOrder(next);
       })
       .catch((nextError: unknown) => {
-        if (active) setError(nextError instanceof Error ? nextError.message : "Gagal memuat pesanan");
+        if (active) {
+          setError(nextError instanceof Error ? nextError.message : t("orderDetail.loadError"));
+        }
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -59,7 +66,7 @@ export default function OrderDetailScreen() {
     return () => {
       active = false;
     };
-  }, [id, user]);
+  }, [id, t, user]);
 
   if (!user) return <Redirect href="/login" />;
 
@@ -70,173 +77,273 @@ export default function OrderDetailScreen() {
     try {
       setOrder(await simulateOrderPayment(user, order.id));
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Gagal mensimulasikan pembayaran");
+      setError(nextError instanceof Error ? nextError.message : t("orderDetail.simulateError"));
     } finally {
       setSimulating(false);
     }
   }
 
-  const deadline = reservationDeadline(order?.stockReservationExpiresAt ?? null);
+  const deadline = reservationDeadline(order?.stockReservationExpiresAt ?? null, language);
+  const progress = order ? orderProgress(order.status) : 0;
+  const progressSteps = [
+    t("orderDetail.progressPayment"),
+    t("orderDetail.progressPreparing"),
+    t("orderDetail.progressDelivery"),
+    t("orderDetail.progressDone"),
+  ];
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.replace("/home")}>
-          <Text style={styles.back}>‹ Home</Text>
+    <ScrollView
+      contentContainerStyle={{
+        flexGrow: 1,
+        paddingHorizontal: 20,
+        paddingTop: insets.top + 14,
+        paddingBottom: Math.max(insets.bottom + 28, 44),
+        backgroundColor: theme.colors.background,
+      }}
+      showsVerticalScrollIndicator={false}
+    >
+      <View className="flex-row items-center justify-between">
+        <Pressable className="min-h-10 justify-center pr-4" onPress={() => router.replace("/orders")}>
+          <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
+            ‹ {t("navigation.orders")}
+          </Text>
         </Pressable>
-        <Text style={styles.brand}>nitip.</Text>
+        <Text className="text-2xl font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>
+          nitip.
+        </Text>
       </View>
 
       {loading ? (
-        <View style={styles.loadingCard}>
+        <View
+          className="mt-8 items-center rounded-3xl border p-7"
+          style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+        >
           <ActivityIndicator color={theme.colors.primary} />
-          <Text style={styles.muted}>Memuat pesanan...</Text>
+          <Text className="mt-3 text-xs" style={{ color: theme.colors.textMuted }}>
+            {t("orderDetail.loading")}
+          </Text>
         </View>
       ) : error && !order ? (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Pesanan tidak ditemukan</Text>
-          <Text style={styles.muted}>{error}</Text>
+        <View className="mt-8 rounded-3xl p-5" style={{ backgroundColor: theme.colors.dangerSurface }}>
+          <Text className="text-base font-black" style={{ color: theme.colors.danger }}>
+            {t("orderDetail.notFound")}
+          </Text>
+          <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>{error}</Text>
         </View>
       ) : order ? (
         <>
-          <Text style={styles.eyebrow}>{statusLabel(order.status)}</Text>
-          <Text style={styles.title}>Pesanan kamu.</Text>
-          <Text style={styles.orderCode}>{order.orderCode}</Text>
-          <Text style={styles.subtitle}>{order.businessName} · {order.outletName}</Text>
+          <View className="mt-8">
+            <View className="self-start rounded-full px-3 py-2" style={{ backgroundColor: theme.colors.surfaceAccent }}>
+              <Text className="text-[9px] font-black" style={{ color: theme.colors.primary }}>
+                {t(`orders.status.${order.status}`)}
+              </Text>
+            </View>
+            <Text className="mt-4 text-3xl font-black tracking-tighter" style={{ color: theme.colors.text }}>
+              {t("orderDetail.title")}
+            </Text>
+            <Text className="mt-2 text-sm font-black" style={{ color: theme.colors.primary }}>
+              {order.orderCode}
+            </Text>
+            <Text className="mt-1 text-xs" style={{ color: theme.colors.textMuted }}>
+              {order.businessName} · {order.outletName}
+            </Text>
+          </View>
+
+          {order.status !== "cancelled" && order.status !== "refunded" ? (
+            <View
+              className="mt-6 rounded-3xl border p-4"
+              style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+            >
+              <View className="flex-row items-start">
+                {progressSteps.map((label, index) => {
+                  const reached = index <= progress;
+                  return (
+                    <View className="flex-1 items-center" key={label}>
+                      <View className="w-full flex-row items-center">
+                        {index > 0 ? (
+                          <View
+                            className="h-0.5 flex-1"
+                            style={{ backgroundColor: index <= progress ? theme.colors.primary : theme.colors.border }}
+                          />
+                        ) : (
+                          <View className="flex-1" />
+                        )}
+                        <View
+                          className="h-5 w-5 items-center justify-center rounded-full"
+                          style={{ backgroundColor: reached ? theme.colors.primary : theme.colors.surfaceAccent }}
+                        >
+                          <View
+                            className="h-1.5 w-1.5 rounded-full"
+                            style={{ backgroundColor: reached ? "#FFFFFF" : theme.colors.textMuted }}
+                          />
+                        </View>
+                        {index < progressSteps.length - 1 ? (
+                          <View
+                            className="h-0.5 flex-1"
+                            style={{ backgroundColor: index < progress ? theme.colors.primary : theme.colors.border }}
+                          />
+                        ) : (
+                          <View className="flex-1" />
+                        )}
+                      </View>
+                      <Text
+                        className="mt-2 text-center text-[9px] font-extrabold"
+                        style={{ color: reached ? theme.colors.text : theme.colors.textMuted }}
+                      >
+                        {label}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          ) : null}
 
           {order.status === "pending_payment" ? (
-            <View style={styles.notice}>
-              <Text style={styles.noticeTitle}>Payment gateway belum terhubung</Text>
-              <Text style={styles.noticeText}>
-                Untuk development, tombol di bawah mensimulasikan callback pembayaran berhasil. Endpoint ini otomatis tidak tersedia saat NODE_ENV=production.
+            <View className="mt-5 rounded-3xl p-5" style={{ backgroundColor: theme.colors.warningSurface }}>
+              <Text className="text-sm font-black" style={{ color: theme.colors.warning }}>
+                {t("orderDetail.paymentGatewayDev")}
               </Text>
+              <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+                {t("orderDetail.paymentGatewayDevDescription")}
+              </Text>
+
               {order.stockReservationStatus === "reserved" ? (
-                <View style={styles.stockBox}>
-                  <Text style={styles.stockTitle}>STOK DIAMANKAN</Text>
-                  <Text style={styles.stockText}>
+                <View
+                  className="mt-4 rounded-2xl border p-3"
+                  style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+                >
+                  <Text className="text-[9px] font-black tracking-wide" style={{ color: theme.colors.primary }}>
+                    {t("orderDetail.stockReserved")}
+                  </Text>
+                  <Text className="mt-1 text-[11px] leading-5" style={{ color: theme.colors.textMuted }}>
                     {deadline
-                      ? `Stok untuk pesanan ini dicadangkan sampai ${deadline}. Jika pembayaran belum selesai, reservation dilepas otomatis.`
-                      : "Stok untuk pesanan ini sedang dicadangkan selama proses pembayaran."}
+                      ? t("orderDetail.stockReservedDeadline", { deadline })
+                      : t("orderDetail.stockReservedGeneric")}
                   </Text>
                 </View>
               ) : null}
+
               <Pressable
+                className="mt-4 min-h-12 items-center justify-center rounded-2xl"
                 disabled={simulating}
                 onPress={() => void simulatePayment()}
-                style={[styles.devButton, simulating && styles.disabled]}
+                style={{ backgroundColor: theme.colors.primary, opacity: simulating ? 0.55 : 1 }}
               >
-                <Text style={styles.devButtonText}>
-                  {simulating ? "Memproses..." : "Simulasikan pembayaran berhasil"}
-                </Text>
+                {simulating ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text className="text-xs font-black text-white">{t("orderDetail.simulatePayment")}</Text>
+                )}
               </Pressable>
             </View>
           ) : null}
 
           {order.status === "paid" ? (
-            <View style={styles.notice}>
-              <Text style={styles.noticeTitle}>Pembayaran diterima</Text>
-              <Text style={styles.noticeText}>
-                Pesanan sekarang sudah masuk ke Order Center merchant dan menunggu konfirmasi.
+            <View className="mt-5 rounded-3xl p-5" style={{ backgroundColor: theme.colors.successSurface }}>
+              <Text className="text-sm font-black" style={{ color: theme.colors.success }}>
+                {t("orderDetail.paymentReceived")}
+              </Text>
+              <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+                {t("orderDetail.paymentReceivedDescription")}
               </Text>
             </View>
           ) : null}
 
           {order.status === "cancelled" ? (
-            <View style={styles.cancelNotice}>
-              <Text style={styles.cancelTitle}>Pesanan dibatalkan</Text>
-              <Text style={styles.cancelText}>
-                {order.cancellationReason ?? "Pesanan tidak dapat diproses merchant."}
+            <View className="mt-5 rounded-3xl p-5" style={{ backgroundColor: theme.colors.dangerSurface }}>
+              <Text className="text-sm font-black" style={{ color: theme.colors.danger }}>
+                {t("orderDetail.cancelled")}
+              </Text>
+              <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.danger }}>
+                {order.cancellationReason ?? t("orderDetail.cancelledFallback")}
               </Text>
             </View>
           ) : null}
 
-          <Text style={styles.sectionTitle}>Item</Text>
-          <View style={styles.card}>
+          <Text className="mt-8 text-lg font-black" style={{ color: theme.colors.text }}>
+            {t("orderDetail.items")}
+          </Text>
+          <View
+            className="mt-3 rounded-3xl border p-5"
+            style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+          >
             {order.items.map((item) => (
-              <View key={item.productId} style={styles.row}>
-                <Text style={styles.rowLabel}>{item.quantity}× {item.name}</Text>
-                <Text style={styles.rowValue}>{formatRupiah(item.lineTotal)}</Text>
+              <View className="flex-row justify-between gap-4 py-1.5" key={item.productId}>
+                <Text className="flex-1 text-xs" style={{ color: theme.colors.textMuted }}>
+                  {item.quantity}× {item.name}
+                </Text>
+                <Text className="text-xs font-extrabold" style={{ color: theme.colors.text }}>
+                  {formatRupiah(item.lineTotal)}
+                </Text>
               </View>
             ))}
           </View>
 
-          <Text style={styles.sectionTitle}>Antar ke</Text>
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{order.address.recipientName}</Text>
-            <Text style={styles.addressMeta}>{order.address.phoneNumber}</Text>
-            <Text style={styles.muted}>{order.address.addressLine}</Text>
-            {order.address.notes ? <Text style={styles.muted}>Catatan: {order.address.notes}</Text> : null}
+          <Text className="mt-8 text-lg font-black" style={{ color: theme.colors.text }}>
+            {t("orderDetail.deliverTo")}
+          </Text>
+          <View
+            className="mt-3 rounded-3xl border p-5"
+            style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+          >
+            <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
+              {order.address.recipientName}
+            </Text>
+            <Text className="mt-1 text-xs font-extrabold" style={{ color: theme.colors.primary }}>
+              {order.address.phoneNumber}
+            </Text>
+            <Text className="mt-2 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+              {order.address.addressLine}
+            </Text>
+            {order.address.notes ? (
+              <Text className="mt-2 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+                {t("orderDetail.notesPrefix", { notes: order.address.notes })}
+              </Text>
+            ) : null}
           </View>
 
-          <Text style={styles.sectionTitle}>Pembayaran</Text>
-          <View style={styles.card}>
-            <View style={styles.row}><Text style={styles.rowLabel}>Subtotal</Text><Text style={styles.rowValue}>{formatRupiah(order.subtotal)}</Text></View>
-            <View style={styles.row}><Text style={styles.rowLabel}>Ongkir</Text><Text style={styles.rowValue}>{formatRupiah(order.deliveryFare)}</Text></View>
-            <View style={styles.row}><Text style={styles.rowLabel}>Biaya layanan</Text><Text style={styles.rowValue}>{formatRupiah(order.serviceFee)}</Text></View>
-            <View style={styles.totalRow}><Text style={styles.totalLabel}>Total</Text><Text style={styles.totalValue}>{formatRupiah(order.customerTotal)}</Text></View>
+          <Text className="mt-8 text-lg font-black" style={{ color: theme.colors.text }}>
+            {t("orderDetail.payment")}
+          </Text>
+          <View
+            className="mt-3 rounded-3xl border p-5"
+            style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+          >
+            <View className="flex-row justify-between py-1.5">
+              <Text className="text-xs" style={{ color: theme.colors.textMuted }}>{t("common.subtotal")}</Text>
+              <Text className="text-xs font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(order.subtotal)}</Text>
+            </View>
+            <View className="flex-row justify-between py-1.5">
+              <Text className="text-xs" style={{ color: theme.colors.textMuted }}>{t("common.deliveryFee")}</Text>
+              <Text className="text-xs font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(order.deliveryFare)}</Text>
+            </View>
+            <View className="flex-row justify-between py-1.5">
+              <Text className="text-xs" style={{ color: theme.colors.textMuted }}>{t("common.serviceFee")}</Text>
+              <Text className="text-xs font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(order.serviceFee)}</Text>
+            </View>
+            <View className="mt-3 flex-row justify-between border-t pt-4" style={{ borderTopColor: theme.colors.border }}>
+              <Text className="text-base font-black" style={{ color: theme.colors.text }}>{t("common.total")}</Text>
+              <Text className="text-lg font-black" style={{ color: theme.colors.primary }}>{formatRupiah(order.customerTotal)}</Text>
+            </View>
           </View>
 
           {error ? (
-            <View style={styles.cancelNotice}>
-              <Text style={styles.cancelText}>{error}</Text>
+            <View className="mt-4 rounded-2xl p-4" style={{ backgroundColor: theme.colors.dangerSurface }}>
+              <Text className="text-xs leading-5" style={{ color: theme.colors.danger }}>{error}</Text>
             </View>
           ) : null}
 
-          <Pressable onPress={() => router.replace("/home")} style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>Kembali ke Home</Text>
+          <Pressable
+            className="mt-7 min-h-[52px] items-center justify-center rounded-2xl"
+            onPress={() => router.replace("/orders")}
+            style={{ backgroundColor: theme.colors.primary }}
+          >
+            <Text className="text-sm font-black text-white">{t("orderDetail.backOrders")}</Text>
           </Pressable>
         </>
       ) : null}
     </ScrollView>
   );
-}
-
-function createStyles(colors: {
-  background: string;
-  surface: string;
-  surfaceAccent: string;
-  primary: string;
-  primaryStrong: string;
-  secondary: string;
-  text: string;
-  textMuted: string;
-  border: string;
-  onPrimary: string;
-}) {
-  return StyleSheet.create({
-    container: { flexGrow: 1, backgroundColor: colors.background, padding: 20, paddingTop: 54, paddingBottom: 42 },
-    header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 28 },
-    back: { color: colors.primary, fontWeight: "900" },
-    brand: { color: colors.primaryStrong, fontWeight: "900", fontSize: 24, letterSpacing: -1 },
-    loadingCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 18, padding: 18, alignItems: "center", gap: 8 },
-    eyebrow: { color: colors.primary, fontSize: 10, fontWeight: "900", letterSpacing: 1.3 },
-    title: { color: colors.text, fontSize: 30, fontWeight: "900", letterSpacing: -1, marginTop: 5 },
-    orderCode: { color: colors.primaryStrong, fontWeight: "900", fontSize: 16, marginTop: 8 },
-    subtitle: { color: colors.textMuted, fontSize: 11, marginTop: 4 },
-    notice: { backgroundColor: colors.surfaceAccent, borderRadius: 18, padding: 15, marginTop: 18 },
-    noticeTitle: { color: colors.text, fontWeight: "900", fontSize: 13 },
-    noticeText: { color: colors.textMuted, fontSize: 10, lineHeight: 16, marginTop: 4 },
-    stockBox: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 11, marginTop: 11 },
-    stockTitle: { color: colors.primary, fontWeight: "900", fontSize: 9, letterSpacing: 0.8 },
-    stockText: { color: colors.textMuted, fontSize: 10, lineHeight: 16, marginTop: 4 },
-    devButton: { backgroundColor: colors.primaryStrong, borderRadius: 12, alignItems: "center", paddingVertical: 12, marginTop: 12 },
-    devButtonText: { color: colors.onPrimary, fontWeight: "900", fontSize: 11 },
-    disabled: { opacity: 0.45 },
-    cancelNotice: { backgroundColor: "#FFF1F0", borderRadius: 16, padding: 14, marginTop: 18 },
-    cancelTitle: { color: "#B42318", fontWeight: "900", fontSize: 13 },
-    cancelText: { color: "#B42318", fontSize: 10, lineHeight: 16, marginTop: 4 },
-    sectionTitle: { color: colors.text, fontWeight: "900", fontSize: 17, marginTop: 24, marginBottom: 9 },
-    card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 18, padding: 16 },
-    cardTitle: { color: colors.text, fontWeight: "900", fontSize: 14 },
-    addressMeta: { color: colors.primary, fontSize: 11, fontWeight: "800", marginTop: 4 },
-    muted: { color: colors.textMuted, fontSize: 11, lineHeight: 17, marginTop: 4 },
-    row: { flexDirection: "row", justifyContent: "space-between", gap: 12, paddingVertical: 6 },
-    rowLabel: { flex: 1, color: colors.textMuted, fontSize: 11 },
-    rowValue: { color: colors.text, fontWeight: "800", fontSize: 11 },
-    totalRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 10, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border },
-    totalLabel: { color: colors.text, fontWeight: "900", fontSize: 15 },
-    totalValue: { color: colors.primaryStrong, fontWeight: "900", fontSize: 17 },
-    primaryButton: { backgroundColor: colors.primaryStrong, borderRadius: 14, alignItems: "center", paddingVertical: 14, marginTop: 20 },
-    primaryButtonText: { color: colors.onPrimary, fontWeight: "900" },
-  });
 }

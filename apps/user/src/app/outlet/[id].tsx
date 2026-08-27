@@ -1,17 +1,18 @@
 import { formatRupiah } from "@nitip/domain";
 import type { NitipCatalogOutlet, NitipProduct } from "@nitip/domain/catalog";
+import { useNitipTranslation } from "@nitip/i18n";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Image,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
@@ -19,11 +20,12 @@ import { useNitipTheme } from "../../hooks/useNitipTheme";
 import { getCatalogOutlet } from "../../lib/api";
 
 export default function CatalogOutletScreen() {
+  const { t } = useNitipTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const cart = useCart();
   const theme = useNitipTheme();
-  const styles = useMemo(() => createStyles(theme.colors), [theme]);
+  const insets = useSafeAreaInsets();
   const [catalog, setCatalog] = useState<NitipCatalogOutlet | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +41,7 @@ export default function CatalogOutletScreen() {
       })
       .catch((nextError: unknown) => {
         if (active) {
-          setError(nextError instanceof Error ? nextError.message : "Gagal memuat outlet");
+          setError(nextError instanceof Error ? nextError.message : t("outlet.loadError"));
         }
       })
       .finally(() => {
@@ -48,7 +50,7 @@ export default function CatalogOutletScreen() {
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, t]);
 
   if (!user) return <Redirect href="/login" />;
 
@@ -63,223 +65,225 @@ export default function CatalogOutletScreen() {
     const result = cart.addItem(outlet, product);
 
     if (result === "different_outlet") {
-      Alert.alert(
-        "Ganti keranjang?",
-        "Nitip hanya mendukung satu outlet per pesanan. Keranjang sekarang akan diganti.",
-        [
-          { text: "Batal", style: "cancel" },
-          {
-            text: "Ganti",
-            style: "destructive",
-            onPress: () => cart.replaceWithItem(outlet, product),
-          },
-        ],
-      );
+      Alert.alert(t("outlet.changeCartTitle"), t("outlet.changeCartDescription"), [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("outlet.replaceCart"),
+          style: "destructive",
+          onPress: () => cart.replaceWithItem(outlet, product),
+        },
+      ]);
     }
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>‹ Kembali</Text>
-        </Pressable>
-        <Text style={styles.brand}>nitip.</Text>
-      </View>
-
-      {loading ? (
-        <View style={styles.loading}>
-          <ActivityIndicator color={theme.colors.primary} />
-          <Text style={styles.muted}>Memuat menu...</Text>
-        </View>
-      ) : error || !catalog ? (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Outlet tidak tersedia</Text>
-          <Text style={styles.muted}>{error ?? "Katalog tidak ditemukan"}</Text>
-        </View>
-      ) : (
-        <>
-          <Text style={styles.eyebrow}>
-            {catalog.acceptingOrders ? "MENERIMA PESANAN" : "SEDANG TUTUP"}
+    <View className="flex-1" style={{ backgroundColor: theme.colors.background }}>
+      <ScrollView
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: insets.top + 14,
+          paddingBottom: cart.itemCount > 0 ? 130 : Math.max(insets.bottom + 24, 40),
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View className="flex-row items-center justify-between">
+          <Pressable className="min-h-10 justify-center pr-4" onPress={() => router.back()}>
+            <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
+              ‹ {t("common.back")}
+            </Text>
+          </Pressable>
+          <Text className="text-2xl font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>
+            nitip.
           </Text>
-          <Text style={styles.title}>{catalog.businessName}</Text>
-          <Text style={styles.outletName}>{catalog.name}</Text>
-          <Text style={styles.address}>{catalog.addressLine}</Text>
+        </View>
 
-          {catalog.categories.length === 0 ? (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Menu belum tersedia</Text>
-              <Text style={styles.muted}>Merchant belum menambahkan produk aktif.</Text>
+        {loading ? (
+          <View
+            className="mt-8 items-center rounded-3xl border p-7"
+            style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+          >
+            <ActivityIndicator color={theme.colors.primary} />
+            <Text className="mt-3 text-xs" style={{ color: theme.colors.textMuted }}>
+              {t("outlet.loading")}
+            </Text>
+          </View>
+        ) : error || !catalog ? (
+          <View
+            className="mt-8 rounded-3xl border p-5"
+            style={{ backgroundColor: theme.colors.dangerSurface, borderColor: theme.colors.border }}
+          >
+            <Text className="text-base font-black" style={{ color: theme.colors.danger }}>
+              {t("outlet.unavailable")}
+            </Text>
+            <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+              {error ?? t("outlet.catalogNotFound")}
+            </Text>
+          </View>
+        ) : (
+          <>
+            <View className="mt-8">
+              <View className="flex-row items-center gap-2">
+                <View
+                  className="h-2 w-2 rounded-full"
+                  style={{
+                    backgroundColor: catalog.acceptingOrders
+                      ? theme.colors.success
+                      : theme.colors.textMuted,
+                  }}
+                />
+                <Text
+                  className="text-[10px] font-black uppercase tracking-[1.5px]"
+                  style={{ color: catalog.acceptingOrders ? theme.colors.success : theme.colors.textMuted }}
+                >
+                  {catalog.acceptingOrders ? t("outlet.accepting") : t("outlet.closed")}
+                </Text>
+              </View>
+              <Text className="mt-3 text-4xl font-black tracking-tighter" style={{ color: theme.colors.text }}>
+                {catalog.businessName}
+              </Text>
+              <Text className="mt-2 text-sm font-extrabold" style={{ color: theme.colors.primary }}>
+                {catalog.name}
+              </Text>
+              <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+                {catalog.addressLine}
+              </Text>
             </View>
-          ) : (
-            catalog.categories.map((category) => (
-              <View key={category.id} style={styles.section}>
-                <Text style={styles.sectionTitle}>{category.name}</Text>
-                {category.description ? (
-                  <Text style={styles.sectionMeta}>{category.description}</Text>
-                ) : null}
-                {category.products.length === 0 ? (
-                  <Text style={styles.muted}>Belum ada produk di kategori ini.</Text>
-                ) : (
-                  category.products.map((product) => {
-                    const quantity =
-                      cart.outlet?.id === catalog.id
-                        ? cart.items.find((item) => item.product.id === product.id)?.quantity ?? 0
-                        : 0;
-                    const canAdd = catalog.acceptingOrders && product.isAvailable;
 
-                    return (
-                      <View
-                        key={product.id}
-                        style={[styles.productCard, !product.isAvailable && styles.unavailable]}
-                      >
-                        {product.imageUrl ? (
-                          <Image source={{ uri: product.imageUrl }} style={styles.image} />
-                        ) : (
-                          <View style={styles.placeholder}>
-                            <Text style={styles.placeholderText}>N</Text>
-                          </View>
-                        )}
-                        <View style={styles.productBody}>
-                          <View style={styles.row}>
-                            <Text style={styles.productName}>{product.name}</Text>
-                            <Text style={styles.price}>{formatRupiah(product.price)}</Text>
-                          </View>
-                          {product.description ? (
-                            <Text style={styles.description}>{product.description}</Text>
-                          ) : null}
-                          <Text style={product.isAvailable ? styles.available : styles.soldOut}>
-                            {product.isAvailable ? "Tersedia" : "Habis / tidak tersedia"}
-                          </Text>
-                          <Pressable
-                            disabled={!canAdd}
-                            onPress={() => addProduct(product)}
-                            style={[styles.addButton, !canAdd && styles.addButtonDisabled]}
-                          >
-                            <Text style={styles.addButtonText}>
-                              {quantity > 0 ? `Tambah lagi · ${quantity} di cart` : "Tambah"}
-                            </Text>
-                          </Pressable>
-                        </View>
+            {catalog.categories.length === 0 ? (
+              <View
+                className="mt-7 rounded-3xl border p-5"
+                style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
+              >
+                <Text className="text-base font-black" style={{ color: theme.colors.text }}>
+                  {t("outlet.menuUnavailable")}
+                </Text>
+                <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+                  {t("outlet.menuUnavailableDescription")}
+                </Text>
+              </View>
+            ) : (
+              <View className="mt-8 gap-8">
+                {catalog.categories.map((category) => (
+                  <View key={category.id}>
+                    <Text className="text-xl font-black" style={{ color: theme.colors.text }}>
+                      {category.name}
+                    </Text>
+                    {category.description ? (
+                      <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+                        {category.description}
+                      </Text>
+                    ) : null}
+
+                    {category.products.length === 0 ? (
+                      <Text className="mt-3 text-xs" style={{ color: theme.colors.textMuted }}>
+                        {t("outlet.noProducts")}
+                      </Text>
+                    ) : (
+                      <View className="mt-3 gap-3">
+                        {category.products.map((product) => {
+                          const quantity =
+                            cart.outlet?.id === catalog.id
+                              ? cart.items.find((item) => item.product.id === product.id)?.quantity ?? 0
+                              : 0;
+                          const canAdd = catalog.acceptingOrders && product.isAvailable;
+
+                          return (
+                            <View
+                              className="flex-row rounded-3xl border p-3"
+                              key={product.id}
+                              style={{
+                                backgroundColor: theme.colors.surface,
+                                borderColor: theme.colors.border,
+                                opacity: product.isAvailable ? 1 : 0.58,
+                              }}
+                            >
+                              {product.imageUrl ? (
+                                <Image
+                                  className="h-24 w-24 rounded-2xl"
+                                  source={{ uri: product.imageUrl }}
+                                  style={{ backgroundColor: theme.colors.surfaceAccent }}
+                                />
+                              ) : (
+                                <View
+                                  className="h-24 w-24 items-center justify-center rounded-2xl"
+                                  style={{ backgroundColor: theme.colors.surfaceAccent }}
+                                >
+                                  <Text className="text-3xl font-black" style={{ color: theme.colors.primary }}>
+                                    N
+                                  </Text>
+                                </View>
+                              )}
+
+                              <View className="flex-1 pl-4">
+                                <View className="flex-row items-start justify-between gap-3">
+                                  <Text className="flex-1 text-sm font-black" style={{ color: theme.colors.text }}>
+                                    {product.name}
+                                  </Text>
+                                  <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
+                                    {formatRupiah(product.price)}
+                                  </Text>
+                                </View>
+                                {product.description ? (
+                                  <Text className="mt-1.5 text-[11px] leading-4" numberOfLines={3} style={{ color: theme.colors.textMuted }}>
+                                    {product.description}
+                                  </Text>
+                                ) : null}
+                                <Text
+                                  className="mt-2 text-[10px] font-black"
+                                  style={{ color: product.isAvailable ? theme.colors.success : theme.colors.danger }}
+                                >
+                                  {product.isAvailable ? t("outlet.available") : t("outlet.unavailableProduct")}
+                                </Text>
+                                <Pressable
+                                  className="mt-3 self-start rounded-full px-4 py-2.5"
+                                  disabled={!canAdd}
+                                  onPress={() => addProduct(product)}
+                                  style={{ backgroundColor: theme.colors.primary, opacity: canAdd ? 1 : 0.4 }}
+                                >
+                                  <Text className="text-[11px] font-black text-white">
+                                    {quantity > 0
+                                      ? t("outlet.addAgain", { count: quantity })
+                                      : t("outlet.add")}
+                                  </Text>
+                                </Pressable>
+                              </View>
+                            </View>
+                          );
+                        })}
                       </View>
-                    );
-                  })
-                )}
+                    )}
+                  </View>
+                ))}
               </View>
-            ))
-          )}
+            )}
+          </>
+        )}
+      </ScrollView>
 
-          {cart.itemCount > 0 ? (
-            <Pressable onPress={() => router.push("/cart")} style={styles.cartBar}>
-              <View style={styles.cartBarBody}>
-                <Text style={styles.cartBarTitle}>Keranjang · {cart.itemCount} item</Text>
-                <Text style={styles.cartBarMeta}>{cart.outlet?.businessName}</Text>
-              </View>
-              <Text style={styles.cartBarPrice}>{formatRupiah(cart.subtotal)}</Text>
-            </Pressable>
-          ) : null}
-        </>
-      )}
-    </ScrollView>
+      {cart.itemCount > 0 ? (
+        <View
+          className="absolute bottom-0 left-0 right-0 border-t px-5 pt-3"
+          style={{
+            backgroundColor: theme.colors.surface,
+            borderTopColor: theme.colors.border,
+            paddingBottom: Math.max(insets.bottom, 12),
+          }}
+        >
+          <Pressable
+            className="min-h-[54px] flex-row items-center rounded-2xl px-4"
+            onPress={() => router.push("/cart")}
+            style={{ backgroundColor: theme.colors.primary }}
+          >
+            <View className="flex-1">
+              <Text className="text-xs font-black text-white">
+                {t("outlet.cartSummary", { count: cart.itemCount })}
+              </Text>
+              <Text className="mt-0.5 text-[10px] text-white/80">{cart.outlet?.businessName}</Text>
+            </View>
+            <Text className="text-sm font-black text-white">{formatRupiah(cart.subtotal)}</Text>
+          </Pressable>
+        </View>
+      ) : null}
+    </View>
   );
-}
-
-function createStyles(colors: {
-  background: string;
-  surface: string;
-  surfaceAccent: string;
-  primary: string;
-  primaryStrong: string;
-  secondary: string;
-  text: string;
-  textMuted: string;
-  border: string;
-  onPrimary: string;
-}) {
-  return StyleSheet.create({
-    container: {
-      flexGrow: 1,
-      backgroundColor: colors.background,
-      padding: 20,
-      paddingTop: 54,
-      paddingBottom: 42,
-    },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: 28,
-    },
-    back: { color: colors.primary, fontWeight: "900" },
-    brand: { color: colors.primaryStrong, fontWeight: "900", fontSize: 24, letterSpacing: -1 },
-    loading: {
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 18,
-      padding: 20,
-      alignItems: "center",
-      gap: 8,
-    },
-    eyebrow: { color: colors.primary, fontSize: 10, fontWeight: "900", letterSpacing: 1.3 },
-    title: { color: colors.text, fontSize: 30, fontWeight: "900", letterSpacing: -1, marginTop: 5 },
-    outletName: { color: colors.primary, fontWeight: "800", marginTop: 5 },
-    address: { color: colors.textMuted, fontSize: 12, lineHeight: 18, marginTop: 5, marginBottom: 24 },
-    section: { marginBottom: 24 },
-    sectionTitle: { color: colors.text, fontSize: 18, fontWeight: "900" },
-    sectionMeta: { color: colors.textMuted, fontSize: 11, marginTop: 3, marginBottom: 10 },
-    card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 18, padding: 16 },
-    cardTitle: { color: colors.text, fontWeight: "900", fontSize: 15 },
-    muted: { color: colors.textMuted, fontSize: 11, lineHeight: 17, marginTop: 4 },
-    productCard: {
-      flexDirection: "row",
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 18,
-      padding: 12,
-      marginTop: 9,
-    },
-    unavailable: { opacity: 0.58 },
-    image: { width: 82, height: 82, borderRadius: 14, backgroundColor: colors.surfaceAccent },
-    placeholder: {
-      width: 82,
-      height: 82,
-      borderRadius: 14,
-      backgroundColor: colors.surfaceAccent,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    placeholderText: { color: colors.primaryStrong, fontWeight: "900", fontSize: 27 },
-    productBody: { flex: 1, paddingLeft: 12 },
-    row: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 10 },
-    productName: { flex: 1, color: colors.text, fontSize: 14, fontWeight: "900" },
-    price: { color: colors.primary, fontSize: 12, fontWeight: "900" },
-    description: { color: colors.textMuted, fontSize: 11, lineHeight: 17, marginTop: 6 },
-    available: { color: colors.primary, fontSize: 10, fontWeight: "800", marginTop: 8 },
-    soldOut: { color: "#B42318", fontSize: 10, fontWeight: "800", marginTop: 8 },
-    addButton: {
-      alignSelf: "flex-start",
-      backgroundColor: colors.primaryStrong,
-      borderRadius: 999,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      marginTop: 10,
-    },
-    addButtonDisabled: { opacity: 0.45 },
-    addButtonText: { color: colors.onPrimary, fontSize: 10, fontWeight: "900" },
-    cartBar: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: colors.primaryStrong,
-      borderRadius: 18,
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-      marginTop: 4,
-    },
-    cartBarBody: { flex: 1 },
-    cartBarTitle: { color: colors.onPrimary, fontWeight: "900", fontSize: 13 },
-    cartBarMeta: { color: colors.secondary, fontSize: 10, marginTop: 2 },
-    cartBarPrice: { color: colors.onPrimary, fontWeight: "900", fontSize: 13 },
-  });
 }
