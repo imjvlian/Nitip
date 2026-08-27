@@ -1,3 +1,4 @@
+import { formatRupiah } from "@nitip/domain";
 import type { NitipMerchantProfile, NitipOutlet } from "@nitip/domain";
 import { useNitipLanguage } from "@nitip/i18n";
 import { Redirect, router, useFocusEffect } from "expo-router";
@@ -24,6 +25,7 @@ export default function MerchantHomeScreen() {
   const [merchant, setMerchant] = useState<NitipMerchantProfile | null>(null);
   const [outlets, setOutlets] = useState<NitipOutlet[]>([]);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [settledEarnings, setSettledEarnings] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +40,7 @@ export default function MerchantHomeScreen() {
       if (!next) {
         setOutlets([]);
         setNotificationCount(0);
+        setSettledEarnings(0);
         return;
       }
 
@@ -48,6 +51,11 @@ export default function MerchantHomeScreen() {
       ]);
 
       setOutlets(nextOutlets);
+      setSettledEarnings(
+        nextOrders
+          .filter((order) => order.status === "delivered")
+          .reduce((total, order) => total + order.merchantNet, 0),
+      );
       const notifications = buildMerchantNotifications(next, nextOrders, language);
       setNotificationCount(
         notifications.filter((notification) => !readIds.has(notification.id)).length,
@@ -75,6 +83,8 @@ export default function MerchantHomeScreen() {
       : merchant?.status === "rejected"
         ? c.home.rejected
         : c.home.draft;
+  const earningsLabel = language === "id" ? "Pendapatan" : "Earnings";
+  const earningsDescription = language === "id" ? "Dari pesanan yang sudah selesai" : "From completed orders";
 
   return (
     <ScrollView
@@ -195,6 +205,21 @@ export default function MerchantHomeScreen() {
                   <Text className="mt-1 text-[9px] leading-4" style={{ color: "rgba(255,255,255,0.72)" }}>{c.home.incomingDescription}</Text>
                 </View>
                 <NitipIcon color="#FFFFFF" name="next" size={17} />
+              </Pressable>
+              <Pressable
+                className="mt-3 flex-row items-center rounded-[22px] p-4"
+                onPress={() => router.push("/earnings")}
+                style={{ backgroundColor: theme.colors.surface }}
+              >
+                <View className="w-9 items-center">
+                  <NitipIcon color={theme.colors.primary} name="earnings" size={20} />
+                </View>
+                <View className="ml-3 flex-1">
+                  <Text className="text-[8px] font-black tracking-[1px]" style={{ color: theme.colors.primary }}>{earningsLabel.toUpperCase()}</Text>
+                  <Text className="mt-1 text-[16px] font-black" style={{ color: theme.colors.text }}>{formatRupiah(settledEarnings)}</Text>
+                  <Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{earningsDescription}</Text>
+                </View>
+                <NitipIcon color={theme.colors.textMuted} name="next" size={17} />
               </Pressable>
             </>
           ) : null}
