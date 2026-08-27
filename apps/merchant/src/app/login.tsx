@@ -1,24 +1,20 @@
+import { useNitipLanguage } from "@nitip/i18n";
 import { Redirect } from "expo-router";
-import { useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { useState, type ReactNode } from "react";
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import { getMerchantCopy } from "../constants/merchantCopy";
 import { useAuth } from "../context/AuthContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
 
 export default function LoginScreen() {
+  const { language } = useNitipLanguage();
+  const c = getMerchantCopy(language);
   const { configured, loading, signIn, signUp, user } = useAuth();
   const theme = useNitipTheme();
-  const styles = useMemo(() => createStyles(theme.colors), [theme]);
+  const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -35,73 +31,42 @@ export default function LoginScreen() {
       if (mode === "register") await signUp(displayName, email, password);
       else await signIn(email, password);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Authentication gagal");
+      setError(nextError instanceof Error ? nextError.message : c.login.authError);
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.flex}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.brand}>nitip mitra.</Text>
-        <Text style={styles.eyebrow}>PORTAL MERCHANT</Text>
-        <Text style={styles.title}>{mode === "login" ? "Kelola usahamu." : "Mulai jadi mitra Nitip."}</Text>
-        <Text style={styles.subtitle}>Masuk dengan akun Firebase Nitip. Status merchant tetap ditentukan server, bukan aplikasi.</Text>
-
-        {!configured && (
-          <View style={styles.notice}>
-            <Text style={styles.noticeTitle}>Firebase belum dikonfigurasi</Text>
-            <Text style={styles.noticeText}>Copy apps/merchant/.env.example menjadi apps/merchant/.env dan isi Firebase config yang sama dengan User App.</Text>
-          </View>
-        )}
-
-        <View style={styles.card}>
-          {mode === "register" && (
-            <>
-              <Text style={styles.label}>Nama pemilik</Text>
-              <TextInput value={displayName} onChangeText={setDisplayName} placeholder="Nama lengkap" placeholderTextColor={theme.colors.textMuted} style={styles.input} />
-            </>
-          )}
-          <Text style={styles.label}>Email</Text>
-          <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholder="nama@email.com" placeholderTextColor={theme.colors.textMuted} style={styles.input} />
-          <Text style={styles.label}>Password</Text>
-          <TextInput value={password} onChangeText={setPassword} secureTextEntry placeholder="Minimal 6 karakter" placeholderTextColor={theme.colors.textMuted} style={styles.input} />
-
-          {error && <View style={styles.errorCard}><Text style={styles.errorText}>{error}</Text></View>}
-
-          <Pressable disabled={!configured || submitting} onPress={() => void submit()} style={({ pressed }) => [styles.primaryButton, (!configured || submitting || pressed) && styles.disabled]}>
-            {submitting ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryText}>{mode === "login" ? "Masuk" : "Buat akun"}</Text>}
-          </Pressable>
-          <Pressable onPress={() => setMode((current) => current === "login" ? "register" : "login")} style={styles.switchButton}>
-            <Text style={styles.switchText}>{mode === "login" ? "Belum punya akun? Daftar" : "Sudah punya akun? Masuk"}</Text>
-          </Pressable>
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} className="flex-1" style={{ backgroundColor: theme.colors.background }}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: insets.top + 28, paddingBottom: Math.max(insets.bottom + 28, 40) }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <Text className="text-[27px] font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>nitip mitra.</Text>
+        <View className="mt-10">
+          <Text className="text-[9px] font-black tracking-[1.2px]" style={{ color: theme.colors.primary }}>{c.login.portal}</Text>
+          <Text className="mt-2 text-[34px] font-black leading-[38px] tracking-tighter" style={{ color: theme.colors.text }}>{mode === "login" ? c.login.titleLogin : c.login.titleRegister}</Text>
+          <Text className="mt-2 max-w-[330px] text-[11px] leading-5" style={{ color: theme.colors.textMuted }}>{c.login.subtitle}</Text>
         </View>
+
+        {!configured ? <View className="mt-5 rounded-[22px] p-4" style={{ backgroundColor: theme.colors.warningSurface }}><Text className="text-[11px] font-black" style={{ color: theme.colors.warning }}>{c.login.firebaseTitle}</Text><Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{c.login.firebaseDescription}</Text></View> : null}
+
+        <View className="mt-6 rounded-[24px] p-4" style={{ backgroundColor: theme.colors.surface }}>
+          {mode === "register" ? <Field label={c.login.ownerName}><TextInput value={displayName} onChangeText={setDisplayName} placeholder={c.login.ownerPlaceholder} placeholderTextColor={theme.colors.textMuted} className="min-h-[48px] rounded-[16px] px-4 text-[12px]" style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text }} /></Field> : null}
+          <Field label={c.login.email}><TextInput value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholder="nama@email.com" placeholderTextColor={theme.colors.textMuted} className="min-h-[48px] rounded-[16px] px-4 text-[12px]" style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text }} /></Field>
+          <Field label={c.login.password}><TextInput value={password} onChangeText={setPassword} secureTextEntry placeholder={c.login.passwordPlaceholder} placeholderTextColor={theme.colors.textMuted} className="min-h-[48px] rounded-[16px] px-4 text-[12px]" style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text }} /></Field>
+
+          {error ? <View className="mt-4 rounded-[16px] p-3" style={{ backgroundColor: theme.colors.dangerSurface }}><Text className="text-[10px] leading-4" style={{ color: theme.colors.danger }}>{error}</Text></View> : null}
+
+          <Pressable className="mt-5 min-h-[50px] items-center justify-center rounded-[16px]" disabled={!configured || submitting} onPress={() => void submit()} style={{ backgroundColor: theme.colors.primary, opacity: !configured || submitting ? 0.5 : 1 }}>
+            {submitting ? <ActivityIndicator color="#FFFFFF" /> : <Text className="text-[12px] font-black text-white">{mode === "login" ? c.login.signIn : c.login.createAccount}</Text>}
+          </Pressable>
+          <Pressable className="min-h-[46px] items-center justify-center" onPress={() => setMode((current) => current === "login" ? "register" : "login")}><Text className="text-[10px] font-extrabold" style={{ color: theme.colors.primary }}>{mode === "login" ? c.login.switchRegister : c.login.switchLogin}</Text></Pressable>
+        </View>
+        <View className="mt-4"><LanguageSwitcher /></View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
-}
 
-function createStyles(colors: { background: string; surface: string; surfaceAccent: string; primary: string; primaryStrong: string; secondary: string; text: string; textMuted: string; border: string; onPrimary: string }) {
-  return StyleSheet.create({
-    flex: { flex: 1, backgroundColor: colors.background },
-    container: { flexGrow: 1, backgroundColor: colors.background, paddingHorizontal: 22, paddingTop: 72, paddingBottom: 40 },
-    brand: { color: colors.primaryStrong, fontWeight: "900", fontSize: 28, letterSpacing: -1.2 },
-    eyebrow: { marginTop: 32, color: colors.primary, fontWeight: "900", fontSize: 10, letterSpacing: 1.4 },
-    title: { marginTop: 7, color: colors.text, fontWeight: "900", fontSize: 34, letterSpacing: -1.2 },
-    subtitle: { marginTop: 9, color: colors.textMuted, lineHeight: 20, fontSize: 13 },
-    notice: { marginTop: 18, padding: 14, borderRadius: 16, backgroundColor: colors.surfaceAccent },
-    noticeTitle: { color: colors.text, fontWeight: "900", fontSize: 13 },
-    noticeText: { color: colors.textMuted, fontSize: 11, lineHeight: 17, marginTop: 4 },
-    card: { marginTop: 24, padding: 18, borderRadius: 22, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-    label: { color: colors.textMuted, fontSize: 11, fontWeight: "800", marginTop: 13, marginBottom: 7 },
-    input: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 14, paddingHorizontal: 13, paddingVertical: 12, color: colors.text },
-    errorCard: { marginTop: 14, borderRadius: 13, padding: 12, backgroundColor: colors.surfaceAccent },
-    errorText: { color: colors.text, fontSize: 11, lineHeight: 17 },
-    primaryButton: { marginTop: 20, minHeight: 48, alignItems: "center", justifyContent: "center", backgroundColor: colors.primaryStrong, borderRadius: 15 },
-    primaryText: { color: "#FFFFFF", fontWeight: "900" },
-    disabled: { opacity: 0.55 },
-    switchButton: { paddingVertical: 15, alignItems: "center" },
-    switchText: { color: colors.primary, fontWeight: "800", fontSize: 12 },
-  });
+  function Field({ label, children }: { label: string; children: ReactNode }) {
+    return <View className="mt-3"><Text className="mb-2 text-[10px] font-extrabold" style={{ color: theme.colors.textMuted }}>{label}</Text>{children}</View>;
+  }
 }

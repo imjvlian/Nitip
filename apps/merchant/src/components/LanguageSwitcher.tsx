@@ -1,44 +1,37 @@
-import {
-  NITIP_LANGUAGES,
-  useNitipLanguage,
-  useNitipTranslation,
-  type NitipLanguage,
-} from "@nitip/i18n";
+import { NITIP_LANGUAGES, useNitipLanguage } from "@nitip/i18n";
 import { Pressable, Text, View } from "react-native";
 
-function languageLabel(language: NitipLanguage, t: (key: string) => string) {
-  return language === "id" ? t("common.indonesia") : t("common.english");
-}
+import { getMerchantCopy } from "../constants/merchantCopy";
+import { useNitipTheme } from "../hooks/useNitipTheme";
+import { NitipIcon } from "./NitipIcon";
 
 export function LanguageSwitcher() {
   const { language, setLanguage } = useNitipLanguage();
-  const { t } = useNitipTranslation();
+  const c = getMerchantCopy(language);
+  const theme = useNitipTheme();
 
   return (
-    <View className="rounded-nitip border border-border bg-surface p-3">
-      <Text className="text-xs font-extrabold uppercase tracking-wider text-muted">
-        {t("common.language")}
-      </Text>
-      <View className="mt-2 flex-row rounded-xl bg-surface-accent p-1">
-        {NITIP_LANGUAGES.map((option) => {
-          const active = option === language;
-          return (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-              className={`flex-1 rounded-lg px-3 py-2 ${active ? "bg-primary" : "bg-transparent"}`}
-              key={option}
-              onPress={() => void setLanguage(option)}
-            >
-              <Text
-                className={`text-center text-xs font-extrabold ${active ? "text-on-primary" : "text-foreground"}`}
-              >
-                {languageLabel(option, t)}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+    <View className="gap-2">
+      {NITIP_LANGUAGES.map((option) => {
+        const selected = option === language;
+        const label = option === "id" ? c.settings.indonesia : c.settings.english;
+        return (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ selected }}
+            className="min-h-[56px] flex-row items-center rounded-[18px] px-4"
+            key={option}
+            onPress={() => void setLanguage(option)}
+            style={{ backgroundColor: selected ? theme.colors.surfaceAccent : theme.colors.surface }}
+          >
+            <View className="h-9 w-9 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surfaceRaised }}>
+              <NitipIcon color={selected ? theme.colors.primary : theme.colors.textMuted} name="language" size={17} />
+            </View>
+            <Text className="ml-3 flex-1 text-[12px] font-black" style={{ color: theme.colors.text }}>{label}</Text>
+            {selected ? <NitipIcon color={theme.colors.primary} name="check" size={16} /> : null}
+          </Pressable>
+        );
+      })}
     </View>
   );
 }

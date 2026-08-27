@@ -1,42 +1,27 @@
 import { formatRupiah } from "@nitip/domain";
 import type { NitipMerchantOrder } from "@nitip/domain/commerce";
+import { useNitipLanguage } from "@nitip/i18n";
 import { Redirect, router, useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { useCallback, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { NitipIcon } from "../components/NitipIcon";
+import { getMerchantCopy, merchantOrderStatusLabel } from "../constants/merchantCopy";
 import { useAuth } from "../context/AuthContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
 import { listMerchantOrders } from "../lib/api";
-
-function statusLabel(status: NitipMerchantOrder["status"]) {
-  if (status === "paid") return "PERLU DIKONFIRMASI";
-  if (status === "merchant_confirmed") return "SUDAH DIKONFIRMASI";
-  if (status === "preparing") return "SEDANG DISIAPKAN";
-  if (status === "ready_for_pickup") return "SIAP DIAMBIL";
-  if (status === "driver_assigned") return "DRIVER DITUGASKAN";
-  if (status === "picked_up") return "SUDAH DIAMBIL";
-  if (status === "on_delivery") return "DALAM PENGANTARAN";
-  if (status === "delivered") return "SELESAI";
-  if (status === "cancelled") return "DIBATALKAN";
-  if (status === "refunded") return "REFUND";
-  return status.replaceAll("_", " ").toUpperCase();
-}
 
 function isActionable(status: NitipMerchantOrder["status"]) {
   return status === "paid" || status === "merchant_confirmed" || status === "preparing";
 }
 
 export default function MerchantOrdersScreen() {
+  const { language } = useNitipLanguage();
+  const c = getMerchantCopy(language);
   const { user } = useAuth();
   const theme = useNitipTheme();
-  const styles = useMemo(() => createStyles(theme.colors), [theme]);
+  const insets = useSafeAreaInsets();
   const [orders, setOrders] = useState<NitipMerchantOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,214 +32,61 @@ export default function MerchantOrdersScreen() {
     setLoading(true);
     setError(null);
     void listMerchantOrders(user)
-      .then((items) => {
-        if (active) setOrders(items);
-      })
-      .catch((nextError: unknown) => {
-        if (active) {
-          setError(
-            nextError instanceof Error
-              ? nextError.message
-              : "Gagal memuat pesanan",
-          );
-        }
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [user]);
+      .then((items) => { if (active) setOrders(items); })
+      .catch((nextError: unknown) => { if (active) setError(nextError instanceof Error ? nextError.message : c.orders.loadError); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [c.orders.loadError, user]);
 
   useFocusEffect(load);
-
   if (!user) return <Redirect href="/login" />;
 
   const actionableCount = orders.filter((order) => isActionable(order.status)).length;
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>‹ Home</Text>
-        </Pressable>
-        <Text style={styles.brand}>nitip mitra.</Text>
+    <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingTop: insets.top + 14, paddingBottom: 32 }} showsVerticalScrollIndicator={false} style={{ backgroundColor: theme.colors.background }}>
+      <View className="flex-row items-center justify-between">
+        <View>
+          <Text className="text-[25px] font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>nitip mitra.</Text>
+          <Text className="mt-0.5 text-[9px]" style={{ color: theme.colors.textMuted }}>{c.orders.center}</Text>
+        </View>
+        <View className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: actionableCount > 0 ? theme.colors.surfaceAccent : theme.colors.surface }}>
+          <NitipIcon color={actionableCount > 0 ? theme.colors.primary : theme.colors.textMuted} name="orders" size={18} />
+        </View>
       </View>
 
-      <Text style={styles.eyebrow}>ORDER CENTER</Text>
-      <Text style={styles.title}>Pesanan masuk.</Text>
-      <Text style={styles.subtitle}>
-        {actionableCount} pesanan membutuhkan tindakan merchant.
-      </Text>
+      <View className="mt-8">
+        <Text className="text-[30px] font-black tracking-tighter" style={{ color: theme.colors.text }}>{c.orders.title}</Text>
+        <Text className="mt-2 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>{c.orders.actionable.replace("{{count}}", String(actionableCount))}</Text>
+      </View>
 
       {loading ? (
-        <View style={styles.loadingCard}>
-          <ActivityIndicator color={theme.colors.primary} />
-          <Text style={styles.muted}>Memuat pesanan...</Text>
-        </View>
+        <View className="mt-6 items-center rounded-[22px] p-7" style={{ backgroundColor: theme.colors.surface }}><ActivityIndicator color={theme.colors.primary} /><Text className="mt-3 text-[10px]" style={{ color: theme.colors.textMuted }}>{c.orders.loading}</Text></View>
       ) : error ? (
-        <View style={styles.errorCard}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
+        <View className="mt-6 rounded-[18px] p-4" style={{ backgroundColor: theme.colors.dangerSurface }}><Text className="text-[10px] leading-4" style={{ color: theme.colors.danger }}>{error}</Text></View>
       ) : orders.length === 0 ? (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Belum ada pesanan dibayar</Text>
-          <Text style={styles.muted}>
-            Pesanan customer baru muncul di sini setelah status pembayaran menjadi paid.
-          </Text>
-        </View>
+        <View className="mt-6 rounded-[22px] p-5" style={{ backgroundColor: theme.colors.surface }}><NitipIcon color={theme.colors.textMuted} name="orders" size={22} /><Text className="mt-4 text-[13px] font-black" style={{ color: theme.colors.text }}>{c.orders.empty}</Text><Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{c.orders.emptyDescription}</Text></View>
       ) : (
-        orders.map((order) => (
-          <Pressable
-            key={order.id}
-            onPress={() =>
-              router.push({ pathname: "/order/[id]", params: { id: order.id } })
-            }
-            style={[styles.card, isActionable(order.status) && styles.actionableCard]}
-          >
-            <View style={styles.rowBetween}>
-              <View style={styles.flex}>
-                <Text style={styles.orderCode}>{order.orderCode}</Text>
-                <Text style={styles.cardTitle}>{order.outletName}</Text>
-              </View>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{statusLabel(order.status)}</Text>
-              </View>
-            </View>
-            <Text style={styles.customer}>
-              {order.address.recipientName} · {order.address.phoneNumber}
-            </Text>
-            <Text style={styles.muted} numberOfLines={2}>
-              {order.address.addressLine}
-            </Text>
-            <View style={styles.footer}>
-              <Text style={styles.meta}>{order.items.length} jenis item</Text>
-              <Text style={styles.total}>{formatRupiah(order.customerTotal)}</Text>
-            </View>
-          </Pressable>
-        ))
+        <View className="mt-5 gap-3">
+          {orders.map((order) => {
+            const actionable = isActionable(order.status);
+            return (
+              <Pressable key={order.id} onPress={() => router.push({ pathname: "/order/[id]", params: { id: order.id } })} className="rounded-[22px] p-4" style={{ backgroundColor: actionable ? theme.colors.surfaceAccent : theme.colors.surface }}>
+                <View className="flex-row items-start justify-between gap-3">
+                  <View className="flex-1">
+                    <Text className="text-[9px] font-black" style={{ color: theme.colors.primary }}>{order.orderCode}</Text>
+                    <Text className="mt-1 text-[13px] font-black" style={{ color: theme.colors.text }}>{order.outletName}</Text>
+                  </View>
+                  <View className="max-w-[145px] rounded-full px-2.5 py-1.5" style={{ backgroundColor: theme.colors.surfaceRaised }}><Text className="text-center text-[7px] font-black" style={{ color: actionable ? theme.colors.primary : theme.colors.textMuted }}>{merchantOrderStatusLabel(order.status, language)}</Text></View>
+                </View>
+                <View className="mt-3 flex-row items-center gap-2"><NitipIcon color={theme.colors.primary} name="profile" size={14} /><Text className="text-[9px] font-extrabold" style={{ color: theme.colors.text }}>{order.address.recipientName}</Text></View>
+                <Text className="mt-1 text-[9px] leading-4" numberOfLines={2} style={{ color: theme.colors.textMuted }}>{order.address.addressLine}</Text>
+                <View className="mt-3 flex-row items-center justify-between border-t pt-3" style={{ borderTopColor: theme.colors.border }}><Text className="text-[9px]" style={{ color: theme.colors.textMuted }}>{c.orders.itemKinds.replace("{{count}}", String(order.items.length))}</Text><Text className="text-[12px] font-black" style={{ color: theme.colors.primary }}>{formatRupiah(order.customerTotal)}</Text></View>
+              </Pressable>
+            );
+          })}
+        </View>
       )}
     </ScrollView>
   );
-}
-
-function createStyles(colors: {
-  background: string;
-  surface: string;
-  surfaceAccent: string;
-  primary: string;
-  primaryStrong: string;
-  secondary: string;
-  text: string;
-  textMuted: string;
-  border: string;
-  onPrimary: string;
-}) {
-  return StyleSheet.create({
-    container: {
-      flexGrow: 1,
-      backgroundColor: colors.background,
-      padding: 20,
-      paddingTop: 54,
-      paddingBottom: 42,
-    },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: 28,
-    },
-    back: { color: colors.primary, fontWeight: "900" },
-    brand: {
-      color: colors.primaryStrong,
-      fontWeight: "900",
-      fontSize: 22,
-      letterSpacing: -1,
-    },
-    eyebrow: {
-      color: colors.primary,
-      fontSize: 10,
-      fontWeight: "900",
-      letterSpacing: 1.3,
-    },
-    title: {
-      color: colors.text,
-      fontSize: 30,
-      fontWeight: "900",
-      letterSpacing: -1,
-      marginTop: 5,
-    },
-    subtitle: { color: colors.textMuted, marginTop: 5, marginBottom: 20 },
-    loadingCard: {
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 18,
-      padding: 18,
-      alignItems: "center",
-      gap: 8,
-    },
-    errorCard: {
-      backgroundColor: colors.surfaceAccent,
-      borderRadius: 16,
-      padding: 14,
-    },
-    errorText: { color: colors.text, fontSize: 11, lineHeight: 17 },
-    card: {
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 18,
-      padding: 16,
-      marginBottom: 10,
-    },
-    actionableCard: { borderColor: colors.primary },
-    rowBetween: {
-      flexDirection: "row",
-      alignItems: "flex-start",
-      justifyContent: "space-between",
-      gap: 12,
-    },
-    flex: { flex: 1 },
-    orderCode: {
-      color: colors.primary,
-      fontWeight: "900",
-      fontSize: 10,
-      marginBottom: 4,
-    },
-    cardTitle: { color: colors.text, fontWeight: "900", fontSize: 15 },
-    badge: {
-      backgroundColor: colors.surfaceAccent,
-      borderRadius: 999,
-      paddingHorizontal: 9,
-      paddingVertical: 6,
-      maxWidth: 150,
-    },
-    badgeText: {
-      color: colors.primaryStrong,
-      fontWeight: "900",
-      fontSize: 8,
-      textAlign: "center",
-    },
-    customer: {
-      color: colors.primary,
-      fontWeight: "800",
-      fontSize: 11,
-      marginTop: 12,
-    },
-    muted: { color: colors.textMuted, fontSize: 11, lineHeight: 17, marginTop: 4 },
-    footer: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      marginTop: 13,
-      paddingTop: 12,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
-    },
-    meta: { color: colors.textMuted, fontSize: 10 },
-    total: { color: colors.primaryStrong, fontWeight: "900", fontSize: 13 },
-  });
 }

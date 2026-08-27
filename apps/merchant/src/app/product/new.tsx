@@ -1,41 +1,27 @@
 import type { NitipCategory } from "@nitip/domain/catalog";
+import { useNitipLanguage } from "@nitip/i18n";
 import * as ImagePicker from "expo-image-picker";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
-import {
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { useEffect, useState, type ReactNode } from "react";
+import { ActivityIndicator, Image, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AppHeader } from "../../components/AppHeader";
+import { NitipIcon } from "../../components/NitipIcon";
+import { getMerchantCopy } from "../../constants/merchantCopy";
 import { useAuth } from "../../context/AuthContext";
 import { useNitipTheme } from "../../hooks/useNitipTheme";
-import {
-  createProduct,
-  getProductUploadSignature,
-  listCategories,
-  uploadProductImage,
-} from "../../lib/api";
+import { createProduct, getProductUploadSignature, listCategories, uploadProductImage } from "../../lib/api";
 
-type SelectedImage = {
-  uri: string;
-  fileName?: string | null;
-  mimeType?: string | null;
-  fileSize?: number;
-};
+type SelectedImage = { uri: string; fileName?: string | null; mimeType?: string | null; fileSize?: number };
 
 export default function NewProductScreen() {
-  const { outletId, outletName } = useLocalSearchParams<{
-    outletId: string;
-    outletName?: string;
-  }>();
+  const { outletId, outletName } = useLocalSearchParams<{ outletId: string; outletName?: string }>();
+  const { language } = useNitipLanguage();
+  const c = getMerchantCopy(language);
   const { user } = useAuth();
   const theme = useNitipTheme();
-  const styles = useMemo(() => createStyles(theme.colors), [theme]);
+  const insets = useSafeAreaInsets();
   const [categories, setCategories] = useState<NitipCategory[]>([]);
   const [categoryId, setCategoryId] = useState("");
   const [name, setName] = useState("");
@@ -51,114 +37,38 @@ export default function NewProductScreen() {
 
   useEffect(() => {
     if (!user || !outletId) return;
-
     void listCategories(user, outletId)
-      .then((items) => {
-        setCategories(items.filter((item) => item.isActive));
-        setCategoryId(
-          (current) => current || items.find((item) => item.isActive)?.id || "",
-        );
-      })
-      .catch((nextError: unknown) => {
-        setError(
-          nextError instanceof Error
-            ? nextError.message
-            : "Gagal memuat kategori",
-        );
-      });
-
-    void getProductUploadSignature(user)
-      .then(() => setCloudinaryReady(true))
-      .catch(() => setCloudinaryReady(false));
-  }, [user, outletId]);
+      .then((items) => { const active = items.filter((item) => item.isActive); setCategories(active); setCategoryId((current) => current || active[0]?.id || ""); })
+      .catch((nextError: unknown) => setError(nextError instanceof Error ? nextError.message : c.product.categoryLoadError));
+    void getProductUploadSignature(user).then(() => setCloudinaryReady(true)).catch(() => setCloudinaryReady(false));
+  }, [c.product.categoryLoadError, outletId, user]);
 
   if (!user) return <Redirect href="/login" />;
 
   async function pickImage() {
-    if (!cloudinaryReady) {
-      setError(
-        "Cloudinary belum dikonfigurasi. Aktifkan Cloudinary di API sebelum memilih foto.",
-      );
-      return;
-    }
-
+    if (!cloudinaryReady) { setError(c.product.cloudinaryRequired); return; }
     setError(null);
-
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        setError("Izin akses galeri diperlukan untuk memilih foto produk");
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.85,
-      });
-
+      if (!permission.granted) { setError(c.product.galleryPermission); return; }
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.85 });
       if (result.canceled || !result.assets[0]) return;
-
       const asset = result.assets[0];
-      if (asset.fileSize != null && asset.fileSize > 10 * 1024 * 1024) {
-        setError("Ukuran foto maksimal 10 MB");
-        return;
-      }
-
-      setSelectedImage({
-        uri: asset.uri,
-        fileName: asset.fileName,
-        mimeType: asset.mimeType,
-        fileSize: asset.fileSize,
-      });
+      if (asset.fileSize != null && asset.fileSize > 10 * 1024 * 1024) { setError(c.product.maxPhoto); return; }
+      setSelectedImage({ uri: asset.uri, fileName: asset.fileName, mimeType: asset.mimeType, fileSize: asset.fileSize });
       setImageUrl("");
-    } catch (nextError) {
-      setError(
-        nextError instanceof Error
-          ? nextError.message
-          : "Gagal membuka galeri",
-      );
-    }
+    } catch (nextError) { setError(nextError instanceof Error ? nextError.message : c.product.galleryError); }
   }
 
   async function save() {
-    if (!categoryId) {
-      setError("Pilih kategori terlebih dahulu");
-      return;
-    }
-    if (!name.trim()) {
-      setError("Nama produk wajib diisi");
-      return;
-    }
-    if (!price.trim() || !Number.isInteger(Number(price)) || Number(price) < 0) {
-      setError("Harga wajib berupa angka Rupiah tanpa desimal");
-      return;
-    }
-    if (
-      stockQuantity.trim() &&
-      (!Number.isInteger(Number(stockQuantity)) || Number(stockQuantity) < 0)
-    ) {
-      setError("Stok harus berupa angka bulat non-negatif");
-      return;
-    }
-
-    setSaving(true);
-    setError(null);
-
+    if (!categoryId) { setError(c.product.selectCategory); return; }
+    if (!name.trim()) { setError(c.product.nameRequired); return; }
+    if (!price.trim() || !Number.isInteger(Number(price)) || Number(price) < 0) { setError(c.product.priceInvalid); return; }
+    if (stockQuantity.trim() && (!Number.isInteger(Number(stockQuantity)) || Number(stockQuantity) < 0)) { setError(c.product.stockInvalid); return; }
+    setSaving(true); setError(null);
     try {
-      let uploadedImage: {
-        imageUrl: string | null;
-        imagePublicId: string | null;
-      } = {
-        imageUrl: imageUrl.trim() || null,
-        imagePublicId: null,
-      };
-
-      if (selectedImage) {
-        uploadedImage = await uploadProductImage(user, selectedImage);
-      }
-
+      let uploadedImage: { imageUrl: string | null; imagePublicId: string | null } = { imageUrl: imageUrl.trim() || null, imagePublicId: null };
+      if (selectedImage) uploadedImage = await uploadProductImage(user, selectedImage);
       await createProduct(user, outletId, {
         categoryId,
         name: name.trim(),
@@ -171,352 +81,40 @@ export default function NewProductScreen() {
         isActive: true,
         sortOrder: Number(sortOrder || 0),
       });
-
-      router.replace({
-        pathname: "/menu",
-        params: { outletId, outletName: outletName ?? "" },
-      });
-    } catch (nextError) {
-      setError(
-        nextError instanceof Error
-          ? nextError.message
-          : "Gagal membuat produk",
-      );
-    } finally {
-      setSaving(false);
-    }
+      router.replace({ pathname: "/menu", params: { outletId, outletName: outletName ?? "" } });
+    } catch (nextError) { setError(nextError instanceof Error ? nextError.message : c.product.saveError); }
+    finally { setSaving(false); }
   }
 
   const previewUri = selectedImage?.uri || imageUrl.trim() || null;
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
-          <Text style={styles.back}>‹ Kembali</Text>
-        </Pressable>
-        <Text style={styles.brand}>nitip mitra.</Text>
+    <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingTop: insets.top + 10, paddingBottom: Math.max(insets.bottom + 30, 42) }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} style={{ backgroundColor: theme.colors.background }}>
+      <AppHeader title={c.product.eyebrow} onBack={() => router.back()} />
+      <View className="mt-7"><Text className="text-[9px] font-black tracking-[1.2px]" style={{ color: theme.colors.primary }}>{c.product.eyebrow}</Text><Text className="mt-2 text-[28px] font-black tracking-tighter" style={{ color: theme.colors.text }}>{c.product.title}</Text><Text className="mt-1 text-[10px]" style={{ color: theme.colors.textMuted }}>{outletName || c.common.outletFallback}</Text></View>
+
+      <View className="mt-5 rounded-[22px] p-4" style={{ backgroundColor: theme.colors.surfaceAccent }}>
+        <View className="flex-row items-center gap-2"><NitipIcon color={theme.colors.primary} name="image" size={16} /><Text className="text-[9px] font-black tracking-[1px]" style={{ color: theme.colors.primary }}>{c.product.photoTitle}</Text></View>
+        <Text className="mt-2 text-[11px] font-black" style={{ color: theme.colors.text }}>{cloudinaryReady === null ? c.product.checkingCloudinary : cloudinaryReady ? c.product.cloudinaryReady : c.product.cloudinaryMissing}</Text>
+        <Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{cloudinaryReady ? c.product.photoReadyDescription : c.product.photoMissingDescription}</Text>
+        {previewUri ? <View className="mt-4"><Image source={{ uri: previewUri }} className="w-full rounded-[20px]" style={{ aspectRatio: 1, backgroundColor: theme.colors.surface }} /><Pressable className="mt-2 self-start" onPress={() => { setSelectedImage(null); setImageUrl(""); }}><Text className="text-[9px] font-black" style={{ color: theme.colors.danger }}>{c.product.removePhoto}</Text></Pressable></View> : null}
+        <Pressable className="mt-4 min-h-[46px] flex-row items-center justify-center rounded-[16px]" disabled={cloudinaryReady !== true || saving} onPress={() => void pickImage()} style={{ backgroundColor: theme.colors.surfaceRaised, opacity: cloudinaryReady !== true || saving ? 0.5 : 1 }}><NitipIcon color={theme.colors.primary} name="image" size={15} /><Text className="ml-2 text-[10px] font-black" style={{ color: theme.colors.primary }}>{selectedImage ? c.product.changePhoto : c.product.choosePhoto}</Text></Pressable>
       </View>
 
-      <Text style={styles.eyebrow}>PRODUK BARU</Text>
-      <Text style={styles.title}>Tambahkan produk.</Text>
-      <Text style={styles.subtitle}>{outletName || "Outlet"}</Text>
-
-      <View style={styles.cloudinaryCard}>
-        <Text style={styles.cloudinaryTitle}>FOTO PRODUK</Text>
-        <Text style={styles.cloudinaryStatus}>
-          {cloudinaryReady === null
-            ? "Memeriksa Cloudinary..."
-            : cloudinaryReady
-              ? "Cloudinary siap · signed upload"
-              : "Cloudinary belum dikonfigurasi"}
-        </Text>
-        <Text style={styles.muted}>
-          {cloudinaryReady
-            ? "Pilih foto dari galeri. Foto baru di-upload saat produk disimpan."
-            : "Produk tetap bisa dibuat tanpa foto. Aktifkan Cloudinary di API untuk upload langsung dari galeri."}
-        </Text>
-
-        {previewUri ? (
-          <View style={styles.previewWrap}>
-            <Image source={{ uri: previewUri }} style={styles.preview} />
-            <Pressable
-              onPress={() => {
-                setSelectedImage(null);
-                setImageUrl("");
-              }}
-            >
-              <Text style={styles.removeImage}>Hapus foto</Text>
-            </Pressable>
-          </View>
-        ) : null}
-
-        <Pressable
-          disabled={cloudinaryReady !== true || saving}
-          onPress={() => void pickImage()}
-          style={[
-            styles.imageButton,
-            (cloudinaryReady !== true || saving) && styles.disabled,
-          ]}
-        >
-          <Text style={styles.imageButtonText}>
-            {selectedImage ? "Ganti foto" : "Pilih foto dari galeri"}
-          </Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.label}>Kategori</Text>
-        {categories.length === 0 ? (
-          <Text style={styles.warning}>
-            Belum ada kategori aktif. Buat kategori terlebih dahulu.
-          </Text>
-        ) : (
-          <View style={styles.chips}>
-            {categories.map((category) => (
-              <Pressable
-                key={category.id}
-                onPress={() => setCategoryId(category.id)}
-                style={[
-                  styles.chip,
-                  categoryId === category.id && styles.chipActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    categoryId === category.id && styles.chipTextActive,
-                  ]}
-                >
-                  {category.name}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
-
-        <Text style={styles.label}>Nama produk</Text>
-        <TextInput
-          value={name}
-          onChangeText={setName}
-          placeholder="Nasi Ayam Original"
-          placeholderTextColor={theme.colors.textMuted}
-          style={styles.input}
-          maxLength={120}
-        />
-
-        <Text style={styles.label}>Deskripsi</Text>
-        <TextInput
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Opsional"
-          placeholderTextColor={theme.colors.textMuted}
-          style={[styles.input, styles.multiline]}
-          multiline
-          textAlignVertical="top"
-          maxLength={500}
-        />
-
-        <Text style={styles.label}>Harga</Text>
-        <TextInput
-          value={price}
-          onChangeText={setPrice}
-          keyboardType="number-pad"
-          placeholder="12000"
-          placeholderTextColor={theme.colors.textMuted}
-          style={styles.input}
-        />
-
-        <Text style={styles.label}>Stok</Text>
-        <TextInput
-          value={stockQuantity}
-          onChangeText={setStockQuantity}
-          keyboardType="number-pad"
-          placeholder="Kosongkan jika tidak dilacak"
-          placeholderTextColor={theme.colors.textMuted}
-          style={styles.input}
-        />
-
-        {!selectedImage && (
-          <>
-            <Text style={styles.label}>URL foto HTTPS · opsional</Text>
-            <TextInput
-              value={imageUrl}
-              onChangeText={setImageUrl}
-              autoCapitalize="none"
-              placeholder="https://res.cloudinary.com/..."
-              placeholderTextColor={theme.colors.textMuted}
-              style={styles.input}
-            />
-          </>
-        )}
-
-        <Text style={styles.label}>Urutan tampil</Text>
-        <TextInput
-          value={sortOrder}
-          onChangeText={setSortOrder}
-          keyboardType="number-pad"
-          placeholder="0"
-          placeholderTextColor={theme.colors.textMuted}
-          style={styles.input}
-        />
-
-        {error && (
-          <View style={styles.errorCard}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-
-        <Pressable
-          disabled={saving || !categoryId}
-          onPress={() => void save()}
-          style={[
-            styles.button,
-            (!categoryId || saving) && styles.disabled,
-          ]}
-        >
-          <Text style={styles.buttonText}>
-            {saving
-              ? selectedImage
-                ? "Mengunggah & menyimpan..."
-                : "Menyimpan..."
-              : "Simpan produk"}
-          </Text>
-        </Pressable>
+      <View className="mt-3 rounded-[22px] p-4" style={{ backgroundColor: theme.colors.surface }}>
+        <Text className="mb-2 mt-1 text-[9px] font-extrabold" style={{ color: theme.colors.textMuted }}>{c.product.category}</Text>
+        {categories.length === 0 ? <View className="rounded-[16px] p-3" style={{ backgroundColor: theme.colors.dangerSurface }}><Text className="text-[9px] leading-4" style={{ color: theme.colors.danger }}>{c.product.noCategory}</Text></View> : <View className="flex-row flex-wrap gap-2">{categories.map((category) => { const selected = category.id === categoryId; return <Pressable key={category.id} onPress={() => setCategoryId(category.id)} className="rounded-full px-3 py-2.5" style={{ backgroundColor: selected ? theme.colors.primary : theme.colors.surfaceRaised }}><Text className="text-[9px] font-black" style={{ color: selected ? theme.colors.onPrimary : theme.colors.text }}>{category.name}</Text></Pressable>; })}</View>}
+        <Field label={c.product.name}><TextInput value={name} onChangeText={setName} placeholder={c.product.namePlaceholder} placeholderTextColor={theme.colors.textMuted} maxLength={120} className="min-h-[48px] rounded-[16px] px-4 text-[11px]" style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text }} /></Field>
+        <Field label={c.product.description}><TextInput value={description} onChangeText={setDescription} placeholder={c.product.optional} placeholderTextColor={theme.colors.textMuted} maxLength={500} multiline textAlignVertical="top" className="min-h-[84px] rounded-[16px] px-4 py-3 text-[11px]" style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text }} /></Field>
+        <Field label={c.product.price}><TextInput value={price} onChangeText={setPrice} keyboardType="number-pad" placeholder="12000" placeholderTextColor={theme.colors.textMuted} className="min-h-[48px] rounded-[16px] px-4 text-[11px]" style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text }} /></Field>
+        <Field label={c.product.stock}><TextInput value={stockQuantity} onChangeText={setStockQuantity} keyboardType="number-pad" placeholder={c.product.stockPlaceholder} placeholderTextColor={theme.colors.textMuted} className="min-h-[48px] rounded-[16px] px-4 text-[11px]" style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text }} /></Field>
+        {!selectedImage ? <Field label={c.product.imageUrl}><TextInput value={imageUrl} onChangeText={setImageUrl} autoCapitalize="none" placeholder="https://res.cloudinary.com/..." placeholderTextColor={theme.colors.textMuted} className="min-h-[48px] rounded-[16px] px-4 text-[11px]" style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text }} /></Field> : null}
+        <Field label={c.product.sort}><TextInput value={sortOrder} onChangeText={setSortOrder} keyboardType="number-pad" placeholder="0" placeholderTextColor={theme.colors.textMuted} className="min-h-[48px] rounded-[16px] px-4 text-[11px]" style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text }} /></Field>
+        {error ? <View className="mt-4 rounded-[16px] p-3" style={{ backgroundColor: theme.colors.dangerSurface }}><Text className="text-[10px] leading-4" style={{ color: theme.colors.danger }}>{error}</Text></View> : null}
+        <Pressable className="mt-5 min-h-[50px] flex-row items-center justify-center rounded-[16px]" disabled={saving || !categoryId} onPress={() => void save()} style={{ backgroundColor: theme.colors.primary, opacity: saving || !categoryId ? 0.5 : 1 }}>{saving && selectedImage ? <ActivityIndicator color="#FFFFFF" /> : null}<Text className={`${saving && selectedImage ? "ml-2" : ""} text-[11px] font-black text-white`}>{saving ? selectedImage ? c.product.uploading : c.common.saving : c.product.save}</Text></Pressable>
       </View>
     </ScrollView>
   );
-}
 
-function createStyles(colors: {
-  background: string;
-  surface: string;
-  surfaceAccent: string;
-  primary: string;
-  primaryStrong: string;
-  secondary: string;
-  text: string;
-  textMuted: string;
-  border: string;
-  onPrimary: string;
-}) {
-  return StyleSheet.create({
-    container: {
-      flexGrow: 1,
-      backgroundColor: colors.background,
-      padding: 20,
-      paddingTop: 54,
-      paddingBottom: 40,
-    },
-    header: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 28,
-    },
-    back: { color: colors.primary, fontWeight: "900" },
-    brand: {
-      color: colors.primaryStrong,
-      fontWeight: "900",
-      fontSize: 23,
-      letterSpacing: -1,
-    },
-    eyebrow: {
-      color: colors.primary,
-      fontSize: 10,
-      fontWeight: "900",
-      letterSpacing: 1.4,
-    },
-    title: {
-      color: colors.text,
-      fontWeight: "900",
-      fontSize: 30,
-      letterSpacing: -1,
-      marginTop: 5,
-    },
-    subtitle: { color: colors.textMuted, marginTop: 6, marginBottom: 16 },
-    cloudinaryCard: {
-      backgroundColor: colors.surfaceAccent,
-      borderRadius: 17,
-      padding: 14,
-      marginBottom: 12,
-    },
-    cloudinaryTitle: {
-      color: colors.primary,
-      fontSize: 9,
-      fontWeight: "900",
-      letterSpacing: 1,
-    },
-    cloudinaryStatus: {
-      color: colors.text,
-      fontWeight: "900",
-      marginTop: 4,
-    },
-    muted: {
-      color: colors.textMuted,
-      fontSize: 10,
-      lineHeight: 16,
-      marginTop: 4,
-    },
-    previewWrap: { marginTop: 14 },
-    preview: {
-      width: "100%",
-      aspectRatio: 1,
-      borderRadius: 16,
-      backgroundColor: colors.surface,
-    },
-    removeImage: {
-      color: "#B42318",
-      fontWeight: "800",
-      fontSize: 11,
-      marginTop: 8,
-    },
-    imageButton: {
-      borderWidth: 1,
-      borderColor: colors.primary,
-      borderRadius: 13,
-      alignItems: "center",
-      paddingVertical: 12,
-      marginTop: 13,
-    },
-    imageButtonText: { color: colors.primary, fontWeight: "900" },
-    card: {
-      backgroundColor: colors.surface,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 20,
-      padding: 17,
-    },
-    label: {
-      color: colors.textMuted,
-      fontSize: 11,
-      fontWeight: "800",
-      marginTop: 15,
-      marginBottom: 7,
-    },
-    warning: { color: "#B42318", fontSize: 11, lineHeight: 17 },
-    chips: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
-    chip: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 999,
-      paddingHorizontal: 11,
-      paddingVertical: 8,
-    },
-    chipActive: {
-      backgroundColor: colors.primaryStrong,
-      borderColor: colors.primaryStrong,
-    },
-    chipText: { color: colors.text, fontSize: 11, fontWeight: "800" },
-    chipTextActive: { color: "#FFFFFF" },
-    input: {
-      backgroundColor: colors.background,
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 14,
-      color: colors.text,
-      paddingHorizontal: 13,
-      paddingVertical: 12,
-    },
-    multiline: { minHeight: 82 },
-    errorCard: {
-      backgroundColor: colors.surfaceAccent,
-      borderRadius: 13,
-      padding: 12,
-      marginTop: 16,
-    },
-    errorText: { color: colors.text, fontSize: 11, lineHeight: 17 },
-    button: {
-      backgroundColor: colors.primaryStrong,
-      borderRadius: 14,
-      alignItems: "center",
-      paddingVertical: 14,
-      marginTop: 20,
-    },
-    disabled: { opacity: 0.5 },
-    buttonText: { color: "#FFFFFF", fontWeight: "900" },
-  });
+  function Field({ label, children }: { label: string; children: ReactNode }) { return <View className="mt-3"><Text className="mb-2 text-[9px] font-extrabold" style={{ color: theme.colors.textMuted }}>{label}</Text>{children}</View>; }
 }

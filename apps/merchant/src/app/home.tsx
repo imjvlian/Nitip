@@ -1,23 +1,22 @@
 import type { NitipMerchantProfile, NitipOutlet } from "@nitip/domain";
+import { useNitipLanguage } from "@nitip/i18n";
 import { Redirect, router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useState, type ReactNode } from "react";
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { NitipIcon } from "../components/NitipIcon";
+import { getMerchantCopy, merchantStatusLabel } from "../constants/merchantCopy";
 import { useAuth } from "../context/AuthContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
 import { createMerchant, deleteOutlet, getMerchantMe, listOutlets, submitMerchant, updateMerchant, updateOutlet } from "../lib/api";
 
-function statusCopy(status: NitipMerchantProfile["status"]) {
-  if (status === "draft") return "DRAFT";
-  if (status === "pending_review") return "MENUNGGU REVIEW";
-  if (status === "approved") return "AKTIF";
-  return "DITOLAK";
-}
-
 export default function MerchantHomeScreen() {
-  const { signOut, user } = useAuth();
+  const { language } = useNitipLanguage();
+  const c = getMerchantCopy(language);
+  const { user } = useAuth();
   const theme = useNitipTheme();
-  const styles = useMemo(() => createStyles(theme.colors), [theme]);
+  const insets = useSafeAreaInsets();
   const [merchant, setMerchant] = useState<NitipMerchantProfile | null>(null);
   const [outlets, setOutlets] = useState<NitipOutlet[]>([]);
   const [businessName, setBusinessName] = useState("");
@@ -45,178 +44,87 @@ export default function MerchantHomeScreen() {
         setOutlets([]);
       }
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Gagal memuat merchant");
+      setError(nextError instanceof Error ? nextError.message : c.home.loadError);
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => { void load(); }, [user]);
-
+  useEffect(() => { void load(); }, [user, language]);
   if (!user) return <Redirect href="/login" />;
 
   async function saveProfile() {
     setSaving(true);
     setError(null);
     try {
-      const input = {
-        businessName: businessName.trim(),
-        contactName: contactName.trim(),
-        phoneNumber: phoneNumber.trim(),
-        description: description.trim() || null,
-      };
+      const input = { businessName: businessName.trim(), contactName: contactName.trim(), phoneNumber: phoneNumber.trim(), description: description.trim() || null };
       const next = merchant ? await updateMerchant(user, input) : await createMerchant(user, input);
       setMerchant(next);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Gagal menyimpan profil merchant");
-    } finally {
-      setSaving(false);
-    }
+      setError(nextError instanceof Error ? nextError.message : c.home.saveError);
+    } finally { setSaving(false); }
   }
 
   async function submitProfile() {
-    setSaving(true);
-    setError(null);
-    try {
-      setMerchant(await submitMerchant(user));
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Gagal mengirim onboarding");
-    } finally {
-      setSaving(false);
-    }
+    setSaving(true); setError(null);
+    try { setMerchant(await submitMerchant(user)); }
+    catch (nextError) { setError(nextError instanceof Error ? nextError.message : c.home.submitError); }
+    finally { setSaving(false); }
   }
 
   async function toggleOrders(outlet: NitipOutlet) {
     try {
       const next = await updateOutlet(user, outlet.id, { acceptingOrders: !outlet.acceptingOrders });
       setOutlets((current) => current.map((item) => item.id === next.id ? next : item));
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Gagal mengubah status outlet");
-    }
+    } catch (nextError) { setError(nextError instanceof Error ? nextError.message : c.home.toggleError); }
   }
 
   function confirmDelete(outlet: NitipOutlet) {
-    Alert.alert("Hapus outlet?", `${outlet.name} dan seluruh katalog di dalamnya akan dihapus.`, [
-      { text: "Batal", style: "cancel" },
-      { text: "Hapus", style: "destructive", onPress: () => void (async () => {
-        try {
-          await deleteOutlet(user, outlet.id);
-          setOutlets((current) => current.filter((item) => item.id !== outlet.id));
-        } catch (nextError) {
-          setError(nextError instanceof Error ? nextError.message : "Gagal menghapus outlet");
-        }
+    Alert.alert(c.home.deleteOutletTitle, c.home.deleteOutletDescription.replace("{{name}}", outlet.name), [
+      { text: c.common.cancel, style: "cancel" },
+      { text: c.common.delete, style: "destructive", onPress: () => void (async () => {
+        try { await deleteOutlet(user, outlet.id); setOutlets((current) => current.filter((item) => item.id !== outlet.id)); }
+        catch (nextError) { setError(nextError instanceof Error ? nextError.message : c.home.deleteOutletError); }
       })() },
     ]);
   }
 
   const editable = !merchant || merchant.status === "draft" || merchant.status === "rejected";
+  const acceptingCount = outlets.filter((outlet) => outlet.acceptingOrders).length;
+  const statusDescription = merchant?.status === "approved" ? c.home.approved : merchant?.status === "pending_review" ? c.home.pending : merchant?.status === "rejected" ? c.home.rejected : c.home.draft;
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <View style={styles.header}>
-        <View><Text style={styles.brand}>nitip mitra.</Text><Text style={styles.muted}>{user.email ?? "Merchant"}</Text></View>
-        <Pressable onPress={() => void signOut()} style={styles.outlineButton}><Text style={styles.outlineText}>Keluar</Text></Pressable>
+    <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingTop: insets.top + 14, paddingBottom: 32 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} style={{ backgroundColor: theme.colors.background }}>
+      <View className="flex-row items-center justify-between">
+        <View><Text className="text-[25px] font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>nitip mitra.</Text><Text className="mt-0.5 text-[9px]" style={{ color: theme.colors.textMuted }}>{user.email ?? "Merchant"}</Text></View>
+        <Pressable className="h-10 w-10 items-center justify-center rounded-full" onPress={() => router.push("/settings")} style={{ backgroundColor: theme.colors.surface }}><NitipIcon color={theme.colors.text} name="settings" size={17} /></Pressable>
       </View>
 
-      <Text style={styles.eyebrow}>MERCHANT CENTER</Text>
-      <Text style={styles.title}>{merchant ? merchant.businessName : "Daftarkan usahamu."}</Text>
-      <Text style={styles.subtitle}>Profil usaha, outlet, katalog, dan pesanan dikelola dari Nitip Mitra.</Text>
+      <View className="mt-8"><Text className="text-[9px] font-black tracking-[1.2px]" style={{ color: theme.colors.primary }}>{c.home.center}</Text><Text className="mt-2 text-[30px] font-black leading-[34px] tracking-tighter" style={{ color: theme.colors.text }}>{merchant ? merchant.businessName : c.home.registerTitle}</Text><Text className="mt-2 max-w-[330px] text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>{c.home.subtitle}</Text></View>
 
-      {loading ? <View style={styles.loadingCard}><ActivityIndicator color={theme.colors.primary} /><Text style={styles.muted}>Memuat merchant...</Text></View> : <>
-        {merchant && <View style={styles.statusCard}>
-          <Text style={styles.statusLabel}>STATUS ONBOARDING</Text>
-          <Text style={styles.statusValue}>{statusCopy(merchant.status)}</Text>
-          <Text style={styles.muted}>{merchant.status === "approved" ? "Merchant sudah siap menerima pesanan customer." : merchant.status === "pending_review" ? "Data menunggu review Ops. Menu tetap bisa disiapkan." : "Lengkapi data lalu kirim untuk review."}</Text>
-        </View>}
+      {loading ? <View className="mt-6 items-center rounded-[22px] p-7" style={{ backgroundColor: theme.colors.surface }}><ActivityIndicator color={theme.colors.primary} /><Text className="mt-3 text-[10px]" style={{ color: theme.colors.textMuted }}>{c.home.loading}</Text></View> : <>
+        {merchant ? <View className="mt-5 rounded-[22px] p-4" style={{ backgroundColor: merchant.status === "approved" ? theme.colors.successSurface : merchant.status === "rejected" ? theme.colors.dangerSurface : theme.colors.surfaceAccent }}><Text className="text-[8px] font-black tracking-[1px]" style={{ color: merchant.status === "approved" ? theme.colors.success : merchant.status === "rejected" ? theme.colors.danger : theme.colors.primary }}>{c.home.statusTitle}</Text><Text className="mt-1 text-[16px] font-black" style={{ color: theme.colors.text }}>{merchantStatusLabel(merchant.status, language)}</Text><Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{statusDescription}</Text></View> : null}
 
-        {merchant?.status === "approved" && (
-          <Pressable onPress={() => router.push("/orders")} style={styles.orderCenterCard}>
-            <View style={styles.orderCenterBody}>
-              <Text style={styles.orderCenterLabel}>ORDER CENTER</Text>
-              <Text style={styles.orderCenterTitle}>Pesanan masuk</Text>
-              <Text style={styles.orderCenterMeta}>Konfirmasi, siapkan, dan tandai siap diambil driver.</Text>
-            </View>
-            <Text style={styles.orderCenterArrow}>›</Text>
-          </Pressable>
-        )}
+        {merchant?.status === "approved" ? <><Text className="mt-7 text-[15px] font-black" style={{ color: theme.colors.text }}>{c.home.overview}</Text><View className="mt-3 flex-row gap-2"><MetricCard icon="store" label={c.home.totalOutlets} value={String(outlets.length)} /><MetricCard icon="power" label={c.home.acceptingOutlets} value={String(acceptingCount)} /></View><Pressable className="mt-3 flex-row items-center rounded-[22px] p-4" onPress={() => router.push("/orders")} style={{ backgroundColor: theme.colors.primary }}><View className="h-11 w-11 items-center justify-center rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.14)" }}><NitipIcon color="#FFFFFF" name="orders" size={20} /></View><View className="ml-3 flex-1"><Text className="text-[8px] font-black tracking-[1px]" style={{ color: "rgba(255,255,255,0.72)" }}>{c.home.orderCenter}</Text><Text className="mt-1 text-[15px] font-black text-white">{c.home.incomingOrders}</Text><Text className="mt-1 text-[9px] leading-4" style={{ color: "rgba(255,255,255,0.72)" }}>{c.home.incomingDescription}</Text></View><NitipIcon color="#FFFFFF" name="next" size={17} /></Pressable></> : null}
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Profil usaha</Text>
-          <Text style={styles.label}>Nama usaha</Text><TextInput editable={editable} value={businessName} onChangeText={setBusinessName} placeholder="Nasi Ayam Bu Rini" placeholderTextColor={theme.colors.textMuted} style={[styles.input, !editable && styles.readonly]} />
-          <Text style={styles.label}>Penanggung jawab</Text><TextInput editable={editable} value={contactName} onChangeText={setContactName} placeholder="Nama lengkap" placeholderTextColor={theme.colors.textMuted} style={[styles.input, !editable && styles.readonly]} />
-          <Text style={styles.label}>Nomor HP</Text><TextInput editable={editable} value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" placeholder="08xxxxxxxxxx" placeholderTextColor={theme.colors.textMuted} style={[styles.input, !editable && styles.readonly]} />
-          <Text style={styles.label}>Deskripsi</Text><TextInput editable={editable} value={description} onChangeText={setDescription} multiline textAlignVertical="top" placeholder="Tentang usaha" placeholderTextColor={theme.colors.textMuted} style={[styles.input, styles.multiline, !editable && styles.readonly]} />
-          {editable && <Pressable disabled={saving} onPress={() => void saveProfile()} style={styles.primaryButton}><Text style={styles.primaryText}>{saving ? "Menyimpan..." : merchant ? "Simpan perubahan" : "Buat profil merchant"}</Text></Pressable>}
-          {merchant && (merchant.status === "draft" || merchant.status === "rejected") && <Pressable disabled={saving} onPress={() => void submitProfile()} style={styles.secondaryButton}><Text style={styles.secondaryText}>Kirim untuk review</Text></Pressable>}
+        <Text className="mt-7 text-[15px] font-black" style={{ color: theme.colors.text }}>{c.home.businessProfile}</Text>
+        <View className="mt-3 rounded-[22px] p-4" style={{ backgroundColor: theme.colors.surface }}>
+          <Field label={c.home.businessName}><TextInput editable={editable} value={businessName} onChangeText={setBusinessName} placeholder={c.home.businessPlaceholder} placeholderTextColor={theme.colors.textMuted} className="min-h-[48px] rounded-[16px] px-4 text-[11px]" style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text, opacity: editable ? 1 : 0.65 }} /></Field>
+          <Field label={c.home.contactName}><TextInput editable={editable} value={contactName} onChangeText={setContactName} placeholder={c.home.contactPlaceholder} placeholderTextColor={theme.colors.textMuted} className="min-h-[48px] rounded-[16px] px-4 text-[11px]" style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text, opacity: editable ? 1 : 0.65 }} /></Field>
+          <Field label={c.home.phone}><TextInput editable={editable} value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" placeholder="08xxxxxxxxxx" placeholderTextColor={theme.colors.textMuted} className="min-h-[48px] rounded-[16px] px-4 text-[11px]" style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text, opacity: editable ? 1 : 0.65 }} /></Field>
+          <Field label={c.home.description}><TextInput editable={editable} value={description} onChangeText={setDescription} multiline textAlignVertical="top" placeholder={c.home.descriptionPlaceholder} placeholderTextColor={theme.colors.textMuted} className="min-h-[86px] rounded-[16px] px-4 py-3 text-[11px]" style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text, opacity: editable ? 1 : 0.65 }} /></Field>
+          {editable ? <Pressable className="mt-5 min-h-[48px] items-center justify-center rounded-[16px]" disabled={saving} onPress={() => void saveProfile()} style={{ backgroundColor: theme.colors.primary, opacity: saving ? 0.5 : 1 }}><Text className="text-[11px] font-black text-white">{saving ? c.common.saving : merchant ? c.home.saveChanges : c.home.createProfile}</Text></Pressable> : null}
+          {merchant && (merchant.status === "draft" || merchant.status === "rejected") ? <Pressable className="mt-2 min-h-[46px] items-center justify-center rounded-[16px]" disabled={saving} onPress={() => void submitProfile()} style={{ backgroundColor: theme.colors.surfaceAccent }}><Text className="text-[11px] font-black" style={{ color: theme.colors.primary }}>{c.home.submitReview}</Text></Pressable> : null}
         </View>
 
-        {merchant && <>
-          <View style={styles.sectionHeader}><View><Text style={styles.cardTitle}>Outlet</Text><Text style={styles.muted}>{outlets.length} outlet</Text></View><Pressable onPress={() => router.push("/outlet/new")} style={styles.smallButton}><Text style={styles.smallButtonText}>+ Tambah</Text></Pressable></View>
-          {outlets.length === 0 ? <View style={styles.card}><Text style={styles.cardTitle}>Belum ada outlet</Text><Text style={styles.muted}>Tambahkan lokasi jualan pertama.</Text></View> : outlets.map((outlet) => <View key={outlet.id} style={styles.outletCard}>
-            <View style={styles.outletTop}><View style={styles.outletInfo}><Text style={styles.outletName}>{outlet.name}</Text><Text style={styles.muted}>{outlet.addressLine}</Text></View><View style={styles.badge}><Text style={styles.badgeText}>{outlet.acceptingOrders ? "BUKA" : "TUTUP"}</Text></View></View>
-            <Text style={styles.meta}>
-              {outlet.isActive ? "Outlet aktif" : "Outlet nonaktif"} · {outlet.latitude != null && outlet.longitude != null ? `${outlet.latitude.toFixed(6)}, ${outlet.longitude.toFixed(6)}` : "Lokasi belum dipilih"}
-            </Text>
-            <View style={styles.actions}>
-              <Pressable onPress={() => router.push({ pathname: "/outlet/[id]/location", params: { id: outlet.id } })}><Text style={styles.linkText}>{outlet.latitude != null ? "Ubah lokasi" : "Atur lokasi"}</Text></Pressable>
-              <Pressable onPress={() => router.push({ pathname: "/menu", params: { outletId: outlet.id, outletName: outlet.name } })}><Text style={styles.linkText}>Kelola menu</Text></Pressable>
-              <Pressable onPress={() => void toggleOrders(outlet)}><Text style={styles.linkText}>{outlet.acceptingOrders ? "Tutup sementara" : "Buka pesanan"}</Text></Pressable>
-              <Pressable onPress={() => confirmDelete(outlet)}><Text style={styles.dangerText}>Hapus</Text></Pressable>
-            </View>
-          </View>)}
-        </>}
+        {merchant ? <><View className="mt-8 flex-row items-end justify-between"><View><Text className="text-[15px] font-black" style={{ color: theme.colors.text }}>{c.home.outlets}</Text><Text className="mt-1 text-[9px]" style={{ color: theme.colors.textMuted }}>{c.home.outletCount.replace("{{count}}", String(outlets.length))}</Text></View><Pressable className="min-h-[38px] flex-row items-center rounded-full px-3" onPress={() => router.push("/outlet/new")} style={{ backgroundColor: theme.colors.surfaceAccent }}><NitipIcon color={theme.colors.primary} name="plus" size={14} /><Text className="ml-1.5 text-[10px] font-black" style={{ color: theme.colors.primary }}>{c.home.addOutlet}</Text></Pressable></View>
+          {outlets.length === 0 ? <View className="mt-3 rounded-[22px] p-5" style={{ backgroundColor: theme.colors.surface }}><Text className="text-[12px] font-black" style={{ color: theme.colors.text }}>{c.home.noOutlet}</Text><Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{c.home.noOutletDescription}</Text></View> : outlets.map((outlet) => <View className="mt-3 rounded-[22px] p-4" key={outlet.id} style={{ backgroundColor: theme.colors.surface }}><View className="flex-row items-start"><View className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surfaceRaised }}><NitipIcon color={theme.colors.primary} name="store" size={18} /></View><View className="ml-3 flex-1"><View className="flex-row items-start justify-between gap-2"><View className="flex-1"><Text className="text-[12px] font-black" style={{ color: theme.colors.text }}>{outlet.name}</Text><Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{outlet.addressLine}</Text></View><View className="rounded-full px-2.5 py-1.5" style={{ backgroundColor: outlet.acceptingOrders ? theme.colors.successSurface : theme.colors.surfaceRaised }}><Text className="text-[8px] font-black" style={{ color: outlet.acceptingOrders ? theme.colors.success : theme.colors.textMuted }}>{outlet.acceptingOrders ? c.home.open : c.home.closed}</Text></View></View><Text className="mt-2 text-[8px] font-extrabold" style={{ color: theme.colors.primary }}>{outlet.isActive ? c.home.activeOutlet : c.home.inactiveOutlet} · {outlet.latitude != null && outlet.longitude != null ? `${outlet.latitude.toFixed(5)}, ${outlet.longitude.toFixed(5)}` : c.home.locationMissing}</Text><View className="mt-3 flex-row flex-wrap gap-x-4 gap-y-3"><Action label={outlet.latitude != null ? c.home.changeLocation : c.home.setLocation} onPress={() => router.push({ pathname: "/outlet/[id]/location", params: { id: outlet.id } })} /><Action label={c.home.manageMenu} onPress={() => router.push({ pathname: "/menu", params: { outletId: outlet.id, outletName: outlet.name } })} /><Action label={outlet.acceptingOrders ? c.home.pauseOrders : c.home.openOrders} onPress={() => void toggleOrders(outlet)} /><Pressable onPress={() => confirmDelete(outlet)}><Text className="text-[9px] font-black" style={{ color: theme.colors.danger }}>{c.common.delete}</Text></Pressable></View></View></View></View>)}</> : null}
       </>}
-
-      {error && <View style={styles.errorCard}><Text style={styles.errorText}>{error}</Text></View>}
+      {error ? <View className="mt-4 rounded-[18px] p-4" style={{ backgroundColor: theme.colors.dangerSurface }}><Text className="text-[10px] leading-4" style={{ color: theme.colors.danger }}>{error}</Text></View> : null}
     </ScrollView>
   );
-}
 
-function createStyles(colors: { background: string; surface: string; surfaceAccent: string; primary: string; primaryStrong: string; secondary: string; text: string; textMuted: string; border: string; onPrimary: string }) {
-  return StyleSheet.create({
-    container: { flexGrow: 1, backgroundColor: colors.background, paddingHorizontal: 20, paddingTop: 56, paddingBottom: 40 },
-    header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 32 },
-    brand: { color: colors.primaryStrong, fontSize: 27, fontWeight: "900", letterSpacing: -1 },
-    muted: { color: colors.textMuted, fontSize: 11, lineHeight: 17, marginTop: 3 },
-    outlineButton: { borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 8 },
-    outlineText: { color: colors.text, fontWeight: "800", fontSize: 11 },
-    eyebrow: { color: colors.primary, fontWeight: "900", fontSize: 10, letterSpacing: 1.4 },
-    title: { color: colors.text, fontWeight: "900", fontSize: 32, letterSpacing: -1.1, marginTop: 5 },
-    subtitle: { color: colors.textMuted, lineHeight: 20, fontSize: 12, marginTop: 8, marginBottom: 20 },
-    loadingCard: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 18, padding: 18, alignItems: "center", gap: 8 },
-    statusCard: { backgroundColor: colors.surfaceAccent, borderRadius: 18, padding: 16, marginBottom: 12 },
-    statusLabel: { color: colors.primary, fontSize: 9, fontWeight: "900", letterSpacing: 1 },
-    statusValue: { color: colors.text, fontSize: 17, fontWeight: "900", marginTop: 4 },
-    orderCenterCard: { flexDirection: "row", alignItems: "center", backgroundColor: colors.primaryStrong, borderRadius: 20, padding: 17, marginBottom: 12 },
-    orderCenterBody: { flex: 1 },
-    orderCenterLabel: { color: colors.secondary, fontWeight: "900", fontSize: 9, letterSpacing: 1.1 },
-    orderCenterTitle: { color: colors.onPrimary, fontWeight: "900", fontSize: 18, marginTop: 4 },
-    orderCenterMeta: { color: colors.secondary, fontSize: 10, lineHeight: 15, marginTop: 4 },
-    orderCenterArrow: { color: colors.onPrimary, fontWeight: "900", fontSize: 30, marginLeft: 12 },
-    card: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 20, padding: 17 },
-    cardTitle: { color: colors.text, fontWeight: "900", fontSize: 17 },
-    label: { color: colors.textMuted, fontSize: 11, fontWeight: "800", marginTop: 15, marginBottom: 7 },
-    input: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: 14, color: colors.text, paddingHorizontal: 13, paddingVertical: 12 },
-    readonly: { opacity: 0.7 },
-    multiline: { minHeight: 90 },
-    primaryButton: { backgroundColor: colors.primaryStrong, borderRadius: 14, alignItems: "center", paddingVertical: 14, marginTop: 18 },
-    primaryText: { color: "#FFFFFF", fontWeight: "900" },
-    secondaryButton: { borderWidth: 1, borderColor: colors.primary, borderRadius: 14, alignItems: "center", paddingVertical: 13, marginTop: 9 },
-    secondaryText: { color: colors.primary, fontWeight: "900" },
-    sectionHeader: { marginTop: 28, marginBottom: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-    smallButton: { backgroundColor: colors.surfaceAccent, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 9 },
-    smallButtonText: { color: colors.primaryStrong, fontWeight: "900", fontSize: 11 },
-    outletCard: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 18, padding: 16, marginBottom: 10 },
-    outletTop: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 },
-    outletInfo: { flex: 1 },
-    outletName: { color: colors.text, fontWeight: "900", fontSize: 15 },
-    badge: { backgroundColor: colors.surfaceAccent, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5 },
-    badgeText: { color: colors.primaryStrong, fontWeight: "900", fontSize: 9 },
-    meta: { color: colors.primary, fontSize: 10, fontWeight: "700", marginTop: 11 },
-    actions: { flexDirection: "row", flexWrap: "wrap", gap: 16, marginTop: 12 },
-    linkText: { color: colors.primary, fontWeight: "800", fontSize: 11 },
-    dangerText: { color: "#B42318", fontWeight: "800", fontSize: 11 },
-    errorCard: { marginTop: 14, padding: 13, borderRadius: 14, backgroundColor: colors.surfaceAccent },
-    errorText: { color: colors.text, fontSize: 11, lineHeight: 17 },
-  });
+  function Field({ label, children }: { label: string; children: ReactNode }) { return <View className="mt-3"><Text className="mb-2 text-[9px] font-extrabold" style={{ color: theme.colors.textMuted }}>{label}</Text>{children}</View>; }
+  function MetricCard({ icon, label, value }: { icon: "store" | "power"; label: string; value: string }) { return <View className="flex-1 rounded-[20px] p-4" style={{ backgroundColor: theme.colors.surface }}><NitipIcon color={theme.colors.primary} name={icon} size={18} /><Text className="mt-4 text-[24px] font-black tracking-tighter" style={{ color: theme.colors.text }}>{value}</Text><Text className="mt-1 text-[9px]" style={{ color: theme.colors.textMuted }}>{label}</Text></View>; }
+  function Action({ label, onPress }: { label: string; onPress: () => void }) { return <Pressable onPress={onPress}><Text className="text-[9px] font-black" style={{ color: theme.colors.primary }}>{label}</Text></Pressable>; }
 }

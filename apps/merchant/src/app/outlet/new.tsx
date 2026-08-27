@@ -1,18 +1,23 @@
 import { WEEKDAYS, type OutletOpeningHour, type Weekday } from "@nitip/domain";
+import { useNitipLanguage } from "@nitip/i18n";
 import { Redirect, router } from "expo-router";
-import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useState } from "react";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AppHeader } from "../../components/AppHeader";
+import { NitipIcon } from "../../components/NitipIcon";
+import { getMerchantCopy } from "../../constants/merchantCopy";
 import { useAuth } from "../../context/AuthContext";
 import { useNitipTheme } from "../../hooks/useNitipTheme";
 import { createOutlet } from "../../lib/api";
 
-const dayLabels: Record<Weekday, string> = { mon: "Sen", tue: "Sel", wed: "Rab", thu: "Kam", fri: "Jum", sat: "Sab", sun: "Min" };
-
 export default function NewOutletScreen() {
+  const { language } = useNitipLanguage();
+  const c = getMerchantCopy(language);
   const { user } = useAuth();
   const theme = useNitipTheme();
-  const styles = useMemo(() => createStyles(theme.colors), [theme]);
+  const insets = useSafeAreaInsets();
   const [name, setName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [addressLine, setAddressLine] = useState("");
@@ -29,87 +34,39 @@ export default function NewOutletScreen() {
   }
 
   async function save() {
-    setSaving(true);
-    setError(null);
+    setSaving(true); setError(null);
     const openingHours: OutletOpeningHour[] = WEEKDAYS.map((day) => {
       const isOpen = openDays.includes(day);
       return { day, isOpen, opensAt: isOpen ? opensAt : null, closesAt: isOpen ? closesAt : null };
     });
-
     try {
-      await createOutlet(user, {
-        name: name.trim(),
-        phoneNumber: phoneNumber.trim(),
-        addressLine: addressLine.trim(),
-        latitude: null,
-        longitude: null,
-        isActive: true,
-        acceptingOrders: false,
-        openingHours,
-      });
+      await createOutlet(user, { name: name.trim(), phoneNumber: phoneNumber.trim(), addressLine: addressLine.trim(), latitude: null, longitude: null, isActive: true, acceptingOrders: false, openingHours });
       router.replace("/home");
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Gagal membuat outlet");
-    } finally {
-      setSaving(false);
-    }
+    } catch (nextError) { setError(nextError instanceof Error ? nextError.message : c.outlet.saveError); }
+    finally { setSaving(false); }
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <View style={styles.header}><Pressable onPress={() => router.back()}><Text style={styles.backText}>‹ Kembali</Text></Pressable><Text style={styles.brand}>nitip mitra.</Text></View>
-      <Text style={styles.eyebrow}>OUTLET BARU</Text>
-      <Text style={styles.title}>Tambahkan lokasi jualan.</Text>
-      <Text style={styles.subtitle}>Alamat dan jam operasional disimpan sekarang. Titik peta ditambahkan pada fase Maps.</Text>
+    <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingTop: insets.top + 10, paddingBottom: Math.max(insets.bottom + 30, 42) }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} style={{ backgroundColor: theme.colors.background }}>
+      <AppHeader title={c.home.addOutlet} onBack={() => router.back()} />
+      <View className="mt-7"><Text className="text-[9px] font-black tracking-[1.2px]" style={{ color: theme.colors.primary }}>{c.outlet.eyebrow}</Text><Text className="mt-2 text-[28px] font-black tracking-tighter" style={{ color: theme.colors.text }}>{c.outlet.title}</Text><Text className="mt-1 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>{c.outlet.subtitle}</Text></View>
 
-      <View style={styles.card}>
-        <Text style={styles.label}>Nama outlet</Text><TextInput value={name} onChangeText={setName} placeholder="Cabang Lumajang Kota" placeholderTextColor={theme.colors.textMuted} style={styles.input} />
-        <Text style={styles.label}>Nomor kontak</Text><TextInput value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" placeholder="08xxxxxxxxxx" placeholderTextColor={theme.colors.textMuted} style={styles.input} />
-        <Text style={styles.label}>Alamat lengkap</Text><TextInput value={addressLine} onChangeText={setAddressLine} multiline textAlignVertical="top" placeholder="Jalan, nomor, desa/kelurahan, kecamatan" placeholderTextColor={theme.colors.textMuted} style={[styles.input, styles.multiline]} />
+      <View className="mt-5 rounded-[22px] p-4" style={{ backgroundColor: theme.colors.surface }}>
+        <Field label={c.outlet.name}><TextInput value={name} onChangeText={setName} placeholder={c.outlet.namePlaceholder} placeholderTextColor={theme.colors.textMuted} className="min-h-[48px] rounded-[16px] px-4 text-[11px]" style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text }} /></Field>
+        <Field label={c.outlet.contact}><TextInput value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" placeholder="08xxxxxxxxxx" placeholderTextColor={theme.colors.textMuted} className="min-h-[48px] rounded-[16px] px-4 text-[11px]" style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text }} /></Field>
+        <Field label={c.outlet.address}><TextInput value={addressLine} onChangeText={setAddressLine} multiline textAlignVertical="top" placeholder={c.outlet.addressPlaceholder} placeholderTextColor={theme.colors.textMuted} className="min-h-[88px] rounded-[16px] px-4 py-3 text-[11px]" style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text }} /></Field>
 
-        <Text style={styles.sectionLabel}>Hari buka</Text>
-        <View style={styles.days}>{WEEKDAYS.map((day) => {
-          const active = openDays.includes(day);
-          return <Pressable key={day} onPress={() => toggleDay(day)} style={[styles.dayChip, active && styles.dayChipActive]}><Text style={[styles.dayText, active && styles.dayTextActive]}>{dayLabels[day]}</Text></Pressable>;
-        })}</View>
+        <Text className="mb-3 mt-5 text-[11px] font-black" style={{ color: theme.colors.text }}>{c.outlet.openDays}</Text>
+        <View className="flex-row flex-wrap gap-2">{WEEKDAYS.map((day) => { const active = openDays.includes(day); return <Pressable key={day} onPress={() => toggleDay(day)} className="min-w-[42px] items-center rounded-full px-3 py-2.5" style={{ backgroundColor: active ? theme.colors.primary : theme.colors.surfaceRaised }}><Text className="text-[9px] font-black" style={{ color: active ? theme.colors.onPrimary : theme.colors.textMuted }}>{c.outlet.days[day]}</Text></Pressable>; })}</View>
 
-        <View style={styles.timeRow}>
-          <View style={styles.timeField}><Text style={styles.label}>Buka</Text><TextInput value={opensAt} onChangeText={setOpensAt} placeholder="08:00" placeholderTextColor={theme.colors.textMuted} style={styles.input} maxLength={5} /></View>
-          <View style={styles.timeField}><Text style={styles.label}>Tutup</Text><TextInput value={closesAt} onChangeText={setClosesAt} placeholder="20:00" placeholderTextColor={theme.colors.textMuted} style={styles.input} maxLength={5} /></View>
-        </View>
-        <Text style={styles.hint}>Gunakan format 24 jam HH:MM. Backend sudah mendukung jadwal berbeda per hari.</Text>
-        {error && <View style={styles.errorCard}><Text style={styles.errorText}>{error}</Text></View>}
-        <Pressable disabled={saving} onPress={() => void save()} style={styles.primaryButton}><Text style={styles.primaryText}>{saving ? "Menyimpan..." : "Simpan outlet"}</Text></Pressable>
+        <View className="mt-2 flex-row gap-2"><View className="flex-1"><Field label={c.outlet.openAt}><TextInput value={opensAt} onChangeText={setOpensAt} placeholder="08:00" placeholderTextColor={theme.colors.textMuted} maxLength={5} className="min-h-[48px] rounded-[16px] px-4 text-[11px]" style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text }} /></Field></View><View className="flex-1"><Field label={c.outlet.closeAt}><TextInput value={closesAt} onChangeText={setClosesAt} placeholder="20:00" placeholderTextColor={theme.colors.textMuted} maxLength={5} className="min-h-[48px] rounded-[16px] px-4 text-[11px]" style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text }} /></Field></View></View>
+        <View className="mt-3 flex-row items-start gap-2"><NitipIcon color={theme.colors.textMuted} name="clock" size={14} /><Text className="flex-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{c.outlet.timeHint}</Text></View>
+
+        {error ? <View className="mt-4 rounded-[16px] p-3" style={{ backgroundColor: theme.colors.dangerSurface }}><Text className="text-[10px] leading-4" style={{ color: theme.colors.danger }}>{error}</Text></View> : null}
+        <Pressable className="mt-5 min-h-[50px] items-center justify-center rounded-[16px]" disabled={saving} onPress={() => void save()} style={{ backgroundColor: theme.colors.primary, opacity: saving ? 0.5 : 1 }}><Text className="text-[11px] font-black text-white">{saving ? c.common.saving : c.outlet.save}</Text></Pressable>
       </View>
     </ScrollView>
   );
-}
 
-function createStyles(colors: { background: string; surface: string; surfaceAccent: string; primary: string; primaryStrong: string; secondary: string; text: string; textMuted: string; border: string; onPrimary: string }) {
-  return StyleSheet.create({
-    container: { flexGrow: 1, backgroundColor: colors.background, padding: 20, paddingTop: 54, paddingBottom: 40 },
-    header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 30 },
-    backText: { color: colors.primary, fontWeight: "800" },
-    brand: { color: colors.primaryStrong, fontSize: 24, fontWeight: "900", letterSpacing: -1 },
-    eyebrow: { color: colors.primary, fontSize: 10, fontWeight: "900", letterSpacing: 1.4 },
-    title: { color: colors.text, fontSize: 30, fontWeight: "900", letterSpacing: -1, marginTop: 5 },
-    subtitle: { color: colors.textMuted, lineHeight: 20, marginTop: 7, marginBottom: 22, fontSize: 12 },
-    card: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 20, padding: 17 },
-    label: { color: colors.textMuted, fontSize: 11, fontWeight: "800", marginTop: 15, marginBottom: 7 },
-    sectionLabel: { color: colors.text, fontSize: 13, fontWeight: "900", marginTop: 22, marginBottom: 10 },
-    input: { backgroundColor: colors.background, borderColor: colors.border, borderWidth: 1, borderRadius: 14, color: colors.text, paddingHorizontal: 13, paddingVertical: 12 },
-    multiline: { minHeight: 92 },
-    days: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
-    dayChip: { width: 44, alignItems: "center", borderWidth: 1, borderColor: colors.border, borderRadius: 999, paddingVertical: 9 },
-    dayChipActive: { backgroundColor: colors.primaryStrong, borderColor: colors.primaryStrong },
-    dayText: { color: colors.text, fontSize: 11, fontWeight: "800" },
-    dayTextActive: { color: "#FFFFFF" },
-    timeRow: { flexDirection: "row", gap: 10 },
-    timeField: { flex: 1 },
-    hint: { color: colors.textMuted, fontSize: 10, lineHeight: 16, marginTop: 10 },
-    errorCard: { backgroundColor: colors.surfaceAccent, borderRadius: 13, padding: 12, marginTop: 16 },
-    errorText: { color: colors.text, fontSize: 11, lineHeight: 17 },
-    primaryButton: { backgroundColor: colors.primaryStrong, borderRadius: 14, paddingVertical: 14, alignItems: "center", marginTop: 20 },
-    primaryText: { color: "#FFFFFF", fontWeight: "900" },
-  });
+  function Field({ label, children }: { label: string; children: React.ReactNode }) { return <View className="mt-3"><Text className="mb-2 text-[9px] font-extrabold" style={{ color: theme.colors.textMuted }}>{label}</Text>{children}</View>; }
 }
