@@ -246,6 +246,20 @@ export default function MenuScreen() {
                         {product.isActive ? c.menu.visible : c.menu.hidden} · {product.isAvailable ? c.common.available : c.common.unavailable}
                       </Text>
                       <View className="mt-3 flex-row flex-wrap gap-x-4 gap-y-2">
+                        <Pressable
+                          onPress={() => router.push({
+                            pathname: "/product/[id]/edit",
+                            params: {
+                              id: product.id,
+                              outletId,
+                              outletName: outletName ?? "",
+                            },
+                          })}
+                        >
+                          <Text className="text-[9px] font-black" style={{ color: theme.colors.primary }}>
+                            {language === "id" ? "Ubah" : "Edit"}
+                          </Text>
+                        </Pressable>
                         <Pressable onPress={() => void toggleAvailability(product)}>
                           <Text className="text-[9px] font-black" style={{ color: theme.colors.primary }}>
                             {product.isAvailable ? c.menu.markSoldOut : c.menu.markAvailable}
