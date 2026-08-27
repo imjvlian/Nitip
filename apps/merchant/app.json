@@ -25,6 +25,7 @@
       ]
     ],
     "android": { "package": "id.nitip.merchant" },
-    "ios": { "bundleIdentifier": "id.nitip.merchant" }
+    "ios": { "bundleIdentifier": "id.nitip.merchant" },
+    "web": { "bundler": "metro" }
   }
 }

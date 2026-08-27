@@ -17,6 +17,7 @@
       ]
     ],
     "android": { "package": "id.nitip.driver" },
-    "ios": { "bundleIdentifier": "id.nitip.driver" }
+    "ios": { "bundleIdentifier": "id.nitip.driver" },
+    "web": { "bundler": "metro" }
   }
 }

@@ -1,3 +1,6 @@
+import "../../global.css";
+
+import { NitipI18nProvider } from "@nitip/i18n";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 
@@ -6,11 +9,13 @@ import { CartProvider } from "../context/CartContext";
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <CartProvider>
-        <StatusBar style="auto" />
-        <Stack screenOptions={{ headerShown: false }} />
-      </CartProvider>
-    </AuthProvider>
+    <NitipI18nProvider>
+      <AuthProvider>
+        <CartProvider>
+          <StatusBar style="auto" />
+          <Stack screenOptions={{ headerShown: false }} />
+        </CartProvider>
+      </AuthProvider>
+    </NitipI18nProvider>
   );
 }

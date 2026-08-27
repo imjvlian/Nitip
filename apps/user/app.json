@@ -21,6 +21,9 @@
     },
     "ios": {
       "bundleIdentifier": "id.nitip.user"
+    },
+    "web": {
+      "bundler": "metro"
     }
   }
 }

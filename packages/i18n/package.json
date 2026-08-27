@@ -1,0 +1,25 @@
+{
+  "name": "@nitip/i18n",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "expo-localization": "~57.0.1",
+    "i18next": "26.4.0",
+    "react": "19.2.3",
+    "react-i18next": "17.0.12"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.2",
+    "typescript": "^5.9.2"
+  }
+}
