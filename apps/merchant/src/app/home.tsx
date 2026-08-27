@@ -85,6 +85,10 @@ export default function MerchantHomeScreen() {
         : c.home.draft;
   const earningsLabel = language === "id" ? "Pendapatan" : "Earnings";
   const earningsDescription = language === "id" ? "Dari pesanan yang sudah selesai" : "From completed orders";
+  const analyticsLabel = language === "id" ? "Analitik" : "Analytics";
+  const analyticsDescription = language === "id"
+    ? "Tren order, outlet, dan produk terlaris"
+    : "Order trends, outlets, and best-selling products";
 
   return (
     <ScrollView
@@ -218,6 +222,21 @@ export default function MerchantHomeScreen() {
                   <Text className="text-[8px] font-black tracking-[1px]" style={{ color: theme.colors.primary }}>{earningsLabel.toUpperCase()}</Text>
                   <Text className="mt-1 text-[16px] font-black" style={{ color: theme.colors.text }}>{formatRupiah(settledEarnings)}</Text>
                   <Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{earningsDescription}</Text>
+                </View>
+                <NitipIcon color={theme.colors.textMuted} name="next" size={17} />
+              </Pressable>
+              <Pressable
+                className="mt-3 flex-row items-center rounded-[22px] p-4"
+                onPress={() => router.push("/analytics")}
+                style={{ backgroundColor: theme.colors.surface }}
+              >
+                <View className="w-9 items-center">
+                  <NitipIcon color={theme.colors.primary} name="analytics" size={20} />
+                </View>
+                <View className="ml-3 flex-1">
+                  <Text className="text-[8px] font-black tracking-[1px]" style={{ color: theme.colors.primary }}>{analyticsLabel.toUpperCase()}</Text>
+                  <Text className="mt-1 text-[14px] font-black" style={{ color: theme.colors.text }}>{analyticsLabel}</Text>
+                  <Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{analyticsDescription}</Text>
                 </View>
                 <NitipIcon color={theme.colors.textMuted} name="next" size={17} />
               </Pressable>

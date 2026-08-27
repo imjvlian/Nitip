@@ -27,7 +27,8 @@ export type NitipIconName =
   | "power"
   | "profile"
   | "notification"
-  | "earnings";
+  | "earnings"
+  | "analytics";
 
 const symbols: Record<NitipIconName, { ios: string; android: string; web: string }> = {
   home: { ios: "house.fill", android: "home", web: "home" },
@@ -56,6 +57,7 @@ const symbols: Record<NitipIconName, { ios: string; android: string; web: string
   profile: { ios: "person.fill", android: "person", web: "person" },
   notification: { ios: "bell.fill", android: "notifications", web: "notifications" },
   earnings: { ios: "banknote.fill", android: "account_balance_wallet", web: "account_balance_wallet" },
+  analytics: { ios: "chart.bar.fill", android: "analytics", web: "analytics" },
 };
 
 export function NitipIcon({
