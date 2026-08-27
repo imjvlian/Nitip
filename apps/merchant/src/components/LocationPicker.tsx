@@ -1,11 +1,11 @@
 import { useNitipLanguage } from "@nitip/i18n";
 import * as Location from "expo-location";
-import { useRef, useState } from "react";
-import { ActivityIndicator, Platform, Pressable, Text, View } from "react-native";
-import MapView, { Marker, UrlTile, type MapPressEvent } from "react-native-maps";
+import { useState } from "react";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import { getMerchantCopy } from "../constants/merchantCopy";
 import { useNitipTheme } from "../hooks/useNitipTheme";
+import LocationMap from "./LocationMap";
 import { NitipIcon } from "./NitipIcon";
 
 interface LocationPickerProps {
@@ -14,25 +14,13 @@ interface LocationPickerProps {
   onChange: (latitude: number | null, longitude: number | null) => void;
 }
 
-const FALLBACK_REGION = { latitude: -8.1335, longitude: 113.2248, latitudeDelta: 0.08, longitudeDelta: 0.08 };
-const OSM_TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-
 export default function LocationPicker({ latitude, longitude, onChange }: LocationPickerProps) {
   const { language } = useNitipLanguage();
   const c = getMerchantCopy(language).location;
   const theme = useNitipTheme();
-  const mapRef = useRef<MapView | null>(null);
   const [locating, setLocating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const point = latitude != null && longitude != null ? { latitude, longitude } : null;
-
-  function choose(latitudeValue: number, longitudeValue: number) {
-    onChange(latitudeValue, longitudeValue);
-  }
-
-  function handleMapPress(event: MapPressEvent) {
-    choose(event.nativeEvent.coordinate.latitude, event.nativeEvent.coordinate.longitude);
-  }
 
   async function useCurrentLocation() {
     setLocating(true);
@@ -41,18 +29,7 @@ export default function LocationPicker({ latitude, longitude, onChange }: Locati
       const permission = await Location.requestForegroundPermissionsAsync();
       if (permission.status !== "granted") throw new Error(c.permission);
       const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      const nextLatitude = position.coords.latitude;
-      const nextLongitude = position.coords.longitude;
-      choose(nextLatitude, nextLongitude);
-      mapRef.current?.animateToRegion(
-        {
-          latitude: nextLatitude,
-          longitude: nextLongitude,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        },
-        300,
-      );
+      onChange(position.coords.latitude, position.coords.longitude);
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : c.deviceError);
     } finally {
@@ -68,41 +45,22 @@ export default function LocationPicker({ latitude, longitude, onChange }: Locati
       </View>
       <Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{c.helper}</Text>
 
-      <View className="mt-3 overflow-hidden rounded-[20px]" style={{ backgroundColor: theme.colors.surfaceRaised }}>
-        <MapView
-          ref={mapRef}
-          style={{ height: 230, width: "100%" }}
-          initialRegion={point ? { ...point, latitudeDelta: 0.01, longitudeDelta: 0.01 } : FALLBACK_REGION}
-          mapType={Platform.OS === "android" ? "none" : "standard"}
-          onPress={handleMapPress}
-          toolbarEnabled={false}
-          showsMyLocationButton={false}
-        >
-          {Platform.OS === "android" ? (
-            <UrlTile
-              urlTemplate={OSM_TILE_URL}
-              maximumZ={19}
-              tileSize={256}
-              zIndex={-1}
-            />
-          ) : null}
-          {point ? (
-            <Marker
-              coordinate={point}
-              draggable
-              onDragEnd={(event) => choose(event.nativeEvent.coordinate.latitude, event.nativeEvent.coordinate.longitude)}
-            />
-          ) : null}
-        </MapView>
-        {Platform.OS === "android" ? (
-          <View
-            pointerEvents="none"
-            className="absolute bottom-1 right-1 rounded px-1.5 py-0.5"
-            style={{ backgroundColor: "rgba(255,255,255,0.82)" }}
-          >
-            <Text className="text-[7px]" style={{ color: "#4B5563" }}>© OpenStreetMap contributors</Text>
-          </View>
-        ) : null}
+      <View
+        className="mt-3 overflow-hidden rounded-[20px]"
+        style={{ backgroundColor: theme.colors.surfaceRaised, height: 230 }}
+      >
+        <LocationMap
+          latitude={latitude}
+          longitude={longitude}
+          loadErrorLabel={language === "id" ? "Peta tidak dapat dimuat. Periksa koneksi internet." : "Map could not load. Check your internet connection."}
+          onLocationChange={async (nextLatitude, nextLongitude) => {
+            onChange(nextLatitude, nextLongitude);
+          }}
+          dom={{
+            scrollEnabled: false,
+            style: { height: 230, width: "100%" },
+          }}
+        />
       </View>
 
       <View className="mt-3 flex-row items-center gap-2">
