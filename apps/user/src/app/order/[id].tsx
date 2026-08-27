@@ -29,6 +29,20 @@ function orderProgress(status: NitipOrder["status"]) {
   return 0;
 }
 
+function receiptAvailable(status: NitipOrder["status"]) {
+  return (
+    status === "paid" ||
+    status === "merchant_confirmed" ||
+    status === "preparing" ||
+    status === "ready_for_pickup" ||
+    status === "driver_assigned" ||
+    status === "picked_up" ||
+    status === "on_delivery" ||
+    status === "delivered" ||
+    status === "refunded"
+  );
+}
+
 export default function OrderDetailScreen() {
   const { t } = useNitipTranslation();
   const { language } = useNitipLanguage();
@@ -84,6 +98,11 @@ export default function OrderDetailScreen() {
     { label: t("orderDetail.progressDelivery"), icon: "location" },
     { label: t("orderDetail.progressDone"), icon: "check" },
   ];
+  const receiptLabel = language === "en" ? "View & save receipt" : "Lihat & simpan receipt";
+  const receiptDescription =
+    language === "en"
+      ? "Open the transaction receipt and save it as a PDF."
+      : "Buka bukti transaksi dan simpan sebagai PDF.";
 
   return (
     <ScrollView
@@ -212,6 +231,23 @@ export default function OrderDetailScreen() {
             <View className="flex-row justify-between py-1.5"><Text className="text-[10px]" style={{ color: theme.colors.textMuted }}>{t("common.serviceFee")}</Text><Text className="text-[10px] font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(order.serviceFee)}</Text></View>
             <View className="mt-3 flex-row justify-between border-t pt-4" style={{ borderTopColor: theme.colors.border }}><Text className="text-sm font-black" style={{ color: theme.colors.text }}>{t("common.total")}</Text><Text className="text-base font-black" style={{ color: theme.colors.primary }}>{formatRupiah(order.customerTotal)}</Text></View>
           </View>
+
+          {receiptAvailable(order.status) ? (
+            <Pressable
+              className="mt-4 flex-row items-center rounded-[20px] p-4"
+              onPress={() => router.push({ pathname: "/order/[id]/receipt", params: { id: order.id } })}
+              style={{ backgroundColor: theme.colors.surface }}
+            >
+              <View className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surfaceRaised }}>
+                <NitipIcon color={theme.colors.primary} name="receipt" size={18} />
+              </View>
+              <View className="ml-3 flex-1">
+                <Text className="text-[11px] font-black" style={{ color: theme.colors.text }}>{receiptLabel}</Text>
+                <Text className="mt-0.5 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{receiptDescription}</Text>
+              </View>
+              <NitipIcon color={theme.colors.textMuted} name="next" size={16} />
+            </Pressable>
+          ) : null}
 
           {error ? <View className="mt-4 rounded-[16px] p-4" style={{ backgroundColor: theme.colors.dangerSurface }}><Text className="text-[10px] leading-4" style={{ color: theme.colors.danger }}>{error}</Text></View> : null}
 
