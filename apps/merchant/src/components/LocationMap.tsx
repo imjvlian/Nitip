@@ -1,62 +1,116 @@
-/// <reference lib="dom" />
-'use dom';
+import { useMemo, useState } from "react";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { WebView } from "react-native-webview";
 
-import { useEffect, useRef, useState } from "react";
-
-const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-const OSM_TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 const FALLBACK = { latitude: -8.1335, longitude: 113.2248 };
 
-type Leaflet = any;
-type LeafletMap = any;
-type LeafletMarker = any;
+function buildMapHtml(latitude: number | null, longitude: number | null) {
+  const hasPoint = latitude != null && longitude != null;
+  const initialLatitude = latitude ?? FALLBACK.latitude;
+  const initialLongitude = longitude ?? FALLBACK.longitude;
+  const initialZoom = hasPoint ? 16 : 13;
 
-declare global {
-  interface Window {
-    L?: Leaflet;
-  }
-}
-
-function ensureLeaflet(): Promise<Leaflet> {
-  if (window.L) return Promise.resolve(window.L);
-
-  if (!document.querySelector(`link[href="${LEAFLET_CSS}"]`)) {
-    const stylesheet = document.createElement("link");
-    stylesheet.rel = "stylesheet";
-    stylesheet.href = LEAFLET_CSS;
-    document.head.appendChild(stylesheet);
-  }
-
-  return new Promise((resolve, reject) => {
-    const existing = document.querySelector(`script[src="${LEAFLET_JS}"]`) as HTMLScriptElement | null;
-    const script = existing ?? document.createElement("script");
-
-    const handleLoad = () => {
-      if (window.L) resolve(window.L);
-      else reject(new Error("Leaflet unavailable"));
-    };
-
-    const handleError = () => reject(new Error("Failed to load Leaflet"));
-
-    script.addEventListener("load", handleLoad, { once: true });
-    script.addEventListener("error", handleError, { once: true });
-
-    if (!existing) {
-      script.src = LEAFLET_JS;
-      script.async = true;
-      document.head.appendChild(script);
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body, #map { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; }
+    * { box-sizing: border-box; }
+    body { background: #eef0f3; }
+    .leaflet-container { font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background: #eef0f3; }
+    .nitip-marker-wrapper { background: transparent !important; border: 0 !important; }
+    .nitip-marker {
+      width: 30px;
+      height: 30px;
+      border-radius: 50% 50% 50% 4px;
+      background: #2448F5;
+      border: 3px solid #fff;
+      box-shadow: 0 3px 10px rgba(17, 19, 24, .3);
+      transform: rotate(-45deg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-  });
-}
+    .nitip-marker-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #fff;
+    }
+    .leaflet-control-attribution { font-size: 9px !important; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    (function () {
+      function post(message) {
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify(message));
+        }
+      }
 
-function createPinIcon(L: Leaflet) {
-  return L.divIcon({
-    className: "nitip-marker-wrapper",
-    html: '<div class="nitip-marker"><div class="nitip-marker-dot"></div></div>',
-    iconSize: [30, 38],
-    iconAnchor: [15, 36],
-  });
+      if (!window.L) {
+        post({ type: 'error' });
+        return;
+      }
+
+      var map = L.map('map', {
+        attributionControl: true,
+        zoomControl: true
+      }).setView([${initialLatitude}, ${initialLongitude}], ${initialZoom});
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19
+      }).addTo(map);
+
+      var marker = null;
+      var pinIcon = L.divIcon({
+        className: 'nitip-marker-wrapper',
+        html: '<div class="nitip-marker"><div class="nitip-marker-dot"></div></div>',
+        iconSize: [30, 38],
+        iconAnchor: [15, 36]
+      });
+
+      function emit(latitude, longitude) {
+        post({ type: 'location', latitude: latitude, longitude: longitude });
+      }
+
+      function placeMarker(latitude, longitude) {
+        if (!marker) {
+          marker = L.marker([latitude, longitude], {
+            draggable: true,
+            icon: pinIcon
+          }).addTo(map);
+
+          marker.on('dragend', function () {
+            var point = marker.getLatLng();
+            emit(point.lat, point.lng);
+          });
+        } else {
+          marker.setLatLng([latitude, longitude]);
+        }
+      }
+
+      ${hasPoint ? `placeMarker(${initialLatitude}, ${initialLongitude});` : ""}
+
+      map.on('click', function (event) {
+        placeMarker(event.latlng.lat, event.latlng.lng);
+        emit(event.latlng.lat, event.latlng.lng);
+      });
+
+      window.setTimeout(function () {
+        map.invalidateSize();
+      }, 100);
+    })();
+  </script>
+</body>
+</html>`;
 }
 
 export default function LocationMap({
@@ -69,133 +123,87 @@ export default function LocationMap({
   longitude: number | null;
   onLocationChange: (latitude: number, longitude: number) => Promise<void>;
   loadErrorLabel?: string;
-  dom?: import("expo/dom").DOMProps;
 }) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<LeafletMap | null>(null);
-  const markerRef = useRef<LeafletMarker | null>(null);
-  const callbackRef = useRef(onLocationChange);
-  const coordinateRef = useRef({ latitude, longitude });
-  const [loadError, setLoadError] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const html = useMemo(() => buildMapHtml(latitude, longitude), [latitude, longitude]);
+  const mapKey = `${latitude ?? "none"}:${longitude ?? "none"}`;
 
-  callbackRef.current = onLocationChange;
-  coordinateRef.current = { latitude, longitude };
+  if (failed) {
+    return (
+      <View style={styles.stateContainer}>
+        <Text style={styles.errorText}>{loadErrorLabel}</Text>
+      </View>
+    );
+  }
 
-  useEffect(() => {
-    let active = true;
+  return (
+    <WebView
+      key={mapKey}
+      originWhitelist={["*"]}
+      source={{ html, baseUrl: "https://nitip.local/" }}
+      style={styles.webView}
+      containerStyle={styles.webViewContainer}
+      javaScriptEnabled
+      domStorageEnabled
+      scrollEnabled={false}
+      bounces={false}
+      overScrollMode="never"
+      setSupportMultipleWindows={false}
+      startInLoadingState
+      renderLoading={() => (
+        <View style={styles.stateContainer}>
+          <ActivityIndicator color="#2448F5" />
+        </View>
+      )}
+      onError={() => setFailed(true)}
+      onMessage={(event) => {
+        try {
+          const message = JSON.parse(event.nativeEvent.data) as {
+            type?: string;
+            latitude?: number;
+            longitude?: number;
+          };
 
-    void ensureLeaflet()
-      .then((L) => {
-        if (!active || !containerRef.current) return;
-
-        const current = coordinateRef.current;
-        const hasPoint = current.latitude != null && current.longitude != null;
-        const center = hasPoint
-          ? [current.latitude as number, current.longitude as number]
-          : [FALLBACK.latitude, FALLBACK.longitude];
-
-        const map = L.map(containerRef.current, {
-          attributionControl: true,
-          zoomControl: true,
-        }).setView(center, hasPoint ? 16 : 13);
-
-        L.tileLayer(OSM_TILE_URL, {
-          attribution: "&copy; OpenStreetMap contributors",
-          maxZoom: 19,
-        }).addTo(map);
-
-        const pinIcon = createPinIcon(L);
-
-        const placeMarker = (nextLatitude: number, nextLongitude: number) => {
-          if (markerRef.current) {
-            markerRef.current.setLatLng([nextLatitude, nextLongitude]);
+          if (message.type === "error") {
+            setFailed(true);
             return;
           }
 
-          const marker = L.marker([nextLatitude, nextLongitude], {
-            draggable: true,
-            icon: pinIcon,
-          }).addTo(map);
-
-          marker.on("dragend", () => {
-            const point = marker.getLatLng();
-            void callbackRef.current(point.lat, point.lng);
-          });
-
-          markerRef.current = marker;
-        };
-
-        if (hasPoint) {
-          placeMarker(current.latitude as number, current.longitude as number);
+          if (
+            message.type === "location" &&
+            Number.isFinite(message.latitude) &&
+            Number.isFinite(message.longitude)
+          ) {
+            void onLocationChange(message.latitude as number, message.longitude as number);
+          }
+        } catch {
+          // Ignore messages that are not emitted by the Nitip map bridge.
         }
-
-        map.on("click", (event: { latlng: { lat: number; lng: number } }) => {
-          placeMarker(event.latlng.lat, event.latlng.lng);
-          void callbackRef.current(event.latlng.lat, event.latlng.lng);
-        });
-
-        mapRef.current = map;
-        window.setTimeout(() => map.invalidateSize(), 50);
-      })
-      .catch(() => {
-        if (active) setLoadError(true);
-      });
-
-    return () => {
-      active = false;
-      markerRef.current = null;
-      mapRef.current?.remove();
-      mapRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    const L = window.L;
-    if (!map || !L) return;
-
-    if (latitude == null || longitude == null) {
-      if (markerRef.current) {
-        markerRef.current.remove();
-        markerRef.current = null;
-      }
-      return;
-    }
-
-    if (markerRef.current) {
-      markerRef.current.setLatLng([latitude, longitude]);
-    } else {
-      const marker = L.marker([latitude, longitude], {
-        draggable: true,
-        icon: createPinIcon(L),
-      }).addTo(map);
-      marker.on("dragend", () => {
-        const point = marker.getLatLng();
-        void callbackRef.current(point.lat, point.lng);
-      });
-      markerRef.current = marker;
-    }
-
-    map.setView([latitude, longitude], Math.max(map.getZoom(), 16), { animate: true });
-  }, [latitude, longitude]);
-
-  return (
-    <>
-      <style>{`
-        html, body, #root { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; }
-        * { box-sizing: border-box; }
-        .nitip-map { width: 100%; height: 100%; background: #eef0f3; }
-        .nitip-error { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 20px; font: 600 12px system-ui, sans-serif; color: #6b7280; background: #f3f4f6; text-align: center; }
-        .nitip-marker-wrapper { background: transparent !important; border: 0 !important; }
-        .nitip-marker { width: 30px; height: 30px; border-radius: 50% 50% 50% 4px; background: #2448F5; border: 3px solid #fff; box-shadow: 0 3px 10px rgba(17, 19, 24, .28); transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; }
-        .nitip-marker-dot { width: 8px; height: 8px; border-radius: 999px; background: #fff; transform: rotate(45deg); }
-        .leaflet-control-attribution { font: 9px/1.2 system-ui, sans-serif !important; }
-      `}</style>
-      {loadError ? (
-        <div className="nitip-error">{loadErrorLabel}</div>
-      ) : (
-        <div ref={containerRef} className="nitip-map" />
-      )}
-    </>
+      }}
+    />
   );
 }
+
+const styles = StyleSheet.create({
+  webViewContainer: {
+    flex: 1,
+    backgroundColor: "#EEF0F3",
+  },
+  webView: {
+    flex: 1,
+    backgroundColor: "#EEF0F3",
+  },
+  stateContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    backgroundColor: "#EEF0F3",
+  },
+  errorText: {
+    color: "#6B7280",
+    fontSize: 11,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+});
