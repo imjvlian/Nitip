@@ -1,6 +1,7 @@
 import { formatRupiah } from "@nitip/domain";
 import type { NitipOrder } from "@nitip/domain/commerce";
 import { useNitipLanguage, useNitipTranslation } from "@nitip/i18n";
+import * as FileSystem from "expo-file-system/legacy";
 import * as Print from "expo-print";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import * as Sharing from "expo-sharing";
@@ -247,11 +248,19 @@ export default function OrderReceiptScreen() {
     try {
       const available = await Sharing.isAvailableAsync();
       if (!available) throw new Error(c.sharingUnavailable);
+      if (!FileSystem.documentDirectory) throw new Error(c.saveError);
+
       const statusLabel = t(`orders.status.${order.status}`);
       const { uri } = await Print.printToFileAsync({
         html: createReceiptHtml(order, language, statusLabel),
       });
-      await Sharing.shareAsync(uri, {
+
+      const safeOrderCode = order.orderCode.replace(/[^A-Za-z0-9._-]/g, "_");
+      const receiptUri = `${FileSystem.documentDirectory}nitip-receipt-${safeOrderCode}.pdf`;
+      await FileSystem.deleteAsync(receiptUri, { idempotent: true });
+      await FileSystem.copyAsync({ from: uri, to: receiptUri });
+
+      await Sharing.shareAsync(receiptUri, {
         dialogTitle: `${c.heading} · ${order.orderCode}`,
         mimeType: "application/pdf",
         UTI: "com.adobe.pdf",
