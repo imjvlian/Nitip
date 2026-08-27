@@ -251,14 +251,18 @@ export default function OrderReceiptScreen() {
       if (!FileSystem.documentDirectory) throw new Error(c.saveError);
 
       const statusLabel = t(`orders.status.${order.status}`);
-      const { uri } = await Print.printToFileAsync({
+      const printResult = await Print.printToFileAsync({
         html: createReceiptHtml(order, language, statusLabel),
+        base64: true,
       });
+      if (!printResult.base64) throw new Error(c.saveError);
 
       const safeOrderCode = order.orderCode.replace(/[^A-Za-z0-9._-]/g, "_");
       const receiptUri = `${FileSystem.documentDirectory}nitip-receipt-${safeOrderCode}.pdf`;
       await FileSystem.deleteAsync(receiptUri, { idempotent: true });
-      await FileSystem.copyAsync({ from: uri, to: receiptUri });
+      await FileSystem.writeAsStringAsync(receiptUri, printResult.base64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
 
       await Sharing.shareAsync(receiptUri, {
         dialogTitle: `${c.heading} · ${order.orderCode}`,
