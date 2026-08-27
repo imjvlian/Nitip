@@ -46,7 +46,10 @@ export default function OutletLocationScreen() {
   async function save() {
     if (!outlet) return;
     setSaving(true); setError(null);
-    try { await updateOutlet(user, outlet.id, { latitude, longitude }); router.replace("/home"); }
+    try {
+      await updateOutlet(user, outlet.id, { latitude, longitude });
+      router.replace({ pathname: "/outlet/[id]", params: { id: outlet.id } });
+    }
     catch (nextError) { setError(nextError instanceof Error ? nextError.message : c.location.saveError); }
     finally { setSaving(false); }
   }

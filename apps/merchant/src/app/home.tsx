@@ -1,15 +1,15 @@
 import type { NitipMerchantProfile, NitipOutlet } from "@nitip/domain";
 import { useNitipLanguage } from "@nitip/i18n";
-import { Redirect, router } from "expo-router";
-import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { Redirect, router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { NitipIcon } from "../components/NitipIcon";
 import { getMerchantCopy, merchantStatusLabel } from "../constants/merchantCopy";
 import { useAuth } from "../context/AuthContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
-import { deleteOutlet, getMerchantMe, listOutlets, updateOutlet } from "../lib/api";
+import { getMerchantMe, listOutlets } from "../lib/api";
 
 export default function MerchantHomeScreen() {
   const { language } = useNitipLanguage();
@@ -22,7 +22,7 @@ export default function MerchantHomeScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     setError(null);
@@ -35,37 +35,15 @@ export default function MerchantHomeScreen() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [c.home.loadError, user]);
 
-  useEffect(() => { void load(); }, [user, language]);
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
+
   if (!user) return <Redirect href="/login" />;
-
-  async function toggleOrders(outlet: NitipOutlet) {
-    try {
-      const next = await updateOutlet(user, outlet.id, { acceptingOrders: !outlet.acceptingOrders });
-      setOutlets((current) => current.map((item) => item.id === next.id ? next : item));
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : c.home.toggleError);
-    }
-  }
-
-  function confirmDelete(outlet: NitipOutlet) {
-    Alert.alert(c.home.deleteOutletTitle, c.home.deleteOutletDescription.replace("{{name}}", outlet.name), [
-      { text: c.common.cancel, style: "cancel" },
-      {
-        text: c.common.delete,
-        style: "destructive",
-        onPress: () => void (async () => {
-          try {
-            await deleteOutlet(user, outlet.id);
-            setOutlets((current) => current.filter((item) => item.id !== outlet.id));
-          } catch (nextError) {
-            setError(nextError instanceof Error ? nextError.message : c.home.deleteOutletError);
-          }
-        })(),
-      },
-    ]);
-  }
 
   const acceptingCount = outlets.filter((outlet) => outlet.acceptingOrders).length;
   const statusDescription = merchant?.status === "approved"
@@ -111,9 +89,26 @@ export default function MerchantHomeScreen() {
         </View>
       ) : (
         <>
-          {merchant ? (
-            <View
+          {!merchant ? (
+            <Pressable
+              className="mt-5 flex-row items-center rounded-[22px] p-4"
+              onPress={() => router.push("/settings/business")}
+              style={{ backgroundColor: theme.colors.surfaceAccent }}
+            >
+              <View className="h-11 w-11 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surfaceRaised }}>
+                <NitipIcon color={theme.colors.primary} name="profile" size={19} />
+              </View>
+              <View className="ml-3 flex-1">
+                <Text className="text-[12px] font-black" style={{ color: theme.colors.text }}>{c.home.createProfile}</Text>
+                <Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{c.home.draft}</Text>
+              </View>
+              <NitipIcon color={theme.colors.primary} name="next" size={16} />
+            </Pressable>
+          ) : (
+            <Pressable
               className="mt-5 rounded-[22px] p-4"
+              disabled={merchant.status === "approved"}
+              onPress={() => router.push("/settings/business")}
               style={{
                 backgroundColor: merchant.status === "approved"
                   ? theme.colors.successSurface
@@ -122,24 +117,29 @@ export default function MerchantHomeScreen() {
                     : theme.colors.surfaceAccent,
               }}
             >
-              <Text
-                className="text-[8px] font-black tracking-[1px]"
-                style={{
-                  color: merchant.status === "approved"
-                    ? theme.colors.success
-                    : merchant.status === "rejected"
-                      ? theme.colors.danger
-                      : theme.colors.primary,
-                }}
-              >
-                {c.home.statusTitle}
-              </Text>
-              <Text className="mt-1 text-[16px] font-black" style={{ color: theme.colors.text }}>
-                {merchantStatusLabel(merchant.status, language)}
-              </Text>
-              <Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{statusDescription}</Text>
-            </View>
-          ) : null}
+              <View className="flex-row items-center">
+                <View className="flex-1">
+                  <Text
+                    className="text-[8px] font-black tracking-[1px]"
+                    style={{
+                      color: merchant.status === "approved"
+                        ? theme.colors.success
+                        : merchant.status === "rejected"
+                          ? theme.colors.danger
+                          : theme.colors.primary,
+                    }}
+                  >
+                    {c.home.statusTitle}
+                  </Text>
+                  <Text className="mt-1 text-[16px] font-black" style={{ color: theme.colors.text }}>
+                    {merchantStatusLabel(merchant.status, language)}
+                  </Text>
+                  <Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{statusDescription}</Text>
+                </View>
+                {merchant.status !== "approved" ? <NitipIcon color={theme.colors.textMuted} name="next" size={16} /> : null}
+              </View>
+            </Pressable>
+          )}
 
           {merchant?.status === "approved" ? (
             <>
@@ -191,51 +191,42 @@ export default function MerchantHomeScreen() {
                   <Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{c.home.noOutletDescription}</Text>
                 </View>
               ) : outlets.map((outlet) => (
-                <View className="mt-3 rounded-[22px] p-4" key={outlet.id} style={{ backgroundColor: theme.colors.surface }}>
-                  <View className="flex-row items-start">
-                    <View className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surfaceRaised }}>
-                      <NitipIcon color={theme.colors.primary} name="store" size={18} />
-                    </View>
-                    <View className="ml-3 flex-1">
-                      <View className="flex-row items-start justify-between gap-2">
-                        <View className="flex-1">
-                          <Text className="text-[12px] font-black" style={{ color: theme.colors.text }}>{outlet.name}</Text>
-                          <Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{outlet.addressLine}</Text>
-                        </View>
-                        <View
-                          className="rounded-full px-2.5 py-1.5"
-                          style={{ backgroundColor: outlet.acceptingOrders ? theme.colors.successSurface : theme.colors.surfaceRaised }}
-                        >
-                          <Text className="text-[8px] font-black" style={{ color: outlet.acceptingOrders ? theme.colors.success : theme.colors.textMuted }}>
-                            {outlet.acceptingOrders ? c.home.open : c.home.closed}
-                          </Text>
-                        </View>
+                <Pressable
+                  accessibilityRole="button"
+                  className="mt-3 flex-row items-center rounded-[22px] p-4"
+                  key={outlet.id}
+                  onPress={() => router.push({ pathname: "/outlet/[id]", params: { id: outlet.id } })}
+                  style={{ backgroundColor: theme.colors.surface }}
+                >
+                  <View className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surfaceRaised }}>
+                    <NitipIcon color={theme.colors.primary} name="store" size={18} />
+                  </View>
+                  <View className="ml-3 flex-1">
+                    <View className="flex-row items-center gap-2">
+                      <Text className="flex-1 text-[12px] font-black" numberOfLines={1} style={{ color: theme.colors.text }}>{outlet.name}</Text>
+                      <View
+                        className="rounded-full px-2.5 py-1.5"
+                        style={{ backgroundColor: outlet.acceptingOrders ? theme.colors.successSurface : theme.colors.surfaceRaised }}
+                      >
+                        <Text className="text-[8px] font-black" style={{ color: outlet.acceptingOrders ? theme.colors.success : theme.colors.textMuted }}>
+                          {outlet.acceptingOrders ? c.home.open : c.home.closed}
+                        </Text>
                       </View>
-                      <Text className="mt-2 text-[8px] font-extrabold" style={{ color: theme.colors.primary }}>
-                        {outlet.isActive ? c.home.activeOutlet : c.home.inactiveOutlet} · {outlet.latitude != null && outlet.longitude != null
+                    </View>
+                    <Text className="mt-1 text-[9px] leading-4" numberOfLines={2} style={{ color: theme.colors.textMuted }}>{outlet.addressLine}</Text>
+                    <View className="mt-2 flex-row items-center">
+                      <NitipIcon color={theme.colors.primary} name="location" size={12} />
+                      <Text className="ml-1.5 flex-1 text-[8px] font-extrabold" numberOfLines={1} style={{ color: theme.colors.primary }}>
+                        {outlet.latitude != null && outlet.longitude != null
                           ? `${outlet.latitude.toFixed(5)}, ${outlet.longitude.toFixed(5)}`
                           : c.home.locationMissing}
                       </Text>
-                      <View className="mt-3 flex-row flex-wrap gap-x-4 gap-y-3">
-                        <Action
-                          label={outlet.latitude != null ? c.home.changeLocation : c.home.setLocation}
-                          onPress={() => router.push({ pathname: "/outlet/[id]/location", params: { id: outlet.id } })}
-                        />
-                        <Action
-                          label={c.home.manageMenu}
-                          onPress={() => router.push({ pathname: "/menu", params: { outletId: outlet.id, outletName: outlet.name } })}
-                        />
-                        <Action
-                          label={outlet.acceptingOrders ? c.home.pauseOrders : c.home.openOrders}
-                          onPress={() => void toggleOrders(outlet)}
-                        />
-                        <Pressable onPress={() => confirmDelete(outlet)}>
-                          <Text className="text-[9px] font-black" style={{ color: theme.colors.danger }}>{c.common.delete}</Text>
-                        </Pressable>
-                      </View>
                     </View>
                   </View>
-                </View>
+                  <View className="ml-2">
+                    <NitipIcon color={theme.colors.textMuted} name="next" size={16} />
+                  </View>
+                </Pressable>
               ))}
             </>
           ) : null}
@@ -257,14 +248,6 @@ export default function MerchantHomeScreen() {
         <Text className="mt-4 text-[24px] font-black tracking-tighter" style={{ color: theme.colors.text }}>{value}</Text>
         <Text className="mt-1 text-[9px]" style={{ color: theme.colors.textMuted }}>{label}</Text>
       </View>
-    );
-  }
-
-  function Action({ label, onPress }: { label: string; onPress: () => void }) {
-    return (
-      <Pressable onPress={onPress}>
-        <Text className="text-[9px] font-black" style={{ color: theme.colors.primary }}>{label}</Text>
-      </Pressable>
     );
   }
 }
