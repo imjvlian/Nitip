@@ -19,8 +19,19 @@ function AppStack() {
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: theme.colors.background },
+          animation: "slide_from_right",
+          animationTypeForReplace: "push",
+          gestureEnabled: true,
+          fullScreenGestureEnabled: true,
+          animationMatchesGesture: true,
         }}
-      />
+      >
+        <Stack.Screen name="index" options={{ animation: "fade" }} />
+        <Stack.Screen name="login" options={{ animation: "fade" }} />
+        <Stack.Screen name="home" options={{ animation: "fade" }} />
+        <Stack.Screen name="orders" options={{ animation: "fade" }} />
+        <Stack.Screen name="profile" options={{ animation: "fade" }} />
+      </Stack>
     </>
   );
 }
