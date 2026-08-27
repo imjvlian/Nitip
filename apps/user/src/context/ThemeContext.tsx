@@ -1,5 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
+  getNitipTheme,
+  type NitipTheme,
+  type NitipThemeMode,
+} from "@nitip/theme";
+import {
   createContext,
   useCallback,
   useContext,
@@ -11,59 +16,10 @@ import {
 import { useColorScheme } from "react-native";
 
 export type UserThemePreference = "system" | "light" | "dark";
-export type UserThemeMode = "light" | "dark";
+export type UserThemeMode = NitipThemeMode;
+export type UserNitipTheme = NitipTheme;
 
 const THEME_STORAGE_KEY = "@nitip/user-theme";
-
-const lightTheme = {
-  mode: "light",
-  colors: {
-    background: "#FFFFFF",
-    surface: "#F5F6F8",
-    surfaceRaised: "#FFFFFF",
-    surfaceAccent: "#EEF1FF",
-    primary: "#2448F5",
-    primaryStrong: "#1836C9",
-    secondary: "#EFF1F5",
-    text: "#111318",
-    textMuted: "#7C8190",
-    border: "#E7E9EE",
-    shadow: "#111318",
-    onPrimary: "#FFFFFF",
-    danger: "#D92D20",
-    dangerSurface: "#FFF1F0",
-    success: "#159A66",
-    successSurface: "#ECFDF3",
-    warning: "#C96A09",
-    warningSurface: "#FFF7E8",
-  },
-} as const;
-
-const darkTheme = {
-  mode: "dark",
-  colors: {
-    background: "#0F1014",
-    surface: "#191B20",
-    surfaceRaised: "#22242B",
-    surfaceAccent: "#242943",
-    primary: "#5A72FF",
-    primaryStrong: "#AAB7FF",
-    secondary: "#24272E",
-    text: "#F7F7F8",
-    textMuted: "#9A9FAA",
-    border: "#2C3038",
-    shadow: "#000000",
-    onPrimary: "#FFFFFF",
-    danger: "#FF8A80",
-    dangerSurface: "#351E1E",
-    success: "#72D6A4",
-    successSurface: "#153226",
-    warning: "#F8C36A",
-    warningSurface: "#352A16",
-  },
-} as const;
-
-export type UserNitipTheme = typeof lightTheme | typeof darkTheme;
 
 interface UserThemeContextValue {
   preference: UserThemePreference;
@@ -117,7 +73,7 @@ export function UserThemeProvider({ children }: { children: ReactNode }) {
     () => ({
       preference,
       resolvedMode,
-      theme: resolvedMode === "dark" ? darkTheme : lightTheme,
+      theme: getNitipTheme(resolvedMode),
       setPreference,
     }),
     [preference, resolvedMode, setPreference],
