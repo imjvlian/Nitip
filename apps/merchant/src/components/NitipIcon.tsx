@@ -1,5 +1,12 @@
-import { SymbolView } from "expo-symbols";
-import { Platform, type ColorValue } from "react-native";
+import { Symbol as ExpoSymbol, SymbolView } from "expo-symbols";
+import { useEffect, useState } from "react";
+import {
+  Image,
+  Platform,
+  View,
+  type ColorValue,
+  type ImageSourcePropType,
+} from "react-native";
 
 export type NitipIconName =
   | "home"
@@ -54,15 +61,83 @@ const symbols: Record<NitipIconName, { ios: string; android: string; web: string
   profile: { ios: "person.fill", android: "person", web: "person" },
 };
 
-export function NitipIcon({ color, name, size = 20 }: { color: ColorValue; name: NitipIconName; size?: number }) {
+const androidSourceCache = new Map<string, ImageSourcePropType>();
+
+function AndroidNitipIcon({
+  color,
+  name,
+  size,
+}: {
+  color: ColorValue;
+  name: NitipIconName;
+  size: number;
+}) {
+  const materialName = symbols[name].android;
+  const resolvedColor = typeof color === "string" ? color : "#000000";
+  const cacheKey = `${materialName}:${size}:${resolvedColor}`;
+  const [source, setSource] = useState<ImageSourcePropType | null>(
+    () => androidSourceCache.get(cacheKey) ?? null,
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    const cached = androidSourceCache.get(cacheKey);
+
+    if (cached) {
+      setSource(cached);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setSource(null);
+
+    void ExpoSymbol.unstable_getMaterialSymbolSourceAsync(
+      materialName as never,
+      size,
+      resolvedColor,
+    ).then((nextSource) => {
+      if (!nextSource) return;
+      androidSourceCache.set(cacheKey, nextSource);
+      if (!cancelled) setSource(nextSource);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cacheKey, materialName, resolvedColor, size]);
+
+  return (
+    <View
+      style={{
+        alignItems: "center",
+        height: size,
+        justifyContent: "center",
+        width: size,
+      }}
+    >
+      {source ? (
+        <Image
+          resizeMode="contain"
+          source={source}
+          style={{ height: size, width: size }}
+        />
+      ) : null}
+    </View>
+  );
+}
+
+export function NitipIcon({
+  color,
+  name,
+  size = 20,
+}: {
+  color: ColorValue;
+  name: NitipIconName;
+  size?: number;
+}) {
   if (Platform.OS === "android") {
-    return (
-      <SymbolView
-        name={symbols[name] as never}
-        style={{ height: size, width: size }}
-        tintColor={color}
-      />
-    );
+    return <AndroidNitipIcon color={color} name={name} size={size} />;
   }
 
   return (
