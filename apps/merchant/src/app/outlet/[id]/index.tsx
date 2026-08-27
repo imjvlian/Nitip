@@ -16,6 +16,15 @@ import { deleteOutlet, listOutlets, updateOutlet } from "../../../lib/api";
 export default function OutletDetailScreen() {
   const { language } = useNitipLanguage();
   const c = getMerchantCopy(language);
+  const detailCopy = language === "id"
+    ? {
+        edit: "Edit outlet",
+        editDescription: "Ubah nama, kontak, alamat, dan jam operasional.",
+      }
+    : {
+        edit: "Edit outlet",
+        editDescription: "Update name, contact, address, and opening hours.",
+      };
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const theme = useNitipTheme();
@@ -196,6 +205,12 @@ export default function OutletDetailScreen() {
           </View>
 
           <View className="mt-7 overflow-hidden rounded-[22px]" style={{ backgroundColor: theme.colors.surface }}>
+            <SettingsRow
+              icon="store"
+              title={detailCopy.edit}
+              description={detailCopy.editDescription}
+              onPress={() => router.push({ pathname: "/outlet/[id]/edit", params: { id: outlet.id } })}
+            />
             <SettingsRow
               icon="location"
               title={outlet.latitude != null ? c.home.changeLocation : c.home.setLocation}
