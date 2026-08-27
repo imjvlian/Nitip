@@ -1,12 +1,27 @@
 import { useNitipTranslation } from "@nitip/i18n";
 import { router } from "expo-router";
+import {
+  createContext,
+  useContext,
+  type ReactNode,
+} from "react";
 import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useNitipTheme } from "../hooks/useNitipTheme";
 import { NitipIcon, type NitipIconName } from "./NitipIcon";
 
-type RootTab = "home" | "orders" | "profile";
+export type RootTab = "home" | "orders" | "profile";
+
+const SuppressBottomNavigationContext = createContext(false);
+
+export function BottomNavigationSuppressionProvider({ children }: { children: ReactNode }) {
+  return (
+    <SuppressBottomNavigationContext.Provider value>
+      {children}
+    </SuppressBottomNavigationContext.Provider>
+  );
+}
 
 const tabs: {
   key: RootTab;
@@ -20,9 +35,12 @@ const tabs: {
 ];
 
 export function BottomNavigation({ active }: { active: RootTab }) {
+  const suppressed = useContext(SuppressBottomNavigationContext);
   const { t } = useNitipTranslation();
   const theme = useNitipTheme();
   const insets = useSafeAreaInsets();
+
+  if (suppressed) return null;
 
   return (
     <View
