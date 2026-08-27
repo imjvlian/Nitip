@@ -1,4 +1,5 @@
 import { useNitipTranslation } from "@nitip/i18n";
+import { nitipLayout, nitipRadius, nitipSpacing } from "@nitip/theme";
 import { router } from "expo-router";
 import {
   createContext,
@@ -35,17 +36,39 @@ const tabs: {
 ];
 
 const styles = StyleSheet.create({
-  indicator: {
-    borderRadius: 999,
-    height: 3,
-    marginBottom: 7,
-    width: 24,
+  shell: {
+    paddingHorizontal: nitipSpacing.sm,
+    paddingTop: nitipSpacing.xs,
+  },
+  dock: {
+    alignItems: "stretch",
+    borderRadius: nitipRadius.xl,
+    flexDirection: "row",
+    minHeight: nitipLayout.bottomNavigationHeight,
+    padding: nitipSpacing.xxs,
+  },
+  tab: {
+    alignItems: "center",
+    borderRadius: nitipRadius.lg,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 56,
+    paddingHorizontal: nitipSpacing.xs,
   },
   iconSlot: {
     alignItems: "center",
     height: 24,
     justifyContent: "center",
-    width: 24,
+    width: 32,
+  },
+  label: {
+    fontSize: 10,
+    fontWeight: "800",
+    lineHeight: 14,
+    marginTop: 3,
+  },
+  pressed: {
+    opacity: 0.68,
   },
 });
 
@@ -59,36 +82,48 @@ export function BottomNavigation({ active }: { active: RootTab }) {
 
   return (
     <View
-      className="px-5 pt-2"
-      style={{
-        backgroundColor: theme.colors.background,
-        borderTopColor: theme.colors.border,
-        borderTopWidth: StyleSheet.hairlineWidth,
-        paddingBottom: Math.max(insets.bottom, 10),
-      }}
+      style={[
+        styles.shell,
+        {
+          backgroundColor: theme.colors.background,
+          paddingBottom: Math.max(insets.bottom, nitipSpacing.xs),
+        },
+      ]}
     >
-      <View className="flex-row items-stretch">
+      <View
+        style={[
+          styles.dock,
+          {
+            backgroundColor: theme.colors.surfaceRaised,
+            borderColor: theme.colors.border,
+            borderWidth: StyleSheet.hairlineWidth,
+            elevation: 8,
+            shadowColor: theme.colors.shadow,
+            shadowOffset: { width: 0, height: 5 },
+            shadowOpacity: theme.mode === "dark" ? 0.3 : 0.08,
+            shadowRadius: 16,
+          },
+        ]}
+      >
         {tabs.map((tab) => {
           const selected = tab.key === active;
           const label = t(tab.label);
 
           return (
             <Pressable
+              accessibilityLabel={label}
               accessibilityRole="tab"
               accessibilityState={{ selected }}
-              accessibilityLabel={label}
-              className="min-h-[58px] flex-1 items-center justify-center py-1"
               key={tab.key}
               onPress={() => {
                 if (!selected) router.replace(tab.href);
               }}
+              style={({ pressed }) => [
+                styles.tab,
+                selected && { backgroundColor: theme.colors.surfaceAccent },
+                pressed && styles.pressed,
+              ]}
             >
-              <View
-                style={[
-                  styles.indicator,
-                  { backgroundColor: selected ? theme.colors.primary : "transparent" },
-                ]}
-              />
               <View style={styles.iconSlot}>
                 <NitipIcon
                   color={selected ? theme.colors.primary : theme.colors.textMuted}
@@ -97,8 +132,11 @@ export function BottomNavigation({ active }: { active: RootTab }) {
                 />
               </View>
               <Text
-                className="mt-1 text-[9px] font-extrabold"
-                style={{ color: selected ? theme.colors.primary : theme.colors.textMuted }}
+                numberOfLines={1}
+                style={[
+                  styles.label,
+                  { color: selected ? theme.colors.primary : theme.colors.textMuted },
+                ]}
               >
                 {label}
               </Text>

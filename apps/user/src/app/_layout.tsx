@@ -30,7 +30,11 @@ function AppStack() {
 
   return (
     <View className="flex-1" style={{ backgroundColor: theme.colors.background }}>
-      <StatusBar style={resolvedMode === "dark" ? "light" : "dark"} />
+      <StatusBar
+        animated
+        backgroundColor={theme.colors.background}
+        style={resolvedMode === "dark" ? "light" : "dark"}
+      />
       <View className="flex-1">
         <BottomNavigationSuppressionProvider>
           <Stack
