@@ -1,5 +1,7 @@
 import type {
   CreateNitipDriverInput,
+  NitipDriverOffer,
+  NitipDriverOrder,
   NitipDriverProfile,
   UpdateNitipDriverInput,
 } from "@nitip/domain/driver";
@@ -87,5 +89,23 @@ export function setDriverOnline(user: User | null, isOnline: boolean) {
   return apiRequest<NitipDriverProfile>(user, "/driver/me/availability", {
     method: "PATCH",
     body: JSON.stringify({ isOnline }),
+  });
+}
+
+export function listDriverOffers(user: User | null) {
+  return apiRequest<NitipDriverOffer[]>(user, "/driver/orders/available");
+}
+
+export function getCurrentDriverOrder(user: User | null) {
+  return apiRequest<NitipDriverOrder | null>(user, "/driver/orders/current");
+}
+
+export function getDriverOrder(user: User | null, id: string) {
+  return apiRequest<NitipDriverOrder>(user, `/driver/orders/${id}`);
+}
+
+export function acceptDriverOffer(user: User | null, id: string) {
+  return apiRequest<NitipDriverOrder>(user, `/driver/orders/${id}/accept`, {
+    method: "POST",
   });
 }

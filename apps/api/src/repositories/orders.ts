@@ -10,8 +10,13 @@ import type {
   NitipOrder,
   NitipOrderAddressSnapshot,
 } from "@nitip/domain/commerce";
+import type {
+  NitipDriverOffer,
+  NitipDriverOrder,
+  NitipDriverPickup,
+} from "@nitip/domain/driver";
 import type { Collection, WithId } from "mongodb";
-import { ObjectId } from "mongodb";
+import { MongoServerError, ObjectId } from "mongodb";
 
 import { getMongoDb } from "../lib/mongodb.js";
 
@@ -73,6 +78,9 @@ interface OrderDocument {
   merchantNet: number;
   status: OrderStatus;
   cancellationReason?: string | null;
+  driverId?: ObjectId | null;
+  driverAssignedAt?: Date | null;
+  activeDriverAssignment?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -91,6 +99,17 @@ export class CheckoutError extends Error {
   ) {
     super(message);
     this.name = "CheckoutError";
+  }
+}
+
+export class DriverDispatchError extends Error {
+  constructor(
+    public readonly code: string,
+    public readonly statusCode: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = "DriverDispatchError";
   }
 }
 
@@ -113,6 +132,14 @@ async function getOrdersCollection(): Promise<Collection<OrderDocument>> {
       { status: 1, createdAt: 1 },
       { name: "orders_status_createdAt" },
     ),
+    collection.createIndex(
+      { driverId: 1 },
+      {
+        name: "orders_one_active_per_driver",
+        unique: true,
+        partialFilterExpression: { activeDriverAssignment: true },
+      },
+    ),
   ]).then(() => undefined);
 
   await orderIndexesReady;
@@ -121,6 +148,10 @@ async function getOrdersCollection(): Promise<Collection<OrderDocument>> {
 
 function parseObjectId(value: string) {
   return ObjectId.isValid(value) ? new ObjectId(value) : null;
+}
+
+function orderCode(id: ObjectId) {
+  return `NTP-${id.toHexString().slice(-8).toUpperCase()}`;
 }
 
 function roundDistance(value: number) {
@@ -165,7 +196,7 @@ function snapshotAddress(
 function serializeOrder(document: WithId<OrderDocument>): NitipOrder {
   return {
     id: document._id.toHexString(),
-    orderCode: `NTP-${document._id.toHexString().slice(-8).toUpperCase()}`,
+    orderCode: orderCode(document._id),
     status: document.status,
     cancellationReason: document.cancellationReason ?? null,
     outletId: document.outletId.toHexString(),
@@ -192,6 +223,82 @@ function serializeMerchantOrder(
     ...serializeOrder(document),
     merchantCommission: document.merchantCommission,
     merchantNet: document.merchantNet,
+  };
+}
+
+function serializePickup(
+  document: WithId<OrderDocument>,
+  outlet: WithId<OutletDocument>,
+): NitipDriverPickup {
+  const coordinates = outlet.location?.coordinates;
+  return {
+    outletId: document.outletId.toHexString(),
+    businessName: document.businessName,
+    outletName: document.outletName,
+    addressLine: outlet.addressLine,
+    latitude: coordinates?.[1] ?? null,
+    longitude: coordinates?.[0] ?? null,
+  };
+}
+
+function serializeDriverOffer(
+  document: WithId<OrderDocument>,
+  outlet: WithId<OutletDocument>,
+): NitipDriverOffer {
+  return {
+    id: document._id.toHexString(),
+    orderCode: orderCode(document._id),
+    status: "ready_for_pickup",
+    pickup: serializePickup(document, outlet),
+    distanceKm: document.distanceKm,
+    deliveryFare: document.deliveryFare,
+    itemCount: document.items.reduce((total, item) => total + item.quantity, 0),
+    createdAt: document.createdAt.toISOString(),
+  };
+}
+
+function isDriverDeliveryStatus(
+  status: OrderStatus,
+): status is NitipDriverOrder["status"] {
+  return (
+    status === "driver_assigned" ||
+    status === "picked_up" ||
+    status === "on_delivery" ||
+    status === "delivered"
+  );
+}
+
+function serializeDriverOrder(
+  document: WithId<OrderDocument>,
+  outlet: WithId<OutletDocument>,
+): NitipDriverOrder {
+  if (!isDriverDeliveryStatus(document.status) || !document.driverAssignedAt) {
+    throw new Error("Order is not assigned to a driver");
+  }
+
+  return {
+    id: document._id.toHexString(),
+    orderCode: orderCode(document._id),
+    status: document.status,
+    pickup: serializePickup(document, outlet),
+    distanceKm: document.distanceKm,
+    deliveryFare: document.deliveryFare,
+    itemCount: document.items.reduce((total, item) => total + item.quantity, 0),
+    createdAt: document.createdAt.toISOString(),
+    destination: {
+      recipientName: document.address.recipientName,
+      phoneNumber: document.address.phoneNumber,
+      addressLine: document.address.addressLine,
+      notes: document.address.notes,
+      latitude: document.address.latitude,
+      longitude: document.address.longitude,
+    },
+    items: document.items.map((item) => ({
+      productId: item.productId,
+      name: item.name,
+      quantity: item.quantity,
+    })),
+    assignedAt: document.driverAssignedAt.toISOString(),
   };
 }
 
@@ -360,6 +467,9 @@ export async function createCustomerOrder(
     merchantNet: checkout.merchantNet,
     status: "pending_payment",
     cancellationReason: null,
+    driverId: null,
+    driverAssignedAt: null,
+    activeDriverAssignment: false,
     createdAt: now,
     updatedAt: now,
   };
@@ -498,4 +608,157 @@ export async function applyMerchantOrderAction(
   );
 
   return document ? serializeMerchantOrder(document) : null;
+}
+
+async function outletMapForOrders(documents: WithId<OrderDocument>[]) {
+  if (documents.length === 0) return new Map<string, WithId<OutletDocument>>();
+
+  const db = await getMongoDb();
+  const uniqueOutletIds = Array.from(
+    new Map(documents.map((document) => [document.outletId.toHexString(), document.outletId])).values(),
+  );
+  const outlets = await db
+    .collection<OutletDocument>("outlets")
+    .find({ _id: { $in: uniqueOutletIds } })
+    .toArray();
+
+  return new Map(outlets.map((outlet) => [outlet._id.toHexString(), outlet]));
+}
+
+export async function listAvailableDriverOffers(
+  driverId: string,
+): Promise<NitipDriverOffer[]> {
+  const driverObjectId = parseObjectId(driverId);
+  if (!driverObjectId) return [];
+
+  const orders = await getOrdersCollection();
+  const active = await orders.findOne({
+    driverId: driverObjectId,
+    activeDriverAssignment: true,
+  });
+  if (active) return [];
+
+  const documents = await orders
+    .find({
+      status: "ready_for_pickup",
+      activeDriverAssignment: { $ne: true },
+    })
+    .sort({ updatedAt: 1 })
+    .limit(30)
+    .toArray();
+
+  const outlets = await outletMapForOrders(documents);
+  return documents.flatMap((document) => {
+    const outlet = outlets.get(document.outletId.toHexString());
+    return outlet ? [serializeDriverOffer(document, outlet)] : [];
+  });
+}
+
+export async function getDriverCurrentOrder(
+  driverId: string,
+): Promise<NitipDriverOrder | null> {
+  const driverObjectId = parseObjectId(driverId);
+  if (!driverObjectId) return null;
+
+  const orders = await getOrdersCollection();
+  const document = await orders.findOne({
+    driverId: driverObjectId,
+    activeDriverAssignment: true,
+    status: { $in: ["driver_assigned", "picked_up", "on_delivery"] },
+  });
+  if (!document) return null;
+
+  const outlets = await outletMapForOrders([document]);
+  const outlet = outlets.get(document.outletId.toHexString());
+  return outlet ? serializeDriverOrder(document, outlet) : null;
+}
+
+export async function getDriverOrder(
+  driverId: string,
+  id: string,
+): Promise<NitipDriverOrder | null> {
+  const driverObjectId = parseObjectId(driverId);
+  const orderObjectId = parseObjectId(id);
+  if (!driverObjectId || !orderObjectId) return null;
+
+  const orders = await getOrdersCollection();
+  const document = await orders.findOne({
+    _id: orderObjectId,
+    driverId: driverObjectId,
+    status: { $in: ["driver_assigned", "picked_up", "on_delivery", "delivered"] },
+  });
+  if (!document) return null;
+
+  const outlets = await outletMapForOrders([document]);
+  const outlet = outlets.get(document.outletId.toHexString());
+  return outlet ? serializeDriverOrder(document, outlet) : null;
+}
+
+export async function acceptDriverOrder(
+  driverId: string,
+  id: string,
+): Promise<NitipDriverOrder | null> {
+  const driverObjectId = parseObjectId(driverId);
+  const orderObjectId = parseObjectId(id);
+  if (!driverObjectId || !orderObjectId) return null;
+
+  const orders = await getOrdersCollection();
+  const existing = await orders.findOne({
+    driverId: driverObjectId,
+    activeDriverAssignment: true,
+  });
+  if (existing) {
+    throw new DriverDispatchError(
+      "driver_has_active_order",
+      409,
+      "Selesaikan order aktif sebelum mengambil order baru",
+    );
+  }
+
+  const now = new Date();
+  let document: WithId<OrderDocument> | null = null;
+
+  try {
+    document = await orders.findOneAndUpdate(
+      {
+        _id: orderObjectId,
+        status: "ready_for_pickup",
+        activeDriverAssignment: { $ne: true },
+        $or: [{ driverId: { $exists: false } }, { driverId: null }],
+      },
+      {
+        $set: {
+          status: "driver_assigned",
+          driverId: driverObjectId,
+          driverAssignedAt: now,
+          activeDriverAssignment: true,
+          updatedAt: now,
+        },
+      },
+      { returnDocument: "after" },
+    );
+  } catch (error) {
+    if (error instanceof MongoServerError && error.code === 11000) {
+      throw new DriverDispatchError(
+        "driver_has_active_order",
+        409,
+        "Driver sudah memiliki order aktif",
+      );
+    }
+    throw error;
+  }
+
+  if (!document) return null;
+
+  const outlets = await outletMapForOrders([document]);
+  const outlet = outlets.get(document.outletId.toHexString());
+  if (!outlet) {
+    throw new DriverDispatchError(
+      "pickup_unavailable",
+      409,
+      "Lokasi pickup tidak tersedia",
+    );
+  }
+
+  return serializeDriverOrder(document, outlet);
 }

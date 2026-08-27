@@ -1,3 +1,5 @@
+import type { OrderStatus } from "./index.js";
+
 export type DriverOnboardingStatus =
   | "draft"
   | "pending_review"
@@ -42,4 +44,51 @@ export interface ReviewNitipDriverInput {
 
 export interface UpdateDriverAvailabilityInput {
   isOnline: boolean;
+}
+
+export interface NitipDriverPickup {
+  outletId: string;
+  businessName: string;
+  outletName: string;
+  addressLine: string;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+export interface NitipDriverOffer {
+  id: string;
+  orderCode: string;
+  status: "ready_for_pickup";
+  pickup: NitipDriverPickup;
+  distanceKm: number | null;
+  deliveryFare: number;
+  itemCount: number;
+  createdAt: string;
+}
+
+export interface NitipDriverOrderItem {
+  productId: string;
+  name: string;
+  quantity: number;
+}
+
+export interface NitipDriverDestination {
+  recipientName: string;
+  phoneNumber: string;
+  addressLine: string;
+  notes: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+export type DriverDeliveryStatus = Extract<
+  OrderStatus,
+  "driver_assigned" | "picked_up" | "on_delivery" | "delivered"
+>;
+
+export interface NitipDriverOrder extends Omit<NitipDriverOffer, "status"> {
+  status: DriverDeliveryStatus;
+  destination: NitipDriverDestination;
+  items: NitipDriverOrderItem[];
+  assignedAt: string;
 }

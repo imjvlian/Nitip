@@ -7,6 +7,7 @@ import {
 } from "./config/env.js";
 import { registerAdminRoutes } from "./http/admin-routes.js";
 import { registerCatalogRoutes } from "./http/catalog-routes.js";
+import { registerDriverOrderRoutes } from "./http/driver-order-routes.js";
 import { registerDriverRoutes } from "./http/driver-routes.js";
 import { registerMerchantOrderRoutes } from "./http/merchant-order-routes.js";
 import { registerOrderRoutes } from "./http/order-routes.js";
@@ -267,6 +268,7 @@ registerAdminRoutes(app);
 registerOrderRoutes(app);
 registerMerchantOrderRoutes(app);
 registerDriverRoutes(app);
+registerDriverOrderRoutes(app);
 
 app.setNotFoundHandler(async (_request, reply) => {
   await reply.code(404).send({ error: "not_found" });
