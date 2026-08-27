@@ -1,6 +1,8 @@
 import type {
   CreateNitipAddressInput,
+  CreateNitipSupportTicketInput,
   NitipAddress,
+  NitipSupportTicket,
   NitipUserProfile,
   UpdateNitipAddressInput,
   UpdateNitipProfileInput,
@@ -92,6 +94,20 @@ export function getMe(user: User | null) {
 export function updateMe(user: User | null, input: UpdateNitipProfileInput) {
   return apiRequest<NitipUserProfile>(user, "/me", {
     method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function listSupportTickets(user: User | null) {
+  return apiRequest<NitipSupportTicket[]>(user, "/me/support-tickets");
+}
+
+export function createSupportTicket(
+  user: User | null,
+  input: CreateNitipSupportTicketInput,
+) {
+  return apiRequest<NitipSupportTicket>(user, "/me/support-tickets", {
+    method: "POST",
     body: JSON.stringify(input),
   });
 }

@@ -1,5 +1,6 @@
 export type UserRole = "customer" | "merchant" | "driver" | "admin";
 export type UserStatus = "active" | "suspended";
+export type AgeVerificationStatus = "unverified" | "verified_adult" | "underage";
 
 export interface NitipUserProfile {
   id: string;
@@ -8,6 +9,9 @@ export interface NitipUserProfile {
   displayName: string | null;
   phoneNumber: string | null;
   photoUrl: string | null;
+  dateOfBirth: string | null;
+  ageVerificationStatus: AgeVerificationStatus;
+  ageVerifiedAt: string | null;
   role: UserRole;
   status: UserStatus;
   createdAt: string;
@@ -17,6 +21,34 @@ export interface NitipUserProfile {
 export interface UpdateNitipProfileInput {
   displayName?: string | null;
   phoneNumber?: string | null;
+  dateOfBirth?: string | null;
+}
+
+export type SupportTicketCategory =
+  | "order"
+  | "payment"
+  | "driver"
+  | "merchant"
+  | "account"
+  | "other";
+export type SupportTicketStatus = "open" | "in_review" | "resolved";
+
+export interface NitipSupportTicket {
+  id: string;
+  category: SupportTicketCategory;
+  subject: string;
+  message: string;
+  orderCode: string | null;
+  status: SupportTicketStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateNitipSupportTicketInput {
+  category: SupportTicketCategory;
+  subject: string;
+  message: string;
+  orderCode?: string | null;
 }
 
 export type AddressLabel = "home" | "office" | "other";

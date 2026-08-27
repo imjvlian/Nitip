@@ -1,4 +1,5 @@
 import type {
+  AgeVerificationStatus,
   NitipUserProfile,
   UpdateNitipProfileInput,
   UserRole,
@@ -15,6 +16,9 @@ interface UserDocument {
   displayName: string | null;
   phoneNumber: string | null;
   photoUrl: string | null;
+  dateOfBirth: string | null;
+  ageVerificationStatus: AgeVerificationStatus;
+  ageVerifiedAt: Date | null;
   role: UserRole;
   status: UserStatus;
   createdAt: Date;
@@ -35,6 +39,23 @@ async function getUsersCollection(): Promise<Collection<UserDocument>> {
   return collection;
 }
 
+function adultFromDateOfBirth(dateOfBirth: string, now = new Date()) {
+  const [year, month, day] = dateOfBirth.split("-").map(Number);
+  let age = now.getUTCFullYear() - year;
+  const currentMonth = now.getUTCMonth() + 1;
+  const currentDay = now.getUTCDate();
+  if (currentMonth < month || (currentMonth === month && currentDay < day)) age -= 1;
+  return age >= 18;
+}
+
+function resolvedAgeStatus(document: WithId<UserDocument>): AgeVerificationStatus {
+  if (!document.dateOfBirth) return "unverified";
+  if (document.ageVerificationStatus === "verified_adult" || document.ageVerificationStatus === "underage") {
+    return document.ageVerificationStatus;
+  }
+  return adultFromDateOfBirth(document.dateOfBirth) ? "verified_adult" : "underage";
+}
+
 function serializeUser(document: WithId<UserDocument>): NitipUserProfile {
   return {
     id: document._id.toHexString(),
@@ -43,6 +64,9 @@ function serializeUser(document: WithId<UserDocument>): NitipUserProfile {
     displayName: document.displayName ?? null,
     phoneNumber: document.phoneNumber ?? null,
     photoUrl: document.photoUrl ?? null,
+    dateOfBirth: document.dateOfBirth ?? null,
+    ageVerificationStatus: resolvedAgeStatus(document),
+    ageVerifiedAt: document.ageVerifiedAt?.toISOString() ?? null,
     role: document.role,
     status: document.status,
     createdAt: document.createdAt.toISOString(),
@@ -68,6 +92,9 @@ export async function upsertUserFromFirebase(
         firebaseUid: identity.uid,
         displayName: identity.name ?? null,
         phoneNumber: identity.phone_number ?? null,
+        dateOfBirth: null,
+        ageVerificationStatus: "unverified",
+        ageVerifiedAt: null,
         role: "customer",
         status: "active",
         createdAt: now,
@@ -108,6 +135,21 @@ export async function updateUserProfile(
 
   if (Object.prototype.hasOwnProperty.call(input, "phoneNumber")) {
     set.phoneNumber = input.phoneNumber ?? null;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(input, "dateOfBirth")) {
+    const dateOfBirth = input.dateOfBirth ?? null;
+    set.dateOfBirth = dateOfBirth;
+    if (!dateOfBirth) {
+      set.ageVerificationStatus = "unverified";
+      set.ageVerifiedAt = null;
+    } else if (adultFromDateOfBirth(dateOfBirth, now)) {
+      set.ageVerificationStatus = "verified_adult";
+      set.ageVerifiedAt = now;
+    } else {
+      set.ageVerificationStatus = "underage";
+      set.ageVerifiedAt = null;
+    }
   }
 
   const document = await users.findOneAndUpdate(

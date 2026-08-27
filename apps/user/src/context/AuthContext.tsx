@@ -9,6 +9,7 @@ import {
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   updateProfile,
@@ -23,6 +24,7 @@ interface AuthContextValue {
   configured: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (displayName: string, email: string, password: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -71,6 +73,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
         if (trimmedName) {
           await updateProfile(credential.user, { displayName: trimmedName });
         }
+      },
+      async resetPassword(email) {
+        const normalizedEmail = email.trim();
+        if (!normalizedEmail) throw new Error("Email is required");
+        await sendPasswordResetEmail(requireAuth(), normalizedEmail);
       },
       async signOut() {
         await firebaseSignOut(requireAuth());

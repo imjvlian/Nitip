@@ -1,6 +1,8 @@
 import type {
   AddressLabel,
   CreateNitipAddressInput,
+  CreateNitipSupportTicketInput,
+  SupportTicketCategory,
   UpdateNitipAddressInput,
   UpdateNitipProfileInput,
 } from "@nitip/domain";
@@ -103,6 +105,45 @@ function optionalCoordinate(
   return value;
 }
 
+function nullableDateOnly(
+  record: Record<string, unknown>,
+  key: string,
+): string | null | undefined {
+  if (!has(record, key)) return undefined;
+  const value = record[key];
+  if (value === null) return null;
+  if (typeof value !== "string") {
+    throw new ValidationError(`${key} must be YYYY-MM-DD or null`);
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+  if (!match) throw new ValidationError(`${key} must use YYYY-MM-DD format`);
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() + 1 !== month ||
+    date.getUTCDate() !== day
+  ) {
+    throw new ValidationError(`${key} is not a valid date`);
+  }
+
+  const now = new Date();
+  if (date.getTime() > now.getTime()) {
+    throw new ValidationError(`${key} cannot be in the future`);
+  }
+  if (now.getUTCFullYear() - year > 120) {
+    throw new ValidationError(`${key} is outside the supported age range`);
+  }
+
+  return trimmed;
+}
+
 function addressLabel(
   record: Record<string, unknown>,
   required: boolean,
@@ -120,18 +161,45 @@ function addressLabel(
   return value;
 }
 
+function supportCategory(record: Record<string, unknown>): SupportTicketCategory {
+  const value = record.category;
+  if (
+    value !== "order" &&
+    value !== "payment" &&
+    value !== "driver" &&
+    value !== "merchant" &&
+    value !== "account" &&
+    value !== "other"
+  ) {
+    throw new ValidationError("category is invalid");
+  }
+  return value;
+}
+
 export function parseProfilePatch(body: unknown): UpdateNitipProfileInput {
   const record = asRecord(body);
   const displayName = nullableString(record, "displayName", 80);
   const phoneNumber = nullableString(record, "phoneNumber", 30);
+  const dateOfBirth = nullableDateOnly(record, "dateOfBirth");
 
-  if (displayName === undefined && phoneNumber === undefined) {
+  if (displayName === undefined && phoneNumber === undefined && dateOfBirth === undefined) {
     throw new ValidationError("No editable profile field was provided");
   }
 
   return {
     ...(displayName !== undefined ? { displayName } : {}),
     ...(phoneNumber !== undefined ? { phoneNumber } : {}),
+    ...(dateOfBirth !== undefined ? { dateOfBirth } : {}),
+  };
+}
+
+export function parseCreateSupportTicket(body: unknown): CreateNitipSupportTicketInput {
+  const record = asRecord(body);
+  return {
+    category: supportCategory(record),
+    subject: requiredString(record, "subject", 120),
+    message: requiredString(record, "message", 2000),
+    orderCode: nullableString(record, "orderCode", 50) ?? null,
   };
 }
 

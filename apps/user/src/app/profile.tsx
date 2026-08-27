@@ -62,6 +62,13 @@ export default function ProfileScreen() {
   const normalizedQuery = query.trim().toLowerCase();
   const languageValue = language === "id" ? t("common.indonesia") : t("common.english");
   const appearanceValue = t(`common.${preference}`);
+  const ageStatus = profile?.ageVerificationStatus ?? "unverified";
+  const ageValue =
+    ageStatus === "verified_adult"
+      ? copy.ageStatusVerified
+      : ageStatus === "underage"
+        ? copy.ageStatusUnderage
+        : copy.ageStatusUnverified;
 
   const visible = useMemo(() => {
     const matches = (...parts: string[]) =>
@@ -70,13 +77,21 @@ export default function ProfileScreen() {
     return {
       account: matches(copy.accountInformation, copy.accountInformationDescription, copy.account),
       addresses: matches(copy.addresses, copy.addressesDescription(addresses.length), copy.account),
+      age: matches(copy.ageVerification, copy.ageVerificationDescription, copy.account),
+      password: matches(copy.password, copy.passwordDescription, copy.account),
       language: matches(copy.language, copy.languageDescription, copy.preferences),
       appearance: matches(copy.appearance, copy.appearanceDescription, copy.preferences),
+      help: matches(copy.helpReport, copy.helpReportDescription, copy.helpLegal),
+      terms: matches(copy.terms, copy.termsDescription, copy.helpLegal),
+      privacy: matches(copy.privacy, copy.privacyDescription, copy.helpLegal),
       signOut: matches(t("common.signOut"), t("profile.signOutDescription"), copy.session),
     };
   }, [addresses.length, copy, normalizedQuery, t]);
 
   const hasResults = Object.values(visible).some(Boolean);
+  const hasAccount = visible.account || visible.addresses || visible.age || visible.password;
+  const hasPreferences = visible.language || visible.appearance;
+  const hasHelpLegal = visible.help || visible.terms || visible.privacy;
 
   return (
     <View className="flex-1" style={{ backgroundColor: theme.colors.background }}>
@@ -132,7 +147,7 @@ export default function ProfileScreen() {
           </View>
         ) : (
           <>
-            {(visible.account || visible.addresses) ? (
+            {hasAccount ? (
               <View className="mt-7">
                 <Text className="text-base font-black" style={{ color: theme.colors.text }}>
                   {copy.account}
@@ -151,7 +166,7 @@ export default function ProfileScreen() {
                         onPress={() => router.push("/settings/account")}
                       />
                     ) : null}
-                    {visible.account && visible.addresses ? <SettingsDivider /> : null}
+                    {visible.account && (visible.addresses || visible.age || visible.password) ? <SettingsDivider /> : null}
                     {visible.addresses ? (
                       <SettingsRow
                         icon="location"
@@ -160,12 +175,31 @@ export default function ProfileScreen() {
                         onPress={() => router.push("/settings/addresses")}
                       />
                     ) : null}
+                    {visible.addresses && (visible.age || visible.password) ? <SettingsDivider /> : null}
+                    {visible.age ? (
+                      <SettingsRow
+                        icon="age"
+                        title={copy.ageVerification}
+                        subtitle={copy.ageVerificationDescription}
+                        value={ageValue}
+                        onPress={() => router.push("/settings/age")}
+                      />
+                    ) : null}
+                    {visible.age && visible.password ? <SettingsDivider /> : null}
+                    {visible.password ? (
+                      <SettingsRow
+                        icon="password"
+                        title={copy.password}
+                        subtitle={copy.passwordDescription}
+                        onPress={() => router.push("/settings/password")}
+                      />
+                    ) : null}
                   </SettingsGroup>
                 </View>
               </View>
             ) : null}
 
-            {(visible.language || visible.appearance) ? (
+            {hasPreferences ? (
               <View className="mt-7">
                 <Text className="text-base font-black" style={{ color: theme.colors.text }}>
                   {copy.preferences}
@@ -192,6 +226,47 @@ export default function ProfileScreen() {
                         subtitle={copy.appearanceDescription}
                         value={appearanceValue}
                         onPress={() => router.push("/settings/appearance")}
+                      />
+                    ) : null}
+                  </SettingsGroup>
+                </View>
+              </View>
+            ) : null}
+
+            {hasHelpLegal ? (
+              <View className="mt-7">
+                <Text className="text-base font-black" style={{ color: theme.colors.text }}>
+                  {copy.helpLegal}
+                </Text>
+                <Text className="mt-1 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
+                  {copy.helpLegalDescription}
+                </Text>
+                <View className="mt-3">
+                  <SettingsGroup>
+                    {visible.help ? (
+                      <SettingsRow
+                        icon="help"
+                        title={copy.helpReport}
+                        subtitle={copy.helpReportDescription}
+                        onPress={() => router.push("/support")}
+                      />
+                    ) : null}
+                    {visible.help && (visible.terms || visible.privacy) ? <SettingsDivider /> : null}
+                    {visible.terms ? (
+                      <SettingsRow
+                        icon="document"
+                        title={copy.terms}
+                        subtitle={copy.termsDescription}
+                        onPress={() => router.push("/legal/terms")}
+                      />
+                    ) : null}
+                    {visible.terms && visible.privacy ? <SettingsDivider /> : null}
+                    {visible.privacy ? (
+                      <SettingsRow
+                        icon="privacy"
+                        title={copy.privacy}
+                        subtitle={copy.privacyDescription}
+                        onPress={() => router.push("/legal/privacy")}
                       />
                     ) : null}
                   </SettingsGroup>

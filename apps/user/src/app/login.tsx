@@ -1,5 +1,5 @@
-import { useNitipTranslation } from "@nitip/i18n";
-import { Redirect } from "expo-router";
+import { useNitipLanguage, useNitipTranslation } from "@nitip/i18n";
+import { Redirect, router } from "expo-router";
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -41,6 +41,7 @@ function getErrorMessage(error: unknown, t: (key: string) => string) {
 
 export default function LoginScreen() {
   const { t } = useNitipTranslation();
+  const { language } = useNitipLanguage();
   const theme = useNitipTheme();
   const insets = useSafeAreaInsets();
   const { configured, signIn, signUp, user } = useAuth();
@@ -183,6 +184,14 @@ export default function LoginScreen() {
               value={password}
             />
           </View>
+
+          {mode === "login" ? (
+            <Pressable className="mt-3 self-end py-1" onPress={() => router.push("/forgot-password")}>
+              <Text className="text-[10px] font-black" style={{ color: theme.colors.primary }}>
+                {language === "id" ? "Lupa kata sandi?" : "Forgot password?"}
+              </Text>
+            </Pressable>
+          ) : null}
 
           {error ? (
             <View className="mt-4 rounded-2xl p-3" style={{ backgroundColor: theme.colors.dangerSurface }}>

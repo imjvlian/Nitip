@@ -26,7 +26,12 @@ export type NitipIconName =
   | "logout"
   | "clock"
   | "history"
-  | "receipt";
+  | "receipt"
+  | "help"
+  | "password"
+  | "age"
+  | "document"
+  | "privacy";
 
 const symbols: Record<
   NitipIconName,
@@ -61,6 +66,11 @@ const symbols: Record<
   clock: { ios: "clock.fill", android: "schedule", web: "schedule" },
   history: { ios: "clock.arrow.circlepath", android: "history", web: "history" },
   receipt: { ios: "doc.text.fill", android: "receipt", web: "receipt" },
+  help: { ios: "questionmark.circle.fill", android: "help", web: "help" },
+  password: { ios: "key.fill", android: "key", web: "key" },
+  age: { ios: "checkmark.seal.fill", android: "verified_user", web: "verified_user" },
+  document: { ios: "doc.text.fill", android: "description", web: "description" },
+  privacy: { ios: "lock.shield.fill", android: "privacy_tip", web: "privacy_tip" },
 };
 
 export function NitipIcon({
