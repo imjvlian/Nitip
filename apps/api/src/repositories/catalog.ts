@@ -60,6 +60,10 @@ interface ProductDocument {
   updatedAt: Date;
 }
 
+function productAvailable(document: ProductDocument) {
+  return document.isAvailable && document.stockQuantity !== 0;
+}
+
 function serializeCategory(document: WithId<CategoryDocument>): NitipCategory {
   return {
     id: document._id.toHexString(),
@@ -84,7 +88,7 @@ function serializeProduct(document: WithId<ProductDocument>): NitipProduct {
     imageUrl: document.imageUrl ?? null,
     imagePublicId: document.imagePublicId ?? null,
     stockQuantity: document.stockQuantity ?? null,
-    isAvailable: document.isAvailable,
+    isAvailable: productAvailable(document),
     isActive: document.isActive,
     sortOrder: document.sortOrder,
     createdAt: document.createdAt.toISOString(),
@@ -125,7 +129,7 @@ export async function listPublicCatalogOutlets(): Promise<NitipCatalogOutletSumm
 
   return outlets.map((outlet) => {
     const outletProducts = byOutlet.get(outlet._id.toHexString()) ?? [];
-    const availableProducts = outletProducts.filter((product) => product.isAvailable);
+    const availableProducts = outletProducts.filter(productAvailable);
     const prices = availableProducts.map((product) => product.price);
     const image = outletProducts.find((product) => product.imageUrl)?.imageUrl ?? null;
     return {

@@ -22,6 +22,16 @@ function statusLabel(status: NitipOrder["status"]) {
   return status.replaceAll("_", " ").toUpperCase();
 }
 
+function reservationDeadline(value: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
@@ -66,6 +76,8 @@ export default function OrderDetailScreen() {
     }
   }
 
+  const deadline = reservationDeadline(order?.stockReservationExpiresAt ?? null);
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.header}>
@@ -98,6 +110,16 @@ export default function OrderDetailScreen() {
               <Text style={styles.noticeText}>
                 Untuk development, tombol di bawah mensimulasikan callback pembayaran berhasil. Endpoint ini otomatis tidak tersedia saat NODE_ENV=production.
               </Text>
+              {order.stockReservationStatus === "reserved" ? (
+                <View style={styles.stockBox}>
+                  <Text style={styles.stockTitle}>STOK DIAMANKAN</Text>
+                  <Text style={styles.stockText}>
+                    {deadline
+                      ? `Stok untuk pesanan ini dicadangkan sampai ${deadline}. Jika pembayaran belum selesai, reservation dilepas otomatis.`
+                      : "Stok untuk pesanan ini sedang dicadangkan selama proses pembayaran."}
+                  </Text>
+                </View>
+              ) : null}
               <Pressable
                 disabled={simulating}
                 onPress={() => void simulatePayment()}
@@ -194,6 +216,9 @@ function createStyles(colors: {
     notice: { backgroundColor: colors.surfaceAccent, borderRadius: 18, padding: 15, marginTop: 18 },
     noticeTitle: { color: colors.text, fontWeight: "900", fontSize: 13 },
     noticeText: { color: colors.textMuted, fontSize: 10, lineHeight: 16, marginTop: 4 },
+    stockBox: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 11, marginTop: 11 },
+    stockTitle: { color: colors.primary, fontWeight: "900", fontSize: 9, letterSpacing: 0.8 },
+    stockText: { color: colors.textMuted, fontSize: 10, lineHeight: 16, marginTop: 4 },
     devButton: { backgroundColor: colors.primaryStrong, borderRadius: 12, alignItems: "center", paddingVertical: 12, marginTop: 12 },
     devButtonText: { color: colors.onPrimary, fontWeight: "900", fontSize: 11 },
     disabled: { opacity: 0.45 },

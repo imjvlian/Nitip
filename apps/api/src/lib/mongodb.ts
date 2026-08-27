@@ -4,7 +4,7 @@ import { env, IntegrationNotConfiguredError } from "../config/env.js";
 
 let clientPromise: Promise<MongoClient> | null = null;
 
-async function getMongoClient() {
+export async function getMongoClient() {
   if (!env.mongodbUri) {
     throw new IntegrationNotConfiguredError("mongodb");
   }

@@ -49,11 +49,19 @@ export interface NitipCheckoutQuote {
   customerTotal: number;
 }
 
+export type StockReservationStatus =
+  | "reserved"
+  | "committed"
+  | "released"
+  | "not_required";
+
 export interface NitipOrder extends NitipCheckoutQuote {
   id: string;
   orderCode: string;
   status: OrderStatus;
   cancellationReason: string | null;
+  stockReservationStatus: StockReservationStatus | null;
+  stockReservationExpiresAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

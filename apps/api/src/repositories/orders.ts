@@ -9,16 +9,19 @@ import type {
   NitipMerchantOrder,
   NitipOrder,
   NitipOrderAddressSnapshot,
+  StockReservationStatus,
 } from "@nitip/domain/commerce";
 import type {
   NitipDriverOffer,
   NitipDriverOrder,
   NitipDriverPickup,
 } from "@nitip/domain/driver";
-import type { Collection, WithId } from "mongodb";
+import type { ClientSession, Collection, WithId } from "mongodb";
 import { MongoServerError, ObjectId } from "mongodb";
 
-import { getMongoDb } from "../lib/mongodb.js";
+import { getMongoClient, getMongoDb } from "../lib/mongodb.js";
+
+const STOCK_RESERVATION_TTL_MS = 15 * 60 * 1000;
 
 interface GeoPoint {
   type: "Point";
@@ -47,6 +50,7 @@ interface ProductDocument {
   stockQuantity: number | null;
   isAvailable: boolean;
   isActive: boolean;
+  updatedAt: Date;
 }
 
 interface AddressDocument {
@@ -58,6 +62,11 @@ interface AddressDocument {
   addressLine: string;
   notes: string | null;
   location?: GeoPoint;
+}
+
+interface StockReservationItemDocument {
+  productId: ObjectId;
+  quantity: number;
 }
 
 interface OrderDocument {
@@ -78,6 +87,11 @@ interface OrderDocument {
   merchantNet: number;
   status: OrderStatus;
   cancellationReason?: string | null;
+  stockReservationStatus?: StockReservationStatus | null;
+  stockReservationExpiresAt?: Date | null;
+  stockReservationCommittedAt?: Date | null;
+  stockReservationReleasedAt?: Date | null;
+  stockReservedItems?: StockReservationItemDocument[];
   driverId?: ObjectId | null;
   driverAssignedAt?: Date | null;
   activeDriverAssignment?: boolean;
@@ -85,10 +99,17 @@ interface OrderDocument {
   updatedAt: Date;
 }
 
+interface InternalStockReservation {
+  productId: ObjectId;
+  quantity: number;
+  productName: string;
+}
+
 interface InternalCheckout {
   quote: NitipCheckoutQuote;
   merchantCommission: number;
   merchantNet: number;
+  stockReservations: InternalStockReservation[];
 }
 
 export class CheckoutError extends Error {
@@ -133,6 +154,10 @@ async function getOrdersCollection(): Promise<Collection<OrderDocument>> {
       { name: "orders_status_createdAt" },
     ),
     collection.createIndex(
+      { stockReservationStatus: 1, stockReservationExpiresAt: 1 },
+      { name: "orders_stock_reservation_expiry" },
+    ),
+    collection.createIndex(
       { driverId: 1 },
       {
         name: "orders_one_active_per_driver",
@@ -144,6 +169,27 @@ async function getOrdersCollection(): Promise<Collection<OrderDocument>> {
 
   await orderIndexesReady;
   return collection;
+}
+
+async function runInTransaction<T>(
+  work: (session: ClientSession) => Promise<T>,
+): Promise<T> {
+  const client = await getMongoClient();
+  const session = client.startSession();
+  let result: T | undefined;
+
+  try {
+    await session.withTransaction(async () => {
+      result = await work(session);
+    });
+  } finally {
+    await session.endSession();
+  }
+
+  if (result === undefined) {
+    throw new Error("MongoDB transaction completed without a result");
+  }
+  return result;
 }
 
 function parseObjectId(value: string) {
@@ -199,6 +245,9 @@ function serializeOrder(document: WithId<OrderDocument>): NitipOrder {
     orderCode: orderCode(document._id),
     status: document.status,
     cancellationReason: document.cancellationReason ?? null,
+    stockReservationStatus: document.stockReservationStatus ?? null,
+    stockReservationExpiresAt:
+      document.stockReservationExpiresAt?.toISOString() ?? null,
     outletId: document.outletId.toHexString(),
     merchantId: document.merchantId.toHexString(),
     businessName: document.businessName,
@@ -302,9 +351,125 @@ function serializeDriverOrder(
   };
 }
 
+async function restoreReservedStock(
+  items: StockReservationItemDocument[],
+  session: ClientSession,
+  now = new Date(),
+) {
+  if (items.length === 0) return;
+  const db = await getMongoDb();
+  const products = db.collection<ProductDocument>("products");
+
+  for (const item of items) {
+    const product = await products.findOne(
+      { _id: item.productId },
+      { session },
+    );
+    if (!product || product.stockQuantity == null) continue;
+
+    await products.updateOne(
+      { _id: item.productId },
+      {
+        $inc: { stockQuantity: item.quantity },
+        $set: { updatedAt: now },
+      },
+      { session },
+    );
+  }
+}
+
+async function reserveCheckoutStock(
+  reservations: InternalStockReservation[],
+  outletId: ObjectId,
+  session: ClientSession,
+  now: Date,
+) {
+  if (reservations.length === 0) return;
+  const db = await getMongoDb();
+  const products = db.collection<ProductDocument>("products");
+
+  for (const reservation of reservations) {
+    const result = await products.updateOne(
+      {
+        _id: reservation.productId,
+        outletId,
+        isActive: true,
+        isAvailable: true,
+        stockQuantity: { $gte: reservation.quantity },
+      },
+      {
+        $inc: { stockQuantity: -reservation.quantity },
+        $set: { updatedAt: now },
+      },
+      { session },
+    );
+
+    if (result.modifiedCount !== 1) {
+      throw new CheckoutError(
+        "insufficient_stock",
+        409,
+        `Stok ${reservation.productName} tidak mencukupi`,
+      );
+    }
+  }
+}
+
+async function releaseExpiredStockReservations(
+  customerFirebaseUid?: string,
+) {
+  const orders = await getOrdersCollection();
+  const now = new Date();
+
+  return runInTransaction(async (session) => {
+    const documents = await orders
+      .find(
+        {
+          status: "pending_payment",
+          stockReservationStatus: "reserved",
+          stockReservationExpiresAt: { $lte: now },
+          ...(customerFirebaseUid ? { customerFirebaseUid } : {}),
+        },
+        { session },
+      )
+      .limit(50)
+      .toArray();
+
+    let released = 0;
+    for (const existing of documents) {
+      const document = await orders.findOneAndUpdate(
+        {
+          _id: existing._id,
+          status: "pending_payment",
+          stockReservationStatus: "reserved",
+          stockReservationExpiresAt: { $lte: now },
+        },
+        {
+          $set: {
+            status: "cancelled",
+            cancellationReason:
+              "Waktu pembayaran habis. Stok pesanan telah dilepas.",
+            stockReservationStatus: "released",
+            stockReservationExpiresAt: null,
+            stockReservationReleasedAt: now,
+            updatedAt: now,
+          },
+        },
+        { returnDocument: "after", session },
+      );
+
+      if (!document) continue;
+      await restoreReservedStock(existing.stockReservedItems ?? [], session, now);
+      released += 1;
+    }
+
+    return released;
+  });
+}
+
 async function buildCheckout(
   customerFirebaseUid: string,
   input: NitipCheckoutRequest,
+  session?: ClientSession,
 ): Promise<InternalCheckout> {
   const db = await getMongoDb();
   const outletId = parseObjectId(input.outletId);
@@ -315,18 +480,24 @@ async function buildCheckout(
     throw new CheckoutError("invalid_checkout", 400, "Checkout tidak valid");
   }
 
-  const address = await db.collection<AddressDocument>("addresses").findOne({
-    _id: addressId,
-    firebaseUid: customerFirebaseUid,
-  });
+  const address = await db.collection<AddressDocument>("addresses").findOne(
+    {
+      _id: addressId,
+      firebaseUid: customerFirebaseUid,
+    },
+    { session },
+  );
   if (!address) {
     throw new CheckoutError("address_not_found", 404, "Alamat tidak ditemukan");
   }
 
-  const outlet = await db.collection<OutletDocument>("outlets").findOne({
-    _id: outletId,
-    isActive: true,
-  });
+  const outlet = await db.collection<OutletDocument>("outlets").findOne(
+    {
+      _id: outletId,
+      isActive: true,
+    },
+    { session },
+  );
   if (!outlet) {
     throw new CheckoutError("outlet_unavailable", 409, "Outlet tidak tersedia");
   }
@@ -334,29 +505,42 @@ async function buildCheckout(
     throw new CheckoutError("outlet_closed", 409, "Outlet sedang tidak menerima pesanan");
   }
 
-  const merchant = await db.collection<MerchantDocument>("merchants").findOne({
-    _id: outlet.merchantId,
-    status: "approved",
-  });
+  const merchant = await db.collection<MerchantDocument>("merchants").findOne(
+    {
+      _id: outlet.merchantId,
+      status: "approved",
+    },
+    { session },
+  );
   if (!merchant) {
     throw new CheckoutError("merchant_unavailable", 409, "Merchant belum tersedia");
   }
 
   const products = await db
     .collection<ProductDocument>("products")
-    .find({
-      _id: { $in: productIds as ObjectId[] },
-      outletId,
-      isActive: true,
-    })
+    .find(
+      {
+        _id: { $in: productIds as ObjectId[] },
+        outletId,
+        isActive: true,
+      },
+      { session },
+    )
     .toArray();
 
   const productsById = new Map(
     products.map((product) => [product._id.toHexString(), product]),
   );
+  const requestedTotals = new Map<string, number>();
+  for (const item of input.items) {
+    requestedTotals.set(
+      item.productId,
+      (requestedTotals.get(item.productId) ?? 0) + item.quantity,
+    );
+  }
 
-  const lines: NitipCheckoutLine[] = input.items.map((item) => {
-    const product = productsById.get(item.productId);
+  for (const [productId, quantity] of requestedTotals) {
+    const product = productsById.get(productId);
     if (!product) {
       throw new CheckoutError(
         "product_unavailable",
@@ -371,11 +555,22 @@ async function buildCheckout(
         `${product.name} sedang tidak tersedia`,
       );
     }
-    if (product.stockQuantity != null && item.quantity > product.stockQuantity) {
+    if (product.stockQuantity != null && quantity > product.stockQuantity) {
       throw new CheckoutError(
         "insufficient_stock",
         409,
         `Stok ${product.name} tidak mencukupi`,
+      );
+    }
+  }
+
+  const lines: NitipCheckoutLine[] = input.items.map((item) => {
+    const product = productsById.get(item.productId);
+    if (!product) {
+      throw new CheckoutError(
+        "product_unavailable",
+        409,
+        "Salah satu produk sudah tidak tersedia",
       );
     }
 
@@ -388,6 +583,18 @@ async function buildCheckout(
       lineTotal: product.price * item.quantity,
     };
   });
+
+  const stockReservations: InternalStockReservation[] = [];
+  for (const [productId, quantity] of requestedTotals) {
+    const product = productsById.get(productId);
+    if (product && product.stockQuantity != null) {
+      stockReservations.push({
+        productId: product._id,
+        quantity,
+        productName: product.name,
+      });
+    }
+  }
 
   const subtotal = lines.reduce((total, item) => total + item.lineTotal, 0);
   const addressCoordinates = address.location?.coordinates;
@@ -430,6 +637,7 @@ async function buildCheckout(
     },
     merchantCommission: pricing.merchantCommission,
     merchantNet: pricing.merchantNet,
+    stockReservations,
   };
 }
 
@@ -437,6 +645,7 @@ export async function quoteCheckout(
   customerFirebaseUid: string,
   input: NitipCheckoutRequest,
 ): Promise<NitipCheckoutQuote> {
+  await releaseExpiredStockReservations();
   return (await buildCheckout(customerFirebaseUid, input)).quote;
 }
 
@@ -444,38 +653,62 @@ export async function createCustomerOrder(
   customerFirebaseUid: string,
   input: NitipCheckoutRequest,
 ): Promise<NitipOrder> {
-  const checkout = await buildCheckout(customerFirebaseUid, input);
-  const { quote } = checkout;
+  await releaseExpiredStockReservations();
   const orders = await getOrdersCollection();
-  const now = new Date();
 
-  const document: OrderDocument = {
-    customerFirebaseUid,
-    merchantId: new ObjectId(quote.merchantId),
-    outletId: new ObjectId(quote.outletId),
-    businessName: quote.businessName,
-    outletName: quote.outletName,
-    address: quote.address,
-    items: quote.items,
-    subtotal: quote.subtotal,
-    distanceKm: quote.distanceKm,
-    distanceMethod: quote.distanceMethod,
-    deliveryFare: quote.deliveryFare,
-    serviceFee: quote.serviceFee,
-    customerTotal: quote.customerTotal,
-    merchantCommission: checkout.merchantCommission,
-    merchantNet: checkout.merchantNet,
-    status: "pending_payment",
-    cancellationReason: null,
-    driverId: null,
-    driverAssignedAt: null,
-    activeDriverAssignment: false,
-    createdAt: now,
-    updatedAt: now,
-  };
+  return runInTransaction(async (session) => {
+    const checkout = await buildCheckout(customerFirebaseUid, input, session);
+    const { quote } = checkout;
+    const outletId = new ObjectId(quote.outletId);
+    const now = new Date();
+    const hasReservation = checkout.stockReservations.length > 0;
+    const expiresAt = hasReservation
+      ? new Date(now.getTime() + STOCK_RESERVATION_TTL_MS)
+      : null;
 
-  const result = await orders.insertOne(document);
-  return serializeOrder({ ...document, _id: result.insertedId });
+    await reserveCheckoutStock(
+      checkout.stockReservations,
+      outletId,
+      session,
+      now,
+    );
+
+    const document: OrderDocument = {
+      customerFirebaseUid,
+      merchantId: new ObjectId(quote.merchantId),
+      outletId,
+      businessName: quote.businessName,
+      outletName: quote.outletName,
+      address: quote.address,
+      items: quote.items,
+      subtotal: quote.subtotal,
+      distanceKm: quote.distanceKm,
+      distanceMethod: quote.distanceMethod,
+      deliveryFare: quote.deliveryFare,
+      serviceFee: quote.serviceFee,
+      customerTotal: quote.customerTotal,
+      merchantCommission: checkout.merchantCommission,
+      merchantNet: checkout.merchantNet,
+      status: "pending_payment",
+      cancellationReason: null,
+      stockReservationStatus: hasReservation ? "reserved" : "not_required",
+      stockReservationExpiresAt: expiresAt,
+      stockReservationCommittedAt: null,
+      stockReservationReleasedAt: null,
+      stockReservedItems: checkout.stockReservations.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+      })),
+      driverId: null,
+      driverAssignedAt: null,
+      activeDriverAssignment: false,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const result = await orders.insertOne(document, { session });
+    return serializeOrder({ ...document, _id: result.insertedId });
+  });
 }
 
 export async function simulateCustomerPayment(
@@ -484,25 +717,79 @@ export async function simulateCustomerPayment(
 ): Promise<NitipOrder | null> {
   const objectId = parseObjectId(id);
   if (!objectId) return null;
-
   const orders = await getOrdersCollection();
-  const document = await orders.findOneAndUpdate(
-    {
-      _id: objectId,
-      customerFirebaseUid,
-      status: "pending_payment",
-    },
-    {
-      $set: {
-        status: "paid",
-        cancellationReason: null,
-        updatedAt: new Date(),
-      },
-    },
-    { returnDocument: "after" },
-  );
 
-  return document ? serializeOrder(document) : null;
+  return runInTransaction(async (session) => {
+    const existing = await orders.findOne(
+      {
+        _id: objectId,
+        customerFirebaseUid,
+        status: "pending_payment",
+      },
+      { session },
+    );
+    if (!existing) return null;
+
+    const now = new Date();
+    const expired =
+      existing.stockReservationStatus === "reserved" &&
+      existing.stockReservationExpiresAt != null &&
+      existing.stockReservationExpiresAt <= now;
+
+    if (expired) {
+      const document = await orders.findOneAndUpdate(
+        {
+          _id: objectId,
+          customerFirebaseUid,
+          status: "pending_payment",
+          stockReservationStatus: "reserved",
+        },
+        {
+          $set: {
+            status: "cancelled",
+            cancellationReason:
+              "Waktu pembayaran habis. Stok pesanan telah dilepas.",
+            stockReservationStatus: "released",
+            stockReservationExpiresAt: null,
+            stockReservationReleasedAt: now,
+            updatedAt: now,
+          },
+        },
+        { returnDocument: "after", session },
+      );
+      if (!document) return null;
+
+      await restoreReservedStock(existing.stockReservedItems ?? [], session, now);
+      return serializeOrder(document);
+    }
+
+    const nextReservationStatus: StockReservationStatus | null =
+      existing.stockReservationStatus === "reserved"
+        ? "committed"
+        : existing.stockReservationStatus ?? null;
+
+    const document = await orders.findOneAndUpdate(
+      {
+        _id: objectId,
+        customerFirebaseUid,
+        status: "pending_payment",
+      },
+      {
+        $set: {
+          status: "paid",
+          cancellationReason: null,
+          stockReservationStatus: nextReservationStatus,
+          stockReservationExpiresAt: null,
+          stockReservationCommittedAt:
+            nextReservationStatus === "committed" ? now : null,
+          updatedAt: now,
+        },
+      },
+      { returnDocument: "after", session },
+    );
+
+    return document ? serializeOrder(document) : null;
+  });
 }
 
 export async function getCustomerOrder(
@@ -511,6 +798,7 @@ export async function getCustomerOrder(
 ): Promise<NitipOrder | null> {
   const objectId = parseObjectId(id);
   if (!objectId) return null;
+  await releaseExpiredStockReservations(customerFirebaseUid);
   const orders = await getOrdersCollection();
   const document = await orders.findOne({
     _id: objectId,
@@ -522,6 +810,7 @@ export async function getCustomerOrder(
 export async function listCustomerOrders(
   customerFirebaseUid: string,
 ): Promise<NitipOrder[]> {
+  await releaseExpiredStockReservations(customerFirebaseUid);
   const orders = await getOrdersCollection();
   const documents = await orders
     .find({ customerFirebaseUid })
@@ -576,17 +865,62 @@ export async function applyMerchantOrderAction(
   const merchantObjectId = parseObjectId(merchantId);
   const orderObjectId = parseObjectId(id);
   if (!merchantObjectId || !orderObjectId) return null;
+  const orders = await getOrdersCollection();
+
+  if (input.action === "reject") {
+    return runInTransaction(async (session) => {
+      const existing = await orders.findOne(
+        {
+          _id: orderObjectId,
+          merchantId: merchantObjectId,
+          status: "paid",
+        },
+        { session },
+      );
+      if (!existing) return null;
+
+      const now = new Date();
+      const shouldRestore =
+        existing.stockReservationStatus === "reserved" ||
+        existing.stockReservationStatus === "committed";
+
+      const document = await orders.findOneAndUpdate(
+        {
+          _id: orderObjectId,
+          merchantId: merchantObjectId,
+          status: "paid",
+        },
+        {
+          $set: {
+            status: "cancelled",
+            cancellationReason:
+              input.reason?.trim() || "Pesanan ditolak merchant",
+            stockReservationStatus: shouldRestore
+              ? "released"
+              : existing.stockReservationStatus ?? null,
+            stockReservationExpiresAt: null,
+            stockReservationReleasedAt: shouldRestore ? now : null,
+            updatedAt: now,
+          },
+        },
+        { returnDocument: "after", session },
+      );
+      if (!document) return null;
+
+      if (shouldRestore) {
+        await restoreReservedStock(existing.stockReservedItems ?? [], session, now);
+      }
+      return serializeMerchantOrder(document);
+    });
+  }
 
   const transition =
     input.action === "confirm"
       ? { from: "paid" as const, to: "merchant_confirmed" as const }
-      : input.action === "reject"
-        ? { from: "paid" as const, to: "cancelled" as const }
-        : input.action === "start_preparing"
-          ? { from: "merchant_confirmed" as const, to: "preparing" as const }
-          : { from: "preparing" as const, to: "ready_for_pickup" as const };
+      : input.action === "start_preparing"
+        ? { from: "merchant_confirmed" as const, to: "preparing" as const }
+        : { from: "preparing" as const, to: "ready_for_pickup" as const };
 
-  const orders = await getOrdersCollection();
   const now = new Date();
   const document = await orders.findOneAndUpdate(
     {
@@ -597,10 +931,7 @@ export async function applyMerchantOrderAction(
     {
       $set: {
         status: transition.to,
-        cancellationReason:
-          input.action === "reject"
-            ? input.reason?.trim() || "Pesanan ditolak merchant"
-            : null,
+        cancellationReason: null,
         updatedAt: now,
       },
     },
