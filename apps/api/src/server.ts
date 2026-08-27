@@ -7,6 +7,7 @@ import {
 } from "./config/env.js";
 import { registerAdminRoutes } from "./http/admin-routes.js";
 import { registerCatalogRoutes } from "./http/catalog-routes.js";
+import { registerDriverRoutes } from "./http/driver-routes.js";
 import { registerMerchantOrderRoutes } from "./http/merchant-order-routes.js";
 import { registerOrderRoutes } from "./http/order-routes.js";
 import {
@@ -43,9 +44,7 @@ import {
 } from "./repositories/outlets.js";
 import { updateUserProfile, upsertUserFromFirebase } from "./repositories/users.js";
 
-const app = Fastify({
-  logger: true,
-});
+const app = Fastify({ logger: true });
 
 function handleRouteError(
   request: FastifyRequest,
@@ -100,11 +99,7 @@ app.patch("/me", async (request, reply) => {
     await upsertUserFromFirebase(identity);
     const input = parseProfilePatch(request.body);
     const profile = await updateUserProfile(identity.uid, input);
-
-    if (!profile) {
-      return reply.code(404).send({ error: "profile_not_found" });
-    }
-
+    if (!profile) return reply.code(404).send({ error: "profile_not_found" });
     return { data: profile };
   } catch (error) {
     return handleRouteError(request, reply, error);
@@ -114,10 +109,8 @@ app.patch("/me", async (request, reply) => {
 app.get("/me/addresses", async (request, reply) => {
   const identity = await authenticateRequest(request, reply);
   if (!identity) return;
-
   try {
-    const addresses = await listUserAddresses(identity.uid);
-    return { data: addresses };
+    return { data: await listUserAddresses(identity.uid) };
   } catch (error) {
     return handleRouteError(request, reply, error);
   }
@@ -126,7 +119,6 @@ app.get("/me/addresses", async (request, reply) => {
 app.post("/me/addresses", async (request, reply) => {
   const identity = await authenticateRequest(request, reply);
   if (!identity) return;
-
   try {
     const input = parseCreateAddress(request.body);
     const address = await createUserAddress(identity.uid, input);
@@ -136,58 +128,37 @@ app.post("/me/addresses", async (request, reply) => {
   }
 });
 
-app.patch<{ Params: { id: string } }>(
-  "/me/addresses/:id",
-  async (request, reply) => {
-    const identity = await authenticateRequest(request, reply);
-    if (!identity) return;
+app.patch<{ Params: { id: string } }>("/me/addresses/:id", async (request, reply) => {
+  const identity = await authenticateRequest(request, reply);
+  if (!identity) return;
+  try {
+    const input = parseUpdateAddress(request.body);
+    const address = await updateUserAddress(identity.uid, request.params.id, input);
+    if (!address) return reply.code(404).send({ error: "address_not_found" });
+    return { data: address };
+  } catch (error) {
+    return handleRouteError(request, reply, error);
+  }
+});
 
-    try {
-      const input = parseUpdateAddress(request.body);
-      const address = await updateUserAddress(
-        identity.uid,
-        request.params.id,
-        input,
-      );
-
-      if (!address) {
-        return reply.code(404).send({ error: "address_not_found" });
-      }
-
-      return { data: address };
-    } catch (error) {
-      return handleRouteError(request, reply, error);
-    }
-  },
-);
-
-app.delete<{ Params: { id: string } }>(
-  "/me/addresses/:id",
-  async (request, reply) => {
-    const identity = await authenticateRequest(request, reply);
-    if (!identity) return;
-
-    try {
-      const deleted = await deleteUserAddress(identity.uid, request.params.id);
-      if (!deleted) {
-        return reply.code(404).send({ error: "address_not_found" });
-      }
-
-      return { ok: true };
-    } catch (error) {
-      return handleRouteError(request, reply, error);
-    }
-  },
-);
+app.delete<{ Params: { id: string } }>("/me/addresses/:id", async (request, reply) => {
+  const identity = await authenticateRequest(request, reply);
+  if (!identity) return;
+  try {
+    const deleted = await deleteUserAddress(identity.uid, request.params.id);
+    if (!deleted) return reply.code(404).send({ error: "address_not_found" });
+    return { ok: true };
+  } catch (error) {
+    return handleRouteError(request, reply, error);
+  }
+});
 
 app.get("/merchant/me", async (request, reply) => {
   const identity = await authenticateRequest(request, reply);
   if (!identity) return;
-
   try {
     await upsertUserFromFirebase(identity);
-    const merchant = await getMerchantProfileByOwner(identity.uid);
-    return { data: merchant };
+    return { data: await getMerchantProfileByOwner(identity.uid) };
   } catch (error) {
     return handleRouteError(request, reply, error);
   }
@@ -196,7 +167,6 @@ app.get("/merchant/me", async (request, reply) => {
 app.post("/merchant/onboarding", async (request, reply) => {
   const identity = await authenticateRequest(request, reply);
   if (!identity) return;
-
   try {
     await upsertUserFromFirebase(identity);
     const input = parseCreateMerchant(request.body);
@@ -210,18 +180,15 @@ app.post("/merchant/onboarding", async (request, reply) => {
 app.patch("/merchant/me", async (request, reply) => {
   const identity = await authenticateRequest(request, reply);
   if (!identity) return;
-
   try {
     const input = parseUpdateMerchant(request.body);
     const merchant = await updateMerchantProfile(identity.uid, input);
-
     if (!merchant) {
       return reply.code(409).send({
         error: "merchant_profile_not_editable",
         message: "Profil hanya dapat diedit saat draft atau ditolak",
       });
     }
-
     return { data: merchant };
   } catch (error) {
     return handleRouteError(request, reply, error);
@@ -231,13 +198,9 @@ app.patch("/merchant/me", async (request, reply) => {
 app.post("/merchant/me/submit", async (request, reply) => {
   const identity = await authenticateRequest(request, reply);
   if (!identity) return;
-
   try {
     const merchant = await submitMerchantProfile(identity.uid);
-    if (!merchant) {
-      return reply.code(404).send({ error: "merchant_profile_not_found" });
-    }
-
+    if (!merchant) return reply.code(404).send({ error: "merchant_profile_not_found" });
     return { data: merchant };
   } catch (error) {
     return handleRouteError(request, reply, error);
@@ -247,15 +210,10 @@ app.post("/merchant/me/submit", async (request, reply) => {
 app.get("/merchant/outlets", async (request, reply) => {
   const identity = await authenticateRequest(request, reply);
   if (!identity) return;
-
   try {
     const merchant = await getMerchantProfileByOwner(identity.uid);
-    if (!merchant) {
-      return reply.code(404).send({ error: "merchant_profile_not_found" });
-    }
-
-    const outlets = await listMerchantOutlets(merchant.id);
-    return { data: outlets };
+    if (!merchant) return reply.code(404).send({ error: "merchant_profile_not_found" });
+    return { data: await listMerchantOutlets(merchant.id) };
   } catch (error) {
     return handleRouteError(request, reply, error);
   }
@@ -264,13 +222,9 @@ app.get("/merchant/outlets", async (request, reply) => {
 app.post("/merchant/outlets", async (request, reply) => {
   const identity = await authenticateRequest(request, reply);
   if (!identity) return;
-
   try {
     const merchant = await getMerchantProfileByOwner(identity.uid);
-    if (!merchant) {
-      return reply.code(404).send({ error: "merchant_profile_not_found" });
-    }
-
+    if (!merchant) return reply.code(404).send({ error: "merchant_profile_not_found" });
     const input = parseCreateOutlet(request.body);
     const outlet = await createMerchantOutlet(merchant.id, input);
     return reply.code(201).send({ data: outlet });
@@ -279,79 +233,47 @@ app.post("/merchant/outlets", async (request, reply) => {
   }
 });
 
-app.patch<{ Params: { id: string } }>(
-  "/merchant/outlets/:id",
-  async (request, reply) => {
-    const identity = await authenticateRequest(request, reply);
-    if (!identity) return;
+app.patch<{ Params: { id: string } }>("/merchant/outlets/:id", async (request, reply) => {
+  const identity = await authenticateRequest(request, reply);
+  if (!identity) return;
+  try {
+    const merchant = await getMerchantProfileByOwner(identity.uid);
+    if (!merchant) return reply.code(404).send({ error: "merchant_profile_not_found" });
+    const input = parseUpdateOutlet(request.body);
+    const outlet = await updateMerchantOutlet(merchant.id, request.params.id, input);
+    if (!outlet) return reply.code(404).send({ error: "outlet_not_found" });
+    return { data: outlet };
+  } catch (error) {
+    return handleRouteError(request, reply, error);
+  }
+});
 
-    try {
-      const merchant = await getMerchantProfileByOwner(identity.uid);
-      if (!merchant) {
-        return reply.code(404).send({ error: "merchant_profile_not_found" });
-      }
-
-      const input = parseUpdateOutlet(request.body);
-      const outlet = await updateMerchantOutlet(
-        merchant.id,
-        request.params.id,
-        input,
-      );
-
-      if (!outlet) {
-        return reply.code(404).send({ error: "outlet_not_found" });
-      }
-
-      return { data: outlet };
-    } catch (error) {
-      return handleRouteError(request, reply, error);
-    }
-  },
-);
-
-app.delete<{ Params: { id: string } }>(
-  "/merchant/outlets/:id",
-  async (request, reply) => {
-    const identity = await authenticateRequest(request, reply);
-    if (!identity) return;
-
-    try {
-      const merchant = await getMerchantProfileByOwner(identity.uid);
-      if (!merchant) {
-        return reply.code(404).send({ error: "merchant_profile_not_found" });
-      }
-
-      const deleted = await deleteMerchantOutlet(
-        merchant.id,
-        request.params.id,
-      );
-      if (!deleted) {
-        return reply.code(404).send({ error: "outlet_not_found" });
-      }
-
-      return { ok: true };
-    } catch (error) {
-      return handleRouteError(request, reply, error);
-    }
-  },
-);
+app.delete<{ Params: { id: string } }>("/merchant/outlets/:id", async (request, reply) => {
+  const identity = await authenticateRequest(request, reply);
+  if (!identity) return;
+  try {
+    const merchant = await getMerchantProfileByOwner(identity.uid);
+    if (!merchant) return reply.code(404).send({ error: "merchant_profile_not_found" });
+    const deleted = await deleteMerchantOutlet(merchant.id, request.params.id);
+    if (!deleted) return reply.code(404).send({ error: "outlet_not_found" });
+    return { ok: true };
+  } catch (error) {
+    return handleRouteError(request, reply, error);
+  }
+});
 
 registerCatalogRoutes(app);
 registerAdminRoutes(app);
 registerOrderRoutes(app);
 registerMerchantOrderRoutes(app);
+registerDriverRoutes(app);
 
 app.setNotFoundHandler(async (_request, reply) => {
-  await reply.code(404).send({
-    error: "not_found",
-  });
+  await reply.code(404).send({ error: "not_found" });
 });
 
 async function start() {
-  await app.listen({
-    host: env.host,
-    port: env.port,
-  });
+  await app.listen({ host: env.host, port: env.port });
 }
 
 async function shutdown(signal: string) {

@@ -1,0 +1,91 @@
+import type {
+  CreateNitipDriverInput,
+  NitipDriverProfile,
+  UpdateNitipDriverInput,
+} from "@nitip/domain/driver";
+import type { User } from "firebase/auth";
+
+const apiBaseUrl = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
+
+export const apiConfigured = apiBaseUrl.length > 0;
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+async function apiRequest<T>(
+  user: User | null,
+  path: string,
+  init?: RequestInit,
+): Promise<T> {
+  if (!apiConfigured) throw new Error("EXPO_PUBLIC_API_URL is not configured");
+  if (!user) throw new Error("Authentication is required");
+
+  const idToken = await user.getIdToken();
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    ...init,
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${idToken}`,
+      ...(init?.body ? { "Content-Type": "application/json" } : {}),
+    },
+  });
+
+  const body = (await response.json()) as {
+    data?: T;
+    message?: string;
+    error?: string;
+  };
+
+  if (!response.ok) {
+    throw new ApiError(
+      body.message ?? body.error ?? "Nitip API request failed",
+      response.status,
+    );
+  }
+
+  return body.data as T;
+}
+
+export function getDriverMe(user: User | null) {
+  return apiRequest<NitipDriverProfile | null>(user, "/driver/me");
+}
+
+export function createDriver(
+  user: User | null,
+  input: CreateNitipDriverInput,
+) {
+  return apiRequest<NitipDriverProfile>(user, "/driver/onboarding", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateDriver(
+  user: User | null,
+  input: UpdateNitipDriverInput,
+) {
+  return apiRequest<NitipDriverProfile>(user, "/driver/me", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function submitDriver(user: User | null) {
+  return apiRequest<NitipDriverProfile>(user, "/driver/me/submit", {
+    method: "POST",
+  });
+}
+
+export function setDriverOnline(user: User | null, isOnline: boolean) {
+  return apiRequest<NitipDriverProfile>(user, "/driver/me/availability", {
+    method: "PATCH",
+    body: JSON.stringify({ isOnline }),
+  });
+}

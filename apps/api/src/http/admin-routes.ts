@@ -3,10 +3,15 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { IntegrationNotConfiguredError } from "../config/env.js";
 import { authorizeAdmin } from "../lib/admin-auth.js";
 import {
+  listDriverProfiles,
+  reviewDriverProfile,
+} from "../repositories/drivers.js";
+import {
   listMerchantProfiles,
   reviewMerchantProfile,
 } from "../repositories/merchants.js";
 import { parseMerchantReview } from "./admin-validation.js";
+import { parseDriverReview } from "./driver-validation.js";
 import { ValidationError } from "./validation.js";
 
 function routeError(
@@ -57,7 +62,6 @@ export function registerAdminRoutes(app: FastifyInstance) {
     try {
       const admin = await authorizeAdmin(request, reply);
       if (!admin) return;
-
       return { data: await listMerchantProfiles() };
     } catch (error) {
       return routeError(request, reply, error);
@@ -87,6 +91,45 @@ export function registerAdminRoutes(app: FastifyInstance) {
         }
 
         return { data: merchant };
+      } catch (error) {
+        return routeError(request, reply, error);
+      }
+    },
+  );
+
+  app.get("/admin/drivers", async (request, reply) => {
+    try {
+      const admin = await authorizeAdmin(request, reply);
+      if (!admin) return;
+      return { data: await listDriverProfiles() };
+    } catch (error) {
+      return routeError(request, reply, error);
+    }
+  });
+
+  app.post<{ Params: { id: string } }>(
+    "/admin/drivers/:id/review",
+    async (request, reply) => {
+      try {
+        const admin = await authorizeAdmin(request, reply);
+        if (!admin) return;
+
+        const input = parseDriverReview(request.body);
+        const driver = await reviewDriverProfile(
+          request.params.id,
+          admin.identity.uid,
+          input,
+        );
+
+        if (!driver) {
+          return reply.code(409).send({
+            error: "driver_not_reviewable",
+            message:
+              "Driver harus berstatus pending_review dan tidak dapat mereview dirinya sendiri",
+          });
+        }
+
+        return { data: driver };
       } catch (error) {
         return routeError(request, reply, error);
       }

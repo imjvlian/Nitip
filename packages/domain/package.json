@@ -8,7 +8,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./catalog": "./src/catalog.ts",
-    "./commerce": "./src/commerce.ts"
+    "./commerce": "./src/commerce.ts",
+    "./driver": "./src/driver.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
