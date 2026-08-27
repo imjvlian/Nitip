@@ -12,11 +12,10 @@ export function AppHeader({ title, onBack, right }: { title: string; onBack?: ()
         {onBack ? (
           <Pressable
             accessibilityRole="button"
-            className="h-10 w-10 items-center justify-center rounded-full"
+            className="h-10 w-10 items-center justify-center"
             onPress={onBack}
-            style={{ backgroundColor: theme.colors.surface }}
           >
-            <NitipIcon color={theme.colors.text} name="back" size={17} />
+            <NitipIcon color={theme.colors.text} name="back" size={18} />
           </Pressable>
         ) : null}
       </View>

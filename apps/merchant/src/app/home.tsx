@@ -66,11 +66,12 @@ export default function MerchantHomeScreen() {
           <Text className="mt-0.5 text-[9px]" style={{ color: theme.colors.textMuted }}>{user.email ?? "Merchant"}</Text>
         </View>
         <Pressable
-          className="h-10 w-10 items-center justify-center rounded-full"
+          accessibilityLabel={c.navigation.settings}
+          accessibilityRole="button"
+          className="h-10 w-10 items-center justify-center"
           onPress={() => router.push("/settings")}
-          style={{ backgroundColor: theme.colors.surface }}
         >
-          <NitipIcon color={theme.colors.text} name="settings" size={17} />
+          <NitipIcon color={theme.colors.textMuted} name="settings" size={19} />
         </Pressable>
       </View>
 
@@ -95,8 +96,8 @@ export default function MerchantHomeScreen() {
               onPress={() => router.push("/settings/business")}
               style={{ backgroundColor: theme.colors.surfaceAccent }}
             >
-              <View className="h-11 w-11 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surfaceRaised }}>
-                <NitipIcon color={theme.colors.primary} name="profile" size={19} />
+              <View className="w-9 items-center">
+                <NitipIcon color={theme.colors.primary} name="profile" size={20} />
               </View>
               <View className="ml-3 flex-1">
                 <Text className="text-[12px] font-black" style={{ color: theme.colors.text }}>{c.home.createProfile}</Text>
@@ -153,8 +154,8 @@ export default function MerchantHomeScreen() {
                 onPress={() => router.push("/orders")}
                 style={{ backgroundColor: theme.colors.primary }}
               >
-                <View className="h-11 w-11 items-center justify-center rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.14)" }}>
-                  <NitipIcon color="#FFFFFF" name="orders" size={20} />
+                <View className="w-9 items-center">
+                  <NitipIcon color="#FFFFFF" name="orders" size={21} />
                 </View>
                 <View className="ml-3 flex-1">
                   <Text className="text-[8px] font-black tracking-[1px]" style={{ color: "rgba(255,255,255,0.72)" }}>{c.home.orderCenter}</Text>
@@ -198,8 +199,8 @@ export default function MerchantHomeScreen() {
                   onPress={() => router.push({ pathname: "/outlet/[id]", params: { id: outlet.id } })}
                   style={{ backgroundColor: theme.colors.surface }}
                 >
-                  <View className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surfaceRaised }}>
-                    <NitipIcon color={theme.colors.primary} name="store" size={18} />
+                  <View className="w-9 items-center">
+                    <NitipIcon color={theme.colors.primary} name="store" size={19} />
                   </View>
                   <View className="ml-3 flex-1">
                     <View className="flex-row items-center gap-2">

@@ -16,7 +16,18 @@ const tabs: { key: RootTab; href: "/home" | "/orders" | "/settings"; icon: Nitip
 ];
 
 const styles = StyleSheet.create({
-  bubble: { height: 38, width: 38, borderRadius: 999, overflow: "hidden", alignItems: "center", justifyContent: "center" },
+  indicator: {
+    borderRadius: 999,
+    height: 3,
+    marginBottom: 7,
+    width: 24,
+  },
+  iconSlot: {
+    alignItems: "center",
+    height: 24,
+    justifyContent: "center",
+    width: 24,
+  },
 });
 
 export function BottomNavigation({ active }: { active: RootTab }) {
@@ -35,7 +46,7 @@ export function BottomNavigation({ active }: { active: RootTab }) {
         paddingBottom: Math.max(insets.bottom, 10),
       }}
     >
-      <View className="flex-row items-end">
+      <View className="flex-row items-stretch">
         {tabs.map((tab) => {
           const selected = tab.key === active;
           const label = c.navigation[tab.key];
@@ -44,16 +55,29 @@ export function BottomNavigation({ active }: { active: RootTab }) {
               accessibilityRole="tab"
               accessibilityState={{ selected }}
               accessibilityLabel={label}
-              className="min-h-[54px] flex-1 items-center justify-end py-1"
+              className="min-h-[58px] flex-1 items-center justify-center py-1"
               key={tab.key}
               onPress={() => {
                 if (!selected) router.replace(tab.href);
               }}
             >
-              <View style={[styles.bubble, { backgroundColor: selected ? theme.colors.primary : "transparent" }]}>
-                <NitipIcon color={selected ? theme.colors.onPrimary : theme.colors.textMuted} name={tab.icon} size={19} />
+              <View
+                style={[
+                  styles.indicator,
+                  { backgroundColor: selected ? theme.colors.primary : "transparent" },
+                ]}
+              />
+              <View style={styles.iconSlot}>
+                <NitipIcon
+                  color={selected ? theme.colors.primary : theme.colors.textMuted}
+                  name={tab.icon}
+                  size={20}
+                />
               </View>
-              <Text className="mt-1.5 text-[9px] font-extrabold" style={{ color: selected ? theme.colors.primary : theme.colors.textMuted }}>
+              <Text
+                className="mt-1 text-[9px] font-extrabold"
+                style={{ color: selected ? theme.colors.primary : theme.colors.textMuted }}
+              >
                 {label}
               </Text>
             </Pressable>
