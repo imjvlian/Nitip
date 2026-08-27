@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 
+import RouteMap from "../../components/RouteMap";
 import { useAuth } from "../../context/AuthContext";
 import { actOnDriverOrder, getDriverOrder } from "../../lib/api";
 
@@ -113,6 +114,10 @@ export default function DriverOrderDetailScreen() {
   }
 
   const action = order ? nextAction(order.status) : null;
+  const hasRoutePoint = order
+    ? (order.pickup.latitude != null && order.pickup.longitude != null)
+      || (order.destination.latitude != null && order.destination.longitude != null)
+    : false;
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -159,6 +164,36 @@ export default function DriverOrderDetailScreen() {
                     : "Pengantaran selesai dan assignment aktif sudah dilepas."}
             </Text>
           </View>
+
+          {hasRoutePoint ? (
+            <>
+              <Text style={styles.sectionTitle}>Peta perjalanan</Text>
+              <View style={styles.mapCard}>
+                <RouteMap
+                  pickup={{
+                    latitude: order.pickup.latitude,
+                    longitude: order.pickup.longitude,
+                    label: `${order.pickup.businessName} · ${order.pickup.outletName}`,
+                  }}
+                  destination={{
+                    latitude: order.destination.latitude,
+                    longitude: order.destination.longitude,
+                    label: order.destination.recipientName,
+                  }}
+                />
+              </View>
+              <View style={styles.mapLegend}>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, styles.pickupDot]} />
+                  <Text style={styles.legendText}>A · Pickup merchant</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, styles.destinationDot]} />
+                  <Text style={styles.legendText}>B · Tujuan customer</Text>
+                </View>
+              </View>
+            </>
+          ) : null}
 
           <Text style={styles.sectionTitle}>Pickup</Text>
           <View style={styles.card}>
@@ -245,6 +280,13 @@ const styles = StyleSheet.create({
   progressLabel: { color: "#08349C", fontWeight: "900", fontSize: 9, letterSpacing: 0.9 },
   progressTitle: { color: "#14216D", fontWeight: "900", fontSize: 16, marginTop: 4 },
   progressText: { color: "#52607F", fontSize: 11, lineHeight: 17, marginTop: 5 },
+  mapCard: { height: 260, overflow: "hidden", borderRadius: 18, backgroundColor: "#EEF0F3", borderWidth: 1, borderColor: "#A1DCD9" },
+  mapLegend: { flexDirection: "row", flexWrap: "wrap", gap: 14, marginTop: 9 },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
+  legendDot: { width: 8, height: 8, borderRadius: 999 },
+  pickupDot: { backgroundColor: "#2448F5" },
+  destinationDot: { backgroundColor: "#16A34A" },
+  legendText: { color: "#52607F", fontSize: 10, fontWeight: "700" },
   noteBox: { backgroundColor: "#CEFCD9", borderRadius: 12, padding: 11, marginTop: 12 },
   noteLabel: { color: "#08349C", fontWeight: "900", fontSize: 9, letterSpacing: 0.7 },
   noteText: { color: "#14216D", fontSize: 11, lineHeight: 17, marginTop: 4 },
