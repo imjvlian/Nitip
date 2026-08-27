@@ -1,5 +1,5 @@
 import { SymbolView } from "expo-symbols";
-import type { ColorValue } from "react-native";
+import { Platform, type ColorValue } from "react-native";
 
 export type NitipIconName =
   | "home"
@@ -54,11 +54,16 @@ const symbols: Record<NitipIconName, { ios: string; android: string; web: string
   profile: { ios: "person.fill", android: "person", web: "person" },
 };
 
+const androidOpticalOffset = {
+  transform: [{ translateX: 1.5 }, { translateY: 1.5 }],
+} as const;
+
 export function NitipIcon({ color, name, size = 20 }: { color: ColorValue; name: NitipIconName; size?: number }) {
   return (
     <SymbolView
       name={symbols[name] as never}
       size={size}
+      style={Platform.OS === "android" ? androidOpticalOffset : undefined}
       tintColor={color}
     />
   );
