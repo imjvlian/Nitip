@@ -14,10 +14,7 @@ function AppStack() {
 
   return (
     <>
-      <StatusBar
-        backgroundColor={theme.colors.background}
-        style={resolvedMode === "dark" ? "light" : "dark"}
-      />
+      <StatusBar style={resolvedMode === "dark" ? "light" : "dark"} />
       <Stack
         screenOptions={{
           headerShown: false,

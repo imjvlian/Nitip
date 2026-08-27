@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Appearance, useColorScheme } from "react-native";
+import { useColorScheme } from "react-native";
 
 export type UserThemePreference = "system" | "light" | "dark";
 export type UserThemeMode = "light" | "dark";
@@ -92,13 +92,6 @@ export function UserThemeProvider({ children }: { children: ReactNode }) {
       active = false;
     };
   }, []);
-
-  useEffect(() => {
-    Appearance.setColorScheme(preference === "system" ? null : preference);
-    return () => {
-      Appearance.setColorScheme(null);
-    };
-  }, [preference]);
 
   const resolvedMode: UserThemeMode =
     preference === "system"
