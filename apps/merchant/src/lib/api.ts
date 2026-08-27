@@ -15,6 +15,10 @@ import type {
   UpdateNitipCategoryInput,
   UpdateNitipProductInput,
 } from "@nitip/domain/catalog";
+import type {
+  MerchantOrderActionInput,
+  NitipMerchantOrder,
+} from "@nitip/domain/commerce";
 import { File, UploadType } from "expo-file-system";
 import type { User } from "firebase/auth";
 
@@ -183,6 +187,25 @@ export function updateProduct(
 export function deleteProduct(user: User | null, outletId: string, id: string) {
   return apiRequest<{ ok: boolean }>(user, `/merchant/outlets/${outletId}/products/${id}`, {
     method: "DELETE",
+  });
+}
+
+export function listMerchantOrders(user: User | null) {
+  return apiRequest<NitipMerchantOrder[]>(user, "/merchant/orders");
+}
+
+export function getMerchantOrder(user: User | null, id: string) {
+  return apiRequest<NitipMerchantOrder>(user, `/merchant/orders/${id}`);
+}
+
+export function actOnMerchantOrder(
+  user: User | null,
+  id: string,
+  input: MerchantOrderActionInput,
+) {
+  return apiRequest<NitipMerchantOrder>(user, `/merchant/orders/${id}/action`, {
+    method: "POST",
+    body: JSON.stringify(input),
   });
 }
 

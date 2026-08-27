@@ -156,3 +156,9 @@ export function getOrder(user: User | null, id: string) {
 export function listOrders(user: User | null) {
   return apiRequest<NitipOrder[]>(user, "/me/orders");
 }
+
+export function simulateOrderPayment(user: User | null, id: string) {
+  return apiRequest<NitipOrder>(user, `/orders/${id}/simulate-payment`, {
+    method: "POST",
+  });
+}

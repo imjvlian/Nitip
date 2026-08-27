@@ -1,6 +1,9 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
-import { IntegrationNotConfiguredError } from "../config/env.js";
+import {
+  env,
+  IntegrationNotConfiguredError,
+} from "../config/env.js";
 import { authenticateRequest } from "../lib/authenticate.js";
 import {
   CheckoutError,
@@ -8,6 +11,7 @@ import {
   getCustomerOrder,
   listCustomerOrders,
   quoteCheckout,
+  simulateCustomerPayment,
 } from "../repositories/orders.js";
 import { parseCheckoutRequest } from "./checkout-validation.js";
 import { ValidationError } from "./validation.js";
@@ -96,4 +100,33 @@ export function registerOrderRoutes(app: FastifyInstance) {
       return handleOrderError(request, reply, error);
     }
   });
+
+  app.post<{ Params: { id: string } }>(
+    "/orders/:id/simulate-payment",
+    async (request, reply) => {
+      const identity = await authenticateRequest(request, reply);
+      if (!identity) return;
+
+      if (env.nodeEnv === "production") {
+        return reply.code(404).send({ error: "not_found" });
+      }
+
+      try {
+        const order = await simulateCustomerPayment(
+          identity.uid,
+          request.params.id,
+        );
+        if (!order) {
+          return reply.code(409).send({
+            error: "payment_not_simulatable",
+            message: "Pesanan tidak ditemukan atau sudah tidak menunggu pembayaran",
+          });
+        }
+
+        return { data: order };
+      } catch (error) {
+        return handleOrderError(request, reply, error);
+      }
+    },
+  );
 }

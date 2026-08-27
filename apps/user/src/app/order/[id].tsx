@@ -6,11 +6,17 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 
 import { useAuth } from "../../context/AuthContext";
 import { useNitipTheme } from "../../hooks/useNitipTheme";
-import { getOrder } from "../../lib/api";
+import { getOrder, simulateOrderPayment } from "../../lib/api";
 
 function statusLabel(status: NitipOrder["status"]) {
   if (status === "pending_payment") return "MENUNGGU PEMBAYARAN";
-  if (status === "paid") return "SUDAH DIBAYAR";
+  if (status === "paid") return "PEMBAYARAN BERHASIL";
+  if (status === "merchant_confirmed") return "DITERIMA MERCHANT";
+  if (status === "preparing") return "SEDANG DISIAPKAN";
+  if (status === "ready_for_pickup") return "SIAP DIAMBIL DRIVER";
+  if (status === "driver_assigned") return "DRIVER DITUGASKAN";
+  if (status === "picked_up") return "SUDAH DIAMBIL DRIVER";
+  if (status === "on_delivery") return "SEDANG DIANTAR";
   if (status === "cancelled") return "DIBATALKAN";
   if (status === "delivered") return "SELESAI";
   return status.replaceAll("_", " ").toUpperCase();
@@ -23,6 +29,7 @@ export default function OrderDetailScreen() {
   const styles = useMemo(() => createStyles(theme.colors), [theme]);
   const [order, setOrder] = useState<NitipOrder | null>(null);
   const [loading, setLoading] = useState(true);
+  const [simulating, setSimulating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -46,6 +53,19 @@ export default function OrderDetailScreen() {
 
   if (!user) return <Redirect href="/login" />;
 
+  async function simulatePayment() {
+    if (!order) return;
+    setSimulating(true);
+    setError(null);
+    try {
+      setOrder(await simulateOrderPayment(user, order.id));
+    } catch (nextError) {
+      setError(nextError instanceof Error ? nextError.message : "Gagal mensimulasikan pembayaran");
+    } finally {
+      setSimulating(false);
+    }
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.header}>
@@ -60,22 +80,51 @@ export default function OrderDetailScreen() {
           <ActivityIndicator color={theme.colors.primary} />
           <Text style={styles.muted}>Memuat pesanan...</Text>
         </View>
-      ) : error || !order ? (
+      ) : error && !order ? (
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Pesanan tidak ditemukan</Text>
-          <Text style={styles.muted}>{error ?? "Order tidak tersedia"}</Text>
+          <Text style={styles.muted}>{error}</Text>
         </View>
-      ) : (
+      ) : order ? (
         <>
           <Text style={styles.eyebrow}>{statusLabel(order.status)}</Text>
-          <Text style={styles.title}>Pesanan dibuat.</Text>
+          <Text style={styles.title}>Pesanan kamu.</Text>
           <Text style={styles.orderCode}>{order.orderCode}</Text>
           <Text style={styles.subtitle}>{order.businessName} · {order.outletName}</Text>
 
           {order.status === "pending_payment" ? (
             <View style={styles.notice}>
-              <Text style={styles.noticeTitle}>Payment belum terhubung</Text>
-              <Text style={styles.noticeText}>DOKU akan dipasang pada tahap payment. Untuk sekarang order disimpan aman dengan status pending_payment.</Text>
+              <Text style={styles.noticeTitle}>Payment gateway belum terhubung</Text>
+              <Text style={styles.noticeText}>
+                Untuk development, tombol di bawah mensimulasikan callback pembayaran berhasil. Endpoint ini otomatis tidak tersedia saat NODE_ENV=production.
+              </Text>
+              <Pressable
+                disabled={simulating}
+                onPress={() => void simulatePayment()}
+                style={[styles.devButton, simulating && styles.disabled]}
+              >
+                <Text style={styles.devButtonText}>
+                  {simulating ? "Memproses..." : "Simulasikan pembayaran berhasil"}
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {order.status === "paid" ? (
+            <View style={styles.notice}>
+              <Text style={styles.noticeTitle}>Pembayaran diterima</Text>
+              <Text style={styles.noticeText}>
+                Pesanan sekarang sudah masuk ke Order Center merchant dan menunggu konfirmasi.
+              </Text>
+            </View>
+          ) : null}
+
+          {order.status === "cancelled" ? (
+            <View style={styles.cancelNotice}>
+              <Text style={styles.cancelTitle}>Pesanan dibatalkan</Text>
+              <Text style={styles.cancelText}>
+                {order.cancellationReason ?? "Pesanan tidak dapat diproses merchant."}
+              </Text>
             </View>
           ) : null}
 
@@ -105,11 +154,17 @@ export default function OrderDetailScreen() {
             <View style={styles.totalRow}><Text style={styles.totalLabel}>Total</Text><Text style={styles.totalValue}>{formatRupiah(order.customerTotal)}</Text></View>
           </View>
 
+          {error ? (
+            <View style={styles.cancelNotice}>
+              <Text style={styles.cancelText}>{error}</Text>
+            </View>
+          ) : null}
+
           <Pressable onPress={() => router.replace("/home")} style={styles.primaryButton}>
             <Text style={styles.primaryButtonText}>Kembali ke Home</Text>
           </Pressable>
         </>
-      )}
+      ) : null}
     </ScrollView>
   );
 }
@@ -139,6 +194,12 @@ function createStyles(colors: {
     notice: { backgroundColor: colors.surfaceAccent, borderRadius: 18, padding: 15, marginTop: 18 },
     noticeTitle: { color: colors.text, fontWeight: "900", fontSize: 13 },
     noticeText: { color: colors.textMuted, fontSize: 10, lineHeight: 16, marginTop: 4 },
+    devButton: { backgroundColor: colors.primaryStrong, borderRadius: 12, alignItems: "center", paddingVertical: 12, marginTop: 12 },
+    devButtonText: { color: colors.onPrimary, fontWeight: "900", fontSize: 11 },
+    disabled: { opacity: 0.45 },
+    cancelNotice: { backgroundColor: "#FFF1F0", borderRadius: 16, padding: 14, marginTop: 18 },
+    cancelTitle: { color: "#B42318", fontWeight: "900", fontSize: 13 },
+    cancelText: { color: "#B42318", fontSize: 10, lineHeight: 16, marginTop: 4 },
     sectionTitle: { color: colors.text, fontWeight: "900", fontSize: 17, marginTop: 24, marginBottom: 9 },
     card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 18, padding: 16 },
     cardTitle: { color: colors.text, fontWeight: "900", fontSize: 14 },

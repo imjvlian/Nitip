@@ -47,14 +47,29 @@ export interface NitipCheckoutQuote {
   deliveryFare: number;
   serviceFee: number;
   customerTotal: number;
-  merchantCommission: number;
-  merchantNet: number;
 }
 
 export interface NitipOrder extends NitipCheckoutQuote {
   id: string;
   orderCode: string;
   status: OrderStatus;
+  cancellationReason: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface NitipMerchantOrder extends NitipOrder {
+  merchantCommission: number;
+  merchantNet: number;
+}
+
+export type MerchantOrderAction =
+  | "confirm"
+  | "reject"
+  | "start_preparing"
+  | "ready_for_pickup";
+
+export interface MerchantOrderActionInput {
+  action: MerchantOrderAction;
+  reason?: string | null;
 }

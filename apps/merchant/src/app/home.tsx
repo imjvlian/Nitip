@@ -120,14 +120,25 @@ export default function MerchantHomeScreen() {
 
       <Text style={styles.eyebrow}>MERCHANT CENTER</Text>
       <Text style={styles.title}>{merchant ? merchant.businessName : "Daftarkan usahamu."}</Text>
-      <Text style={styles.subtitle}>Profil usaha, outlet, dan katalog menjadi fondasi pesanan, jarak kirim, serta payout.</Text>
+      <Text style={styles.subtitle}>Profil usaha, outlet, katalog, dan pesanan dikelola dari Nitip Mitra.</Text>
 
       {loading ? <View style={styles.loadingCard}><ActivityIndicator color={theme.colors.primary} /><Text style={styles.muted}>Memuat merchant...</Text></View> : <>
         {merchant && <View style={styles.statusCard}>
           <Text style={styles.statusLabel}>STATUS ONBOARDING</Text>
           <Text style={styles.statusValue}>{statusCopy(merchant.status)}</Text>
-          <Text style={styles.muted}>{merchant.status === "approved" ? "Merchant sudah siap dipublikasikan." : merchant.status === "pending_review" ? "Data menunggu review Ops. Menu tetap bisa disiapkan." : "Lengkapi data lalu kirim untuk review."}</Text>
+          <Text style={styles.muted}>{merchant.status === "approved" ? "Merchant sudah siap menerima pesanan customer." : merchant.status === "pending_review" ? "Data menunggu review Ops. Menu tetap bisa disiapkan." : "Lengkapi data lalu kirim untuk review."}</Text>
         </View>}
+
+        {merchant?.status === "approved" && (
+          <Pressable onPress={() => router.push("/orders")} style={styles.orderCenterCard}>
+            <View style={styles.orderCenterBody}>
+              <Text style={styles.orderCenterLabel}>ORDER CENTER</Text>
+              <Text style={styles.orderCenterTitle}>Pesanan masuk</Text>
+              <Text style={styles.orderCenterMeta}>Konfirmasi, siapkan, dan tandai siap diambil driver.</Text>
+            </View>
+            <Text style={styles.orderCenterArrow}>›</Text>
+          </Pressable>
+        )}
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Profil usaha</Text>
@@ -173,6 +184,12 @@ function createStyles(colors: { background: string; surface: string; surfaceAcce
     statusCard: { backgroundColor: colors.surfaceAccent, borderRadius: 18, padding: 16, marginBottom: 12 },
     statusLabel: { color: colors.primary, fontSize: 9, fontWeight: "900", letterSpacing: 1 },
     statusValue: { color: colors.text, fontSize: 17, fontWeight: "900", marginTop: 4 },
+    orderCenterCard: { flexDirection: "row", alignItems: "center", backgroundColor: colors.primaryStrong, borderRadius: 20, padding: 17, marginBottom: 12 },
+    orderCenterBody: { flex: 1 },
+    orderCenterLabel: { color: colors.secondary, fontWeight: "900", fontSize: 9, letterSpacing: 1.1 },
+    orderCenterTitle: { color: colors.onPrimary, fontWeight: "900", fontSize: 18, marginTop: 4 },
+    orderCenterMeta: { color: colors.secondary, fontSize: 10, lineHeight: 15, marginTop: 4 },
+    orderCenterArrow: { color: colors.onPrimary, fontWeight: "900", fontSize: 30, marginLeft: 12 },
     card: { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 20, padding: 17 },
     cardTitle: { color: colors.text, fontWeight: "900", fontSize: 17 },
     label: { color: colors.textMuted, fontSize: 11, fontWeight: "800", marginTop: 15, marginBottom: 7 },
