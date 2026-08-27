@@ -101,7 +101,7 @@ if (!i18n.isInitialized) {
     fallbackLng: DEFAULT_NITIP_LANGUAGE,
     supportedLngs: [...NITIP_LANGUAGES],
     interpolation: { escapeValue: false },
-    initImmediate: false,
+    initAsync: false,
   });
 }
 
