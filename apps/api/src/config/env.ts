@@ -1,7 +1,9 @@
 import "dotenv/config";
 
 export class IntegrationNotConfiguredError extends Error {
-  constructor(public readonly integration: "firebase" | "mongodb" | "cloudinary") {
+  constructor(
+    public readonly integration: "firebase" | "mongodb" | "cloudinary" | "doku",
+  ) {
     super(`${integration} is not configured`);
     this.name = "IntegrationNotConfiguredError";
   }
@@ -23,13 +25,14 @@ function readCsv(name: string) {
 }
 
 const parsedPort = Number(process.env.PORT ?? "3001");
+const nodeEnv = process.env.NODE_ENV ?? "development";
 
 if (!Number.isInteger(parsedPort) || parsedPort <= 0 || parsedPort > 65535) {
   throw new Error("PORT must be a valid TCP port");
 }
 
 export const env = {
-  nodeEnv: process.env.NODE_ENV ?? "development",
+  nodeEnv,
   host: process.env.HOST?.trim() || "0.0.0.0",
   port: parsedPort,
   mongodbUri: read("MONGODB_URI"),
@@ -41,6 +44,14 @@ export const env = {
   cloudinaryCloudName: read("CLOUDINARY_CLOUD_NAME"),
   cloudinaryApiKey: read("CLOUDINARY_API_KEY"),
   cloudinaryApiSecret: read("CLOUDINARY_API_SECRET"),
+  dokuBaseUrl:
+    read("DOKU_BASE_URL") ??
+    (nodeEnv === "production"
+      ? "https://api.doku.com"
+      : "https://api-sandbox.doku.com"),
+  dokuClientId: read("DOKU_CLIENT_ID"),
+  dokuSecretKey: read("DOKU_SECRET_KEY"),
+  dokuNotificationUrl: read("DOKU_NOTIFICATION_URL"),
   adminEmails: readCsv("ADMIN_EMAILS"),
 } as const;
 
@@ -54,4 +65,5 @@ export const integrationStatus = {
   cloudinary: Boolean(
     env.cloudinaryCloudName && env.cloudinaryApiKey && env.cloudinaryApiSecret,
   ),
+  doku: Boolean(env.dokuClientId && env.dokuSecretKey),
 } as const;

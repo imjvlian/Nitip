@@ -55,6 +55,50 @@ export type StockReservationStatus =
   | "released"
   | "not_required";
 
+export type PaymentProvider = "development" | "doku";
+
+export type PaymentStatus =
+  | "pending"
+  | "paid"
+  | "failed"
+  | "expired"
+  | "refunded";
+
+export type PaymentMethod =
+  | "simulation"
+  | "qris"
+  | "virtual_account"
+  | "card"
+  | "e_wallet"
+  | "paylater"
+  | "convenience_store"
+  | "unknown";
+
+export interface NitipPaymentSnapshot {
+  provider: PaymentProvider | null;
+  status: PaymentStatus;
+  method: PaymentMethod | null;
+  reference: string | null;
+  checkoutUrl: string | null;
+  expiresAt: string | null;
+  paidAt: string | null;
+  refundedAt: string | null;
+}
+
+export type MerchantSettlementStatus =
+  | "pending"
+  | "eligible"
+  | "settled"
+  | "reversed";
+
+export interface NitipMerchantSettlementSnapshot {
+  status: MerchantSettlementStatus;
+  amount: number;
+  eligibleAt: string | null;
+  settledAt: string | null;
+  reference: string | null;
+}
+
 export interface NitipOrder extends NitipCheckoutQuote {
   id: string;
   orderCode: string;
@@ -62,6 +106,7 @@ export interface NitipOrder extends NitipCheckoutQuote {
   cancellationReason: string | null;
   stockReservationStatus: StockReservationStatus | null;
   stockReservationExpiresAt: string | null;
+  payment?: NitipPaymentSnapshot | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -69,6 +114,7 @@ export interface NitipOrder extends NitipCheckoutQuote {
 export interface NitipMerchantOrder extends NitipOrder {
   merchantCommission: number;
   merchantNet: number;
+  settlement?: NitipMerchantSettlementSnapshot | null;
 }
 
 export type MerchantOrderAction =
