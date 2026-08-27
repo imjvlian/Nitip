@@ -87,34 +87,24 @@ export default function MerchantHomeScreen() {
           <Text className="text-[25px] font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>nitip mitra.</Text>
           <Text className="mt-0.5 text-[9px]" style={{ color: theme.colors.textMuted }}>{user.email ?? "Merchant"}</Text>
         </View>
-        <View className="flex-row items-center gap-1">
-          <Pressable
-            accessibilityLabel={language === "id" ? "Notifikasi" : "Notifications"}
-            accessibilityRole="button"
-            className="h-10 w-10 items-center justify-center"
-            onPress={() => router.push("/notifications")}
-          >
-            <NitipIcon color={theme.colors.textMuted} name="notification" size={19} />
-            {notificationCount > 0 ? (
-              <View
-                className="absolute right-0.5 top-0.5 min-w-[17px] items-center justify-center rounded-full px-1"
-                style={{ backgroundColor: theme.colors.primary, minHeight: 17 }}
-              >
-                <Text className="text-[7px] font-black text-white">
-                  {notificationCount > 99 ? "99+" : notificationCount}
-                </Text>
-              </View>
-            ) : null}
-          </Pressable>
-          <Pressable
-            accessibilityLabel={c.navigation.settings}
-            accessibilityRole="button"
-            className="h-10 w-10 items-center justify-center"
-            onPress={() => router.push("/settings")}
-          >
-            <NitipIcon color={theme.colors.textMuted} name="settings" size={19} />
-          </Pressable>
-        </View>
+        <Pressable
+          accessibilityLabel={language === "id" ? "Notifikasi" : "Notifications"}
+          accessibilityRole="button"
+          className="h-10 w-10 items-center justify-center"
+          onPress={() => router.push("/notifications")}
+        >
+          <NitipIcon color={theme.colors.textMuted} name="notification" size={19} />
+          {notificationCount > 0 ? (
+            <View
+              className="absolute right-0.5 top-0.5 min-w-[17px] items-center justify-center rounded-full px-1"
+              style={{ backgroundColor: theme.colors.primary, minHeight: 17 }}
+            >
+              <Text className="text-[7px] font-black text-white">
+                {notificationCount > 99 ? "99+" : notificationCount}
+              </Text>
+            </View>
+          ) : null}
+        </Pressable>
       </View>
 
       <View className="mt-8">
