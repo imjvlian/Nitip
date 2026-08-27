@@ -16,10 +16,12 @@ import type {
   NitipCheckoutRequest,
   NitipOrder,
 } from "@nitip/domain/commerce";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { File, UploadType } from "expo-file-system";
 import type { User } from "firebase/auth";
 
 const apiBaseUrl = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
+const ORDER_IDEMPOTENCY_PREFIX = "@nitip/order-idempotency/";
 
 export const apiConfigured = apiBaseUrl.length > 0;
 
@@ -77,13 +79,16 @@ async function apiRequest<T>(
   }
 
   const idToken = await user.getIdToken();
+  const headers = new Headers(init?.headers);
+  headers.set("Accept", "application/json");
+  headers.set("Authorization", `Bearer ${idToken}`);
+  if (init?.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${idToken}`,
-      ...(init?.body ? { "Content-Type": "application/json" } : {}),
-    },
+    headers,
   });
 
   return readResponse<T>(response);
@@ -97,6 +102,49 @@ async function publicApiRequest<T>(path: string): Promise<T> {
     headers: { Accept: "application/json" },
   });
   return readResponse<T>(response);
+}
+
+function canonicalCheckoutFingerprint(
+  user: User,
+  input: NitipCheckoutRequest,
+) {
+  const items = input.items
+    .map((item) => `${item.productId}:${item.quantity}`)
+    .sort()
+    .join(",");
+  return `${user.uid}:${input.outletId}:${input.addressId}:${items}`;
+}
+
+function storageKeyForCheckout(user: User, input: NitipCheckoutRequest) {
+  const fingerprint = canonicalCheckoutFingerprint(user, input);
+  let hash = 2166136261;
+  for (let index = 0; index < fingerprint.length; index += 1) {
+    hash ^= fingerprint.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `${ORDER_IDEMPOTENCY_PREFIX}${user.uid}/${(hash >>> 0).toString(16)}`;
+}
+
+function generateOrderIdempotencyKey() {
+  return [
+    "order",
+    Date.now().toString(36),
+    Math.random().toString(36).slice(2, 12),
+    Math.random().toString(36).slice(2, 12),
+  ].join("-");
+}
+
+async function getOrCreateOrderIdempotencyKey(
+  user: User,
+  input: NitipCheckoutRequest,
+) {
+  const storageKey = storageKeyForCheckout(user, input);
+  const existing = await AsyncStorage.getItem(storageKey);
+  if (existing) return { storageKey, idempotencyKey: existing };
+
+  const idempotencyKey = generateOrderIdempotencyKey();
+  await AsyncStorage.setItem(storageKey, idempotencyKey);
+  return { storageKey, idempotencyKey };
 }
 
 export function getMe(user: User | null) {
@@ -222,11 +270,28 @@ export function getCheckoutQuote(
   });
 }
 
-export function createOrder(user: User | null, input: NitipCheckoutRequest) {
-  return apiRequest<NitipOrder>(user, "/orders", {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
+export async function createOrder(
+  user: User | null,
+  input: NitipCheckoutRequest,
+) {
+  if (!user) {
+    throw new Error("Authentication is required");
+  }
+
+  const { storageKey, idempotencyKey } =
+    await getOrCreateOrderIdempotencyKey(user, input);
+
+  try {
+    const order = await apiRequest<NitipOrder>(user, "/orders", {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body: JSON.stringify(input),
+    });
+    await AsyncStorage.removeItem(storageKey);
+    return order;
+  } catch (error) {
+    throw error;
+  }
 }
 
 export function getOrder(user: User | null, id: string) {

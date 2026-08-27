@@ -1,14 +1,22 @@
+import { createHash } from "node:crypto";
+
 import { calculateOrderQuote } from "@nitip/domain";
 import type { AddressLabel, OrderStatus } from "@nitip/domain";
 import type {
   DeliveryDistanceMethod,
   MerchantOrderActionInput,
+  MerchantSettlementStatus,
   NitipCheckoutLine,
   NitipCheckoutQuote,
   NitipCheckoutRequest,
   NitipMerchantOrder,
+  NitipMerchantSettlementSnapshot,
   NitipOrder,
   NitipOrderAddressSnapshot,
+  NitipPaymentSnapshot,
+  PaymentMethod,
+  PaymentProvider,
+  PaymentStatus,
   StockReservationStatus,
 } from "@nitip/domain/commerce";
 import type {
@@ -21,7 +29,7 @@ import { MongoServerError, ObjectId } from "mongodb";
 
 import { getMongoClient, getMongoDb } from "../lib/mongodb.js";
 
-const STOCK_RESERVATION_TTL_MS = 15 * 60 * 1000;
+const PAYMENT_WINDOW_MS = 15 * 60 * 1000;
 
 interface GeoPoint {
   type: "Point";
@@ -69,6 +77,25 @@ interface StockReservationItemDocument {
   quantity: number;
 }
 
+interface PaymentDocument {
+  provider: PaymentProvider | null;
+  status: PaymentStatus;
+  method: PaymentMethod | null;
+  reference: string | null;
+  checkoutUrl: string | null;
+  expiresAt: Date | null;
+  paidAt: Date | null;
+  refundedAt: Date | null;
+}
+
+interface MerchantSettlementDocument {
+  status: MerchantSettlementStatus;
+  amount: number;
+  eligibleAt: Date | null;
+  settledAt: Date | null;
+  reference: string | null;
+}
+
 interface OrderDocument {
   customerFirebaseUid: string;
   merchantId: ObjectId;
@@ -87,6 +114,10 @@ interface OrderDocument {
   merchantNet: number;
   status: OrderStatus;
   cancellationReason?: string | null;
+  idempotencyKey?: string;
+  idempotencyRequestHash?: string;
+  payment?: PaymentDocument | null;
+  settlement?: MerchantSettlementDocument | null;
   stockReservationStatus?: StockReservationStatus | null;
   stockReservationExpiresAt?: Date | null;
   stockReservationCommittedAt?: Date | null;
@@ -158,6 +189,18 @@ async function getOrdersCollection(): Promise<Collection<OrderDocument>> {
       { name: "orders_stock_reservation_expiry" },
     ),
     collection.createIndex(
+      { "payment.status": 1, "payment.expiresAt": 1 },
+      { name: "orders_payment_expiry" },
+    ),
+    collection.createIndex(
+      { customerFirebaseUid: 1, idempotencyKey: 1 },
+      {
+        name: "orders_customer_idempotency",
+        unique: true,
+        partialFilterExpression: { idempotencyKey: { $exists: true } },
+      },
+    ),
+    collection.createIndex(
       { driverId: 1 },
       {
         name: "orders_one_active_per_driver",
@@ -222,6 +265,38 @@ function haversineKm(
   return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function checkoutRequestHash(input: NitipCheckoutRequest) {
+  const canonical = {
+    outletId: input.outletId,
+    addressId: input.addressId,
+    items: input.items
+      .map((item) => ({ productId: item.productId, quantity: item.quantity }))
+      .sort((a, b) =>
+        a.productId === b.productId
+          ? a.quantity - b.quantity
+          : a.productId.localeCompare(b.productId),
+      ),
+  };
+
+  return createHash("sha256").update(JSON.stringify(canonical), "utf8").digest("hex");
+}
+
+function assertIdempotencyMatch(
+  document: WithId<OrderDocument>,
+  requestHash: string,
+) {
+  if (
+    document.idempotencyRequestHash &&
+    document.idempotencyRequestHash !== requestHash
+  ) {
+    throw new CheckoutError(
+      "idempotency_conflict",
+      409,
+      "Idempotency-Key sudah digunakan untuk checkout yang berbeda",
+    );
+  }
+}
+
 function snapshotAddress(
   address: WithId<AddressDocument>,
 ): NitipOrderAddressSnapshot {
@@ -239,6 +314,31 @@ function snapshotAddress(
   };
 }
 
+function serializePayment(payment: PaymentDocument): NitipPaymentSnapshot {
+  return {
+    provider: payment.provider,
+    status: payment.status,
+    method: payment.method,
+    reference: payment.reference,
+    checkoutUrl: payment.checkoutUrl,
+    expiresAt: payment.expiresAt?.toISOString() ?? null,
+    paidAt: payment.paidAt?.toISOString() ?? null,
+    refundedAt: payment.refundedAt?.toISOString() ?? null,
+  };
+}
+
+function serializeSettlement(
+  settlement: MerchantSettlementDocument,
+): NitipMerchantSettlementSnapshot {
+  return {
+    status: settlement.status,
+    amount: settlement.amount,
+    eligibleAt: settlement.eligibleAt?.toISOString() ?? null,
+    settledAt: settlement.settledAt?.toISOString() ?? null,
+    reference: settlement.reference,
+  };
+}
+
 function serializeOrder(document: WithId<OrderDocument>): NitipOrder {
   return {
     id: document._id.toHexString(),
@@ -248,6 +348,7 @@ function serializeOrder(document: WithId<OrderDocument>): NitipOrder {
     stockReservationStatus: document.stockReservationStatus ?? null,
     stockReservationExpiresAt:
       document.stockReservationExpiresAt?.toISOString() ?? null,
+    payment: document.payment ? serializePayment(document.payment) : null,
     outletId: document.outletId.toHexString(),
     merchantId: document.merchantId.toHexString(),
     businessName: document.businessName,
@@ -272,6 +373,9 @@ function serializeMerchantOrder(
     ...serializeOrder(document),
     merchantCommission: document.merchantCommission,
     merchantNet: document.merchantNet,
+    settlement: document.settlement
+      ? serializeSettlement(document.settlement)
+      : null,
   };
 }
 
@@ -425,9 +529,18 @@ async function releaseExpiredStockReservations(
       .find(
         {
           status: "pending_payment",
-          stockReservationStatus: "reserved",
-          stockReservationExpiresAt: { $lte: now },
           ...(customerFirebaseUid ? { customerFirebaseUid } : {}),
+          $or: [
+            {
+              "payment.status": "pending",
+              "payment.expiresAt": { $lte: now },
+            },
+            {
+              payment: { $exists: false },
+              stockReservationStatus: "reserved",
+              stockReservationExpiresAt: { $lte: now },
+            },
+          ],
         },
         { session },
       )
@@ -436,21 +549,38 @@ async function releaseExpiredStockReservations(
 
     let released = 0;
     for (const existing of documents) {
+      const shouldRestore = existing.stockReservationStatus === "reserved";
+      const paymentExpiresAt =
+        existing.payment?.expiresAt ??
+        existing.stockReservationExpiresAt ??
+        now;
+      const payment: PaymentDocument = {
+        provider: existing.payment?.provider ?? null,
+        status: "expired",
+        method: existing.payment?.method ?? null,
+        reference: existing.payment?.reference ?? null,
+        checkoutUrl: existing.payment?.checkoutUrl ?? null,
+        expiresAt: paymentExpiresAt,
+        paidAt: existing.payment?.paidAt ?? null,
+        refundedAt: existing.payment?.refundedAt ?? null,
+      };
+
       const document = await orders.findOneAndUpdate(
         {
           _id: existing._id,
           status: "pending_payment",
-          stockReservationStatus: "reserved",
-          stockReservationExpiresAt: { $lte: now },
         },
         {
           $set: {
             status: "cancelled",
             cancellationReason:
-              "Waktu pembayaran habis. Stok pesanan telah dilepas.",
-            stockReservationStatus: "released",
+              "Waktu pembayaran habis. Pesanan dibatalkan otomatis.",
+            payment,
+            stockReservationStatus: shouldRestore
+              ? "released"
+              : existing.stockReservationStatus ?? null,
             stockReservationExpiresAt: null,
-            stockReservationReleasedAt: now,
+            stockReservationReleasedAt: shouldRestore ? now : null,
             updatedAt: now,
           },
         },
@@ -458,7 +588,9 @@ async function releaseExpiredStockReservations(
       );
 
       if (!document) continue;
-      await restoreReservedStock(existing.stockReservedItems ?? [], session, now);
+      if (shouldRestore) {
+        await restoreReservedStock(existing.stockReservedItems ?? [], session, now);
+      }
       released += 1;
     }
 
@@ -652,63 +784,115 @@ export async function quoteCheckout(
 export async function createCustomerOrder(
   customerFirebaseUid: string,
   input: NitipCheckoutRequest,
+  idempotencyKey: string,
 ): Promise<NitipOrder> {
-  await releaseExpiredStockReservations();
+  await releaseExpiredStockReservations(customerFirebaseUid);
   const orders = await getOrdersCollection();
+  const requestHash = checkoutRequestHash(input);
 
-  return runInTransaction(async (session) => {
-    const checkout = await buildCheckout(customerFirebaseUid, input, session);
-    const { quote } = checkout;
-    const outletId = new ObjectId(quote.outletId);
-    const now = new Date();
-    const hasReservation = checkout.stockReservations.length > 0;
-    const expiresAt = hasReservation
-      ? new Date(now.getTime() + STOCK_RESERVATION_TTL_MS)
-      : null;
-
-    await reserveCheckoutStock(
-      checkout.stockReservations,
-      outletId,
-      session,
-      now,
-    );
-
-    const document: OrderDocument = {
-      customerFirebaseUid,
-      merchantId: new ObjectId(quote.merchantId),
-      outletId,
-      businessName: quote.businessName,
-      outletName: quote.outletName,
-      address: quote.address,
-      items: quote.items,
-      subtotal: quote.subtotal,
-      distanceKm: quote.distanceKm,
-      distanceMethod: quote.distanceMethod,
-      deliveryFare: quote.deliveryFare,
-      serviceFee: quote.serviceFee,
-      customerTotal: quote.customerTotal,
-      merchantCommission: checkout.merchantCommission,
-      merchantNet: checkout.merchantNet,
-      status: "pending_payment",
-      cancellationReason: null,
-      stockReservationStatus: hasReservation ? "reserved" : "not_required",
-      stockReservationExpiresAt: expiresAt,
-      stockReservationCommittedAt: null,
-      stockReservationReleasedAt: null,
-      stockReservedItems: checkout.stockReservations.map((item) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-      })),
-      driverId: null,
-      driverAssignedAt: null,
-      activeDriverAssignment: false,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const result = await orders.insertOne(document, { session });
-    return serializeOrder({ ...document, _id: result.insertedId });
+  const existing = await orders.findOne({
+    customerFirebaseUid,
+    idempotencyKey,
   });
+  if (existing) {
+    assertIdempotencyMatch(existing, requestHash);
+    return serializeOrder(existing);
+  }
+
+  try {
+    return await runInTransaction(async (session) => {
+      const replay = await orders.findOne(
+        { customerFirebaseUid, idempotencyKey },
+        { session },
+      );
+      if (replay) {
+        assertIdempotencyMatch(replay, requestHash);
+        return serializeOrder(replay);
+      }
+
+      const checkout = await buildCheckout(customerFirebaseUid, input, session);
+      const { quote } = checkout;
+      const outletId = new ObjectId(quote.outletId);
+      const now = new Date();
+      const paymentExpiresAt = new Date(now.getTime() + PAYMENT_WINDOW_MS);
+      const hasReservation = checkout.stockReservations.length > 0;
+      const stockExpiresAt = hasReservation ? paymentExpiresAt : null;
+
+      await reserveCheckoutStock(
+        checkout.stockReservations,
+        outletId,
+        session,
+        now,
+      );
+
+      const document: OrderDocument = {
+        customerFirebaseUid,
+        merchantId: new ObjectId(quote.merchantId),
+        outletId,
+        businessName: quote.businessName,
+        outletName: quote.outletName,
+        address: quote.address,
+        items: quote.items,
+        subtotal: quote.subtotal,
+        distanceKm: quote.distanceKm,
+        distanceMethod: quote.distanceMethod,
+        deliveryFare: quote.deliveryFare,
+        serviceFee: quote.serviceFee,
+        customerTotal: quote.customerTotal,
+        merchantCommission: checkout.merchantCommission,
+        merchantNet: checkout.merchantNet,
+        status: "pending_payment",
+        cancellationReason: null,
+        idempotencyKey,
+        idempotencyRequestHash: requestHash,
+        payment: {
+          provider: null,
+          status: "pending",
+          method: null,
+          reference: null,
+          checkoutUrl: null,
+          expiresAt: paymentExpiresAt,
+          paidAt: null,
+          refundedAt: null,
+        },
+        settlement: {
+          status: "pending",
+          amount: checkout.merchantNet,
+          eligibleAt: null,
+          settledAt: null,
+          reference: null,
+        },
+        stockReservationStatus: hasReservation ? "reserved" : "not_required",
+        stockReservationExpiresAt: stockExpiresAt,
+        stockReservationCommittedAt: null,
+        stockReservationReleasedAt: null,
+        stockReservedItems: checkout.stockReservations.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+        })),
+        driverId: null,
+        driverAssignedAt: null,
+        activeDriverAssignment: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      const result = await orders.insertOne(document, { session });
+      return serializeOrder({ ...document, _id: result.insertedId });
+    });
+  } catch (error) {
+    if (error instanceof MongoServerError && error.code === 11000) {
+      const replay = await orders.findOne({
+        customerFirebaseUid,
+        idempotencyKey,
+      });
+      if (replay) {
+        assertIdempotencyMatch(replay, requestHash);
+        return serializeOrder(replay);
+      }
+    }
+    throw error;
+  }
 }
 
 export async function simulateCustomerPayment(
@@ -731,27 +915,39 @@ export async function simulateCustomerPayment(
     if (!existing) return null;
 
     const now = new Date();
-    const expired =
-      existing.stockReservationStatus === "reserved" &&
-      existing.stockReservationExpiresAt != null &&
-      existing.stockReservationExpiresAt <= now;
+    const paymentExpiresAt =
+      existing.payment?.expiresAt ?? existing.stockReservationExpiresAt ?? null;
+    const expired = paymentExpiresAt != null && paymentExpiresAt <= now;
 
     if (expired) {
+      const shouldRestore = existing.stockReservationStatus === "reserved";
+      const payment: PaymentDocument = {
+        provider: existing.payment?.provider ?? null,
+        status: "expired",
+        method: existing.payment?.method ?? null,
+        reference: existing.payment?.reference ?? null,
+        checkoutUrl: existing.payment?.checkoutUrl ?? null,
+        expiresAt: paymentExpiresAt,
+        paidAt: existing.payment?.paidAt ?? null,
+        refundedAt: existing.payment?.refundedAt ?? null,
+      };
       const document = await orders.findOneAndUpdate(
         {
           _id: objectId,
           customerFirebaseUid,
           status: "pending_payment",
-          stockReservationStatus: "reserved",
         },
         {
           $set: {
             status: "cancelled",
             cancellationReason:
-              "Waktu pembayaran habis. Stok pesanan telah dilepas.",
-            stockReservationStatus: "released",
+              "Waktu pembayaran habis. Pesanan dibatalkan otomatis.",
+            payment,
+            stockReservationStatus: shouldRestore
+              ? "released"
+              : existing.stockReservationStatus ?? null,
             stockReservationExpiresAt: null,
-            stockReservationReleasedAt: now,
+            stockReservationReleasedAt: shouldRestore ? now : null,
             updatedAt: now,
           },
         },
@@ -759,7 +955,9 @@ export async function simulateCustomerPayment(
       );
       if (!document) return null;
 
-      await restoreReservedStock(existing.stockReservedItems ?? [], session, now);
+      if (shouldRestore) {
+        await restoreReservedStock(existing.stockReservedItems ?? [], session, now);
+      }
       return serializeOrder(document);
     }
 
@@ -767,6 +965,16 @@ export async function simulateCustomerPayment(
       existing.stockReservationStatus === "reserved"
         ? "committed"
         : existing.stockReservationStatus ?? null;
+    const payment: PaymentDocument = {
+      provider: "development",
+      status: "paid",
+      method: "simulation",
+      reference: `development:${objectId.toHexString()}`,
+      checkoutUrl: null,
+      expiresAt: paymentExpiresAt,
+      paidAt: now,
+      refundedAt: null,
+    };
 
     const document = await orders.findOneAndUpdate(
       {
@@ -778,6 +986,7 @@ export async function simulateCustomerPayment(
         $set: {
           status: "paid",
           cancellationReason: null,
+          payment,
           stockReservationStatus: nextReservationStatus,
           stockReservationExpiresAt: null,
           stockReservationCommittedAt:

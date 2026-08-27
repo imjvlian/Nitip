@@ -49,6 +49,29 @@ function handleOrderError(
   });
 }
 
+function parseIdempotencyKey(request: FastifyRequest) {
+  const raw = request.headers["idempotency-key"];
+  const value = Array.isArray(raw) ? raw[0] : raw;
+
+  if (typeof value !== "string") {
+    throw new ValidationError("Idempotency-Key header is required");
+  }
+
+  const key = value.trim();
+  if (key.length < 16 || key.length > 128) {
+    throw new ValidationError(
+      "Idempotency-Key must be between 16 and 128 characters",
+    );
+  }
+  if (!/^[A-Za-z0-9._:-]+$/.test(key)) {
+    throw new ValidationError(
+      "Idempotency-Key contains unsupported characters",
+    );
+  }
+
+  return key;
+}
+
 export function registerOrderRoutes(app: FastifyInstance) {
   app.post("/checkout/quote", async (request, reply) => {
     const identity = await authenticateRequest(request, reply);
@@ -68,7 +91,12 @@ export function registerOrderRoutes(app: FastifyInstance) {
 
     try {
       const input = parseCheckoutRequest(request.body);
-      const order = await createCustomerOrder(identity.uid, input);
+      const idempotencyKey = parseIdempotencyKey(request);
+      const order = await createCustomerOrder(
+        identity.uid,
+        input,
+        idempotencyKey,
+      );
       return reply.code(201).send({ data: order });
     } catch (error) {
       return handleOrderError(request, reply, error);
