@@ -9,7 +9,11 @@ import { NitipIcon } from "../components/NitipIcon";
 import { getMerchantCopy, merchantStatusLabel } from "../constants/merchantCopy";
 import { useAuth } from "../context/AuthContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
-import { getMerchantMe, listOutlets } from "../lib/api";
+import { getMerchantMe, listMerchantOrders, listOutlets } from "../lib/api";
+import {
+  buildMerchantNotifications,
+  getMerchantNotificationReadIds,
+} from "../lib/merchantNotifications";
 
 export default function MerchantHomeScreen() {
   const { language } = useNitipLanguage();
@@ -19,6 +23,7 @@ export default function MerchantHomeScreen() {
   const insets = useSafeAreaInsets();
   const [merchant, setMerchant] = useState<NitipMerchantProfile | null>(null);
   const [outlets, setOutlets] = useState<NitipOutlet[]>([]);
+  const [notificationCount, setNotificationCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,13 +34,30 @@ export default function MerchantHomeScreen() {
     try {
       const next = await getMerchantMe(user);
       setMerchant(next);
-      setOutlets(next ? await listOutlets(user) : []);
+
+      if (!next) {
+        setOutlets([]);
+        setNotificationCount(0);
+        return;
+      }
+
+      const [nextOutlets, nextOrders, readIds] = await Promise.all([
+        listOutlets(user),
+        next.status === "approved" ? listMerchantOrders(user) : Promise.resolve([]),
+        getMerchantNotificationReadIds(user.uid),
+      ]);
+
+      setOutlets(nextOutlets);
+      const notifications = buildMerchantNotifications(next, nextOrders, language);
+      setNotificationCount(
+        notifications.filter((notification) => !readIds.has(notification.id)).length,
+      );
     } catch (nextError) {
       setError(nextError instanceof Error ? nextError.message : c.home.loadError);
     } finally {
       setLoading(false);
     }
-  }, [c.home.loadError, user]);
+  }, [c.home.loadError, language, user]);
 
   useFocusEffect(
     useCallback(() => {
@@ -65,14 +87,34 @@ export default function MerchantHomeScreen() {
           <Text className="text-[25px] font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>nitip mitra.</Text>
           <Text className="mt-0.5 text-[9px]" style={{ color: theme.colors.textMuted }}>{user.email ?? "Merchant"}</Text>
         </View>
-        <Pressable
-          accessibilityLabel={c.navigation.settings}
-          accessibilityRole="button"
-          className="h-10 w-10 items-center justify-center"
-          onPress={() => router.push("/settings")}
-        >
-          <NitipIcon color={theme.colors.textMuted} name="settings" size={19} />
-        </Pressable>
+        <View className="flex-row items-center gap-1">
+          <Pressable
+            accessibilityLabel={language === "id" ? "Notifikasi" : "Notifications"}
+            accessibilityRole="button"
+            className="h-10 w-10 items-center justify-center"
+            onPress={() => router.push("/notifications")}
+          >
+            <NitipIcon color={theme.colors.textMuted} name="notification" size={19} />
+            {notificationCount > 0 ? (
+              <View
+                className="absolute right-0.5 top-0.5 min-w-[17px] items-center justify-center rounded-full px-1"
+                style={{ backgroundColor: theme.colors.primary, minHeight: 17 }}
+              >
+                <Text className="text-[7px] font-black text-white">
+                  {notificationCount > 99 ? "99+" : notificationCount}
+                </Text>
+              </View>
+            ) : null}
+          </Pressable>
+          <Pressable
+            accessibilityLabel={c.navigation.settings}
+            accessibilityRole="button"
+            className="h-10 w-10 items-center justify-center"
+            onPress={() => router.push("/settings")}
+          >
+            <NitipIcon color={theme.colors.textMuted} name="settings" size={19} />
+          </Pressable>
+        </View>
       </View>
 
       <View className="mt-8">

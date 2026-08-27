@@ -25,7 +25,8 @@ export type NitipIconName =
   | "image"
   | "visibility"
   | "power"
-  | "profile";
+  | "profile"
+  | "notification";
 
 const symbols: Record<NitipIconName, { ios: string; android: string; web: string }> = {
   home: { ios: "house.fill", android: "home", web: "home" },
@@ -52,6 +53,7 @@ const symbols: Record<NitipIconName, { ios: string; android: string; web: string
   visibility: { ios: "eye.fill", android: "visibility", web: "visibility" },
   power: { ios: "power", android: "power_settings_new", web: "power_settings_new" },
   profile: { ios: "person.fill", android: "person", web: "person" },
+  notification: { ios: "bell.fill", android: "notifications", web: "notifications" },
 };
 
 export function NitipIcon({
