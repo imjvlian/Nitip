@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BottomNavigation } from "../components/BottomNavigation";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import { NitipIcon } from "../components/NitipIcon";
 import { ThemeSwitcher } from "../components/ThemeSwitcher";
 import { useAuth } from "../context/AuthContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
@@ -238,12 +239,13 @@ export default function ProfileScreen() {
                 </Text>
               </View>
               <Pressable
-                className="rounded-full px-4 py-2.5"
+                className="flex-row items-center gap-1.5 rounded-full px-4 py-2.5"
                 onPress={() => router.push("/address/new")}
                 style={{ backgroundColor: theme.colors.surfaceAccent }}
               >
+                <NitipIcon color={theme.colors.primary} name="plus" size={16} />
                 <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
-                  + {t("common.add")}
+                  {t("common.add")}
                 </Text>
               </Pressable>
             </View>
@@ -273,7 +275,8 @@ export default function ProfileScreen() {
                         {addressLabel(address)}
                       </Text>
                       {address.isDefault ? (
-                        <View className="rounded-full px-2.5 py-1.5" style={{ backgroundColor: theme.colors.successSurface }}>
+                        <View className="flex-row items-center gap-1 rounded-full px-2.5 py-1.5" style={{ backgroundColor: theme.colors.successSurface }}>
+                          <NitipIcon color={theme.colors.success} name="check" size={13} />
                           <Text className="text-[9px] font-black" style={{ color: theme.colors.success }}>
                             {t("profile.main")}
                           </Text>
@@ -294,14 +297,18 @@ export default function ProfileScreen() {
                         {t("profile.notesPrefix", { notes: address.notes })}
                       </Text>
                     ) : null}
-                    <Text className="mt-3 text-[10px] font-extrabold" style={{ color: theme.colors.primary }}>
-                      {address.latitude != null && address.longitude != null
-                        ? `${address.latitude.toFixed(6)}, ${address.longitude.toFixed(6)}`
-                        : t("profile.mapMissing")}
-                    </Text>
+                    <View className="mt-3 flex-row items-center gap-1.5">
+                      <NitipIcon color={theme.colors.primary} name="location" size={14} />
+                      <Text className="text-[10px] font-extrabold" style={{ color: theme.colors.primary }}>
+                        {address.latitude != null && address.longitude != null
+                          ? `${address.latitude.toFixed(6)}, ${address.longitude.toFixed(6)}`
+                          : t("profile.mapMissing")}
+                      </Text>
+                    </View>
 
                     <View className="mt-4 flex-row flex-wrap gap-x-5 gap-y-3">
                       <Pressable
+                        className="flex-row items-center gap-1.5"
                         onPress={() =>
                           router.push({
                             pathname: "/address/[id]/location",
@@ -309,18 +316,21 @@ export default function ProfileScreen() {
                           })
                         }
                       >
+                        <NitipIcon color={theme.colors.primary} name="location" size={15} />
                         <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
                           {address.latitude != null ? t("profile.changeMap") : t("profile.setMap")}
                         </Text>
                       </Pressable>
                       {!address.isDefault ? (
-                        <Pressable onPress={() => void makeDefault(address)}>
+                        <Pressable className="flex-row items-center gap-1.5" onPress={() => void makeDefault(address)}>
+                          <NitipIcon color={theme.colors.primary} name="check" size={15} />
                           <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
                             {t("profile.makeDefault")}
                           </Text>
                         </Pressable>
                       ) : null}
-                      <Pressable onPress={() => confirmDelete(address)}>
+                      <Pressable className="flex-row items-center gap-1.5" onPress={() => confirmDelete(address)}>
+                        <NitipIcon color={theme.colors.danger} name="trash" size={15} />
                         <Text className="text-xs font-black" style={{ color: theme.colors.danger }}>
                           {t("common.delete")}
                         </Text>
@@ -356,17 +366,21 @@ export default function ProfileScreen() {
               className="mt-8 rounded-3xl border p-5"
               style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
             >
-              <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
-                {t("common.signOut")}
-              </Text>
+              <View className="flex-row items-center gap-2">
+                <NitipIcon color={theme.colors.text} name="logout" size={18} />
+                <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
+                  {t("common.signOut")}
+                </Text>
+              </View>
               <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
                 {t("profile.signOutDescription")}
               </Text>
               <Pressable
-                className="mt-4 min-h-12 items-center justify-center rounded-2xl"
+                className="mt-4 min-h-12 flex-row items-center justify-center gap-2 rounded-2xl"
                 onPress={() => void signOut()}
                 style={{ backgroundColor: theme.colors.dangerSurface }}
               >
+                <NitipIcon color={theme.colors.danger} name="logout" size={17} />
                 <Text className="text-xs font-black" style={{ color: theme.colors.danger }}>
                   {t("common.signOut")}
                 </Text>

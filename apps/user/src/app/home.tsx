@@ -7,6 +7,7 @@ import { ActivityIndicator, Image, Pressable, ScrollView, Text, View } from "rea
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BottomNavigation } from "../components/BottomNavigation";
+import { NitipIcon, type NitipIconName } from "../components/NitipIcon";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
@@ -80,10 +81,10 @@ export default function HomeScreen() {
     user.displayName?.split(" ")[0] ??
     t("home.fallbackName");
 
-  const categories = [
-    { icon: "🍜", label: t("home.food") },
-    { icon: "🥤", label: t("home.drinks") },
-    { icon: "🛒", label: t("home.stores") },
+  const categories: { icon: NitipIconName; label: string }[] = [
+    { icon: "food", label: t("home.food") },
+    { icon: "drink", label: t("home.drinks") },
+    { icon: "store", label: t("home.stores") },
   ];
 
   return (
@@ -101,15 +102,24 @@ export default function HomeScreen() {
             nitip.
           </Text>
           <Pressable
-            className="min-h-11 flex-row items-center justify-center rounded-full px-4"
+            accessibilityRole="button"
+            accessibilityLabel={t("common.cart")}
+            className="min-h-11 flex-row items-center justify-center gap-2 rounded-full px-4"
             onPress={() => router.push("/cart")}
             style={{ backgroundColor: theme.colors.surface }}
           >
+            <NitipIcon color={theme.colors.text} name="cart" size={18} />
             <Text className="text-xs font-black" style={{ color: theme.colors.text }}>
-              {cart.itemCount > 0
-                ? t("home.cartButton", { count: cart.itemCount })
-                : t("common.cart")}
+              {t("common.cart")}
             </Text>
+            {cart.itemCount > 0 ? (
+              <View
+                className="h-5 min-w-5 items-center justify-center rounded-full px-1"
+                style={{ backgroundColor: theme.colors.primary }}
+              >
+                <Text className="text-[9px] font-black text-white">{cart.itemCount}</Text>
+              </View>
+            ) : null}
           </Pressable>
         </View>
 
@@ -123,11 +133,11 @@ export default function HomeScreen() {
         </View>
 
         <View
-          className="mt-6 flex-row items-center rounded-2xl border px-4 py-4"
+          className="mt-6 min-h-[52px] flex-row items-center rounded-2xl border px-4"
           style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
         >
-          <Text className="mr-3 text-xl" style={{ color: theme.colors.textMuted }}>⌕</Text>
-          <Text className="flex-1 text-sm" style={{ color: theme.colors.textMuted }}>
+          <NitipIcon color={theme.colors.textMuted} name="search" size={19} />
+          <Text className="ml-3 flex-1 text-sm" style={{ color: theme.colors.textMuted }}>
             {t("home.searchPlaceholder")}
           </Text>
         </View>
@@ -142,7 +152,12 @@ export default function HomeScreen() {
               key={category.label}
               style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
             >
-              <Text className="text-2xl">{category.icon}</Text>
+              <View
+                className="h-11 w-11 items-center justify-center rounded-full"
+                style={{ backgroundColor: theme.colors.surfaceAccent }}
+              >
+                <NitipIcon color={theme.colors.primary} name={category.icon} size={22} />
+              </View>
               <Text className="mt-2 text-xs font-extrabold" style={{ color: theme.colors.text }}>
                 {category.label}
               </Text>
@@ -274,6 +289,9 @@ export default function HomeScreen() {
                       ? t("home.menuSoon")
                       : t("home.fromPrice", { price: formatRupiah(outlet.minPrice) })}
                   </Text>
+                </View>
+                <View className="justify-center pl-2">
+                  <NitipIcon color={theme.colors.textMuted} name="next" size={18} />
                 </View>
               </Pressable>
             ))}

@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BottomNavigation } from "../components/BottomNavigation";
+import { NitipIcon } from "../components/NitipIcon";
 import { useAuth } from "../context/AuthContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
 import { listOrders } from "../lib/api";
@@ -114,10 +115,15 @@ export default function OrdersScreen() {
           style={{ backgroundColor: theme.colors.surfaceAccent }}
         >
           <Pressable
-            className="flex-1 rounded-xl py-3"
+            className="flex-1 flex-row items-center justify-center gap-2 rounded-xl py-3"
             onPress={() => setTab("active")}
             style={{ backgroundColor: tab === "active" ? theme.colors.primary : "transparent" }}
           >
+            <NitipIcon
+              color={tab === "active" ? "#FFFFFF" : theme.colors.textMuted}
+              name="clock"
+              size={16}
+            />
             <Text
               className="text-center text-xs font-black"
               style={{ color: tab === "active" ? "#FFFFFF" : theme.colors.textMuted }}
@@ -126,10 +132,15 @@ export default function OrdersScreen() {
             </Text>
           </Pressable>
           <Pressable
-            className="flex-1 rounded-xl py-3"
+            className="flex-1 flex-row items-center justify-center gap-2 rounded-xl py-3"
             onPress={() => setTab("history")}
             style={{ backgroundColor: tab === "history" ? theme.colors.primary : "transparent" }}
           >
+            <NitipIcon
+              color={tab === "history" ? "#FFFFFF" : theme.colors.textMuted}
+              name="history"
+              size={16}
+            />
             <Text
               className="text-center text-xs font-black"
               style={{ color: tab === "history" ? "#FFFFFF" : theme.colors.textMuted }}
@@ -175,6 +186,9 @@ export default function OrdersScreen() {
             className="mt-4 items-center rounded-3xl border p-7"
             style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
           >
+            <View className="mb-4 h-12 w-12 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surfaceAccent }}>
+              <NitipIcon color={theme.colors.primary} name={tab === "active" ? "orders" : "history"} size={24} />
+            </View>
             <Text className="text-center text-base font-black" style={{ color: theme.colors.text }}>
               {tab === "active" ? t("orders.emptyActiveTitle") : t("orders.emptyHistoryTitle")}
             </Text>
@@ -185,10 +199,11 @@ export default function OrdersScreen() {
             </Text>
             {tab === "active" ? (
               <Pressable
-                className="mt-5 min-h-12 w-full items-center justify-center rounded-2xl"
+                className="mt-5 min-h-12 w-full flex-row items-center justify-center gap-2 rounded-2xl"
                 onPress={() => router.replace("/home")}
                 style={{ backgroundColor: theme.colors.primary }}
               >
+                <NitipIcon color="#FFFFFF" name="store" size={18} />
                 <Text className="text-xs font-black text-white">
                   {t("orders.browseMerchants")}
                 </Text>
@@ -263,9 +278,12 @@ export default function OrdersScreen() {
                     </View>
                   ) : null}
 
-                  <Text className="mt-4 text-xs font-black" style={{ color: theme.colors.primary }}>
-                    {t("orders.details")} →
-                  </Text>
+                  <View className="mt-4 flex-row items-center gap-1.5">
+                    <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
+                      {t("orders.details")}
+                    </Text>
+                    <NitipIcon color={theme.colors.primary} name="next" size={16} />
+                  </View>
                 </Pressable>
               );
             })}

@@ -4,6 +4,7 @@ import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import { NitipIcon } from "../components/NitipIcon";
 import { useNitipTheme } from "../hooks/useNitipTheme";
 
 export default function LanguageScreen() {
@@ -20,9 +21,10 @@ export default function LanguageScreen() {
         paddingBottom: Math.max(insets.bottom, 24),
       }}
     >
-      <Pressable className="min-h-10 justify-center self-start pr-4" onPress={() => router.back()}>
-        <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
-          ‹ {t("common.back")}
+      <Pressable className="min-h-10 flex-row items-center justify-center self-start pr-4" onPress={() => router.back()}>
+        <NitipIcon color={theme.colors.primary} name="back" size={18} />
+        <Text className="ml-1 text-xs font-black" style={{ color: theme.colors.primary }}>
+          {t("common.back")}
         </Text>
       </Pressable>
       <Text className="mt-7 text-3xl font-black tracking-tighter" style={{ color: theme.colors.text }}>

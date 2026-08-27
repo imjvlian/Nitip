@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { NitipIcon } from "../../components/NitipIcon";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { useNitipTheme } from "../../hooks/useNitipTheme";
@@ -87,9 +88,10 @@ export default function CatalogOutletScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View className="flex-row items-center justify-between">
-          <Pressable className="min-h-10 justify-center pr-4" onPress={() => router.back()}>
-            <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
-              ‹ {t("common.back")}
+          <Pressable className="min-h-10 flex-row items-center justify-center pr-4" onPress={() => router.back()}>
+            <NitipIcon color={theme.colors.primary} name="back" size={18} />
+            <Text className="ml-1 text-xs font-black" style={{ color: theme.colors.primary }}>
+              {t("common.back")}
             </Text>
           </Pressable>
           <Text className="text-2xl font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>
@@ -235,11 +237,12 @@ export default function CatalogOutletScreen() {
                                   {product.isAvailable ? t("outlet.available") : t("outlet.unavailableProduct")}
                                 </Text>
                                 <Pressable
-                                  className="mt-3 self-start rounded-full px-4 py-2.5"
+                                  className="mt-3 flex-row items-center gap-1.5 self-start rounded-full px-4 py-2.5"
                                   disabled={!canAdd}
                                   onPress={() => addProduct(product)}
                                   style={{ backgroundColor: theme.colors.primary, opacity: canAdd ? 1 : 0.4 }}
                                 >
+                                  <NitipIcon color="#FFFFFF" name="plus" size={15} />
                                   <Text className="text-[11px] font-black text-white">
                                     {quantity > 0
                                       ? t("outlet.addAgain", { count: quantity })
@@ -274,6 +277,9 @@ export default function CatalogOutletScreen() {
             onPress={() => router.push("/cart")}
             style={{ backgroundColor: theme.colors.primary }}
           >
+            <View className="mr-3 h-9 w-9 items-center justify-center rounded-full bg-white/15">
+              <NitipIcon color="#FFFFFF" name="cart" size={19} />
+            </View>
             <View className="flex-1">
               <Text className="text-xs font-black text-white">
                 {t("outlet.cartSummary", { count: cart.itemCount })}
@@ -281,6 +287,9 @@ export default function CatalogOutletScreen() {
               <Text className="mt-0.5 text-[10px] text-white/80">{cart.outlet?.businessName}</Text>
             </View>
             <Text className="text-sm font-black text-white">{formatRupiah(cart.subtotal)}</Text>
+            <View className="ml-2">
+              <NitipIcon color="#FFFFFF" name="next" size={17} />
+            </View>
           </Pressable>
         </View>
       ) : null}

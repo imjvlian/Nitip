@@ -7,6 +7,7 @@ import {
 import { Pressable, Text, View } from "react-native";
 
 import { useNitipTheme } from "../hooks/useNitipTheme";
+import { NitipIcon } from "./NitipIcon";
 
 function languageLabel(language: NitipLanguage, t: (key: string) => string) {
   return language === "id" ? t("common.indonesia") : t("common.english");
@@ -20,9 +21,12 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   return (
     <View>
       {!compact ? (
-        <Text className="mb-2 text-xs font-extrabold" style={{ color: theme.colors.textMuted }}>
-          {t("common.language")}
-        </Text>
+        <View className="mb-2 flex-row items-center gap-2">
+          <NitipIcon color={theme.colors.textMuted} name="language" size={16} />
+          <Text className="text-xs font-extrabold" style={{ color: theme.colors.textMuted }}>
+            {t("common.language")}
+          </Text>
+        </View>
       ) : null}
       <View
         className="flex-row rounded-2xl p-1"

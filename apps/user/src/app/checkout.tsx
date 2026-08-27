@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { NitipIcon } from "../components/NitipIcon";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
@@ -118,14 +119,18 @@ export default function CheckoutScreen() {
         className="flex-1 items-center justify-center px-6"
         style={{ backgroundColor: theme.colors.background, paddingTop: insets.top, paddingBottom: insets.bottom }}
       >
+        <View className="mb-4 h-12 w-12 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surfaceAccent }}>
+          <NitipIcon color={theme.colors.primary} name="cart" size={24} />
+        </View>
         <Text className="text-center text-3xl font-black tracking-tighter" style={{ color: theme.colors.text }}>
           {t("checkout.emptyCart")}
         </Text>
         <Pressable
-          className="mt-5 min-h-12 w-full items-center justify-center rounded-2xl"
+          className="mt-5 min-h-12 w-full flex-row items-center justify-center gap-2 rounded-2xl"
           onPress={() => router.replace("/home")}
           style={{ backgroundColor: theme.colors.primary }}
         >
+          <NitipIcon color="#FFFFFF" name="home" size={18} />
           <Text className="text-xs font-black text-white">{t("checkout.backHome")}</Text>
         </Pressable>
       </View>
@@ -143,9 +148,10 @@ export default function CheckoutScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View className="flex-row items-center justify-between">
-          <Pressable className="min-h-10 justify-center pr-4" onPress={() => router.back()}>
-            <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
-              ‹ {t("common.cart")}
+          <Pressable className="min-h-10 flex-row items-center justify-center pr-4" onPress={() => router.back()}>
+            <NitipIcon color={theme.colors.primary} name="back" size={18} />
+            <Text className="ml-1 text-xs font-black" style={{ color: theme.colors.primary }}>
+              {t("common.cart")}
             </Text>
           </Pressable>
           <Text className="text-2xl font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>
@@ -191,12 +197,13 @@ export default function CheckoutScreen() {
               {t("checkout.noAddressDescription")}
             </Text>
             <Pressable
-              className="mt-4 min-h-11 items-center justify-center rounded-2xl"
+              className="mt-4 min-h-11 flex-row items-center justify-center gap-2 rounded-2xl"
               onPress={() => router.push("/address/new")}
               style={{ backgroundColor: theme.colors.surfaceAccent }}
             >
+              <NitipIcon color={theme.colors.primary} name="plus" size={17} />
               <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
-                + {t("checkout.addAddress")}
+                {t("checkout.addAddress")}
               </Text>
             </Pressable>
           </View>
@@ -220,9 +227,12 @@ export default function CheckoutScreen() {
                       {addressLabel(address)}
                     </Text>
                     {selected ? (
-                      <Text className="text-[9px] font-black" style={{ color: theme.colors.primary }}>
-                        {t("checkout.selected")}
-                      </Text>
+                      <View className="flex-row items-center gap-1.5 rounded-full px-2.5 py-1.5" style={{ backgroundColor: theme.colors.surface }}>
+                        <NitipIcon color={theme.colors.primary} name="check" size={14} />
+                        <Text className="text-[9px] font-black" style={{ color: theme.colors.primary }}>
+                          {t("checkout.selected")}
+                        </Text>
+                      </View>
                     ) : null}
                   </View>
                   <Text className="mt-2 text-xs font-extrabold" style={{ color: theme.colors.primary }}>
@@ -321,7 +331,7 @@ export default function CheckoutScreen() {
             </Text>
           </View>
           <Pressable
-            className="min-h-[52px] flex-[1.45] items-center justify-center rounded-2xl px-4"
+            className="min-h-[52px] flex-[1.45] flex-row items-center justify-center gap-2 rounded-2xl px-4"
             disabled={!quote || creating}
             onPress={() => void submitOrder()}
             style={{ backgroundColor: theme.colors.primary, opacity: !quote || creating ? 0.45 : 1 }}
@@ -329,7 +339,10 @@ export default function CheckoutScreen() {
             {creating ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text className="text-center text-xs font-black text-white">{t("checkout.createOrder")}</Text>
+              <>
+                <NitipIcon color="#FFFFFF" name="receipt" size={18} />
+                <Text className="text-center text-xs font-black text-white">{t("checkout.createOrder")}</Text>
+              </>
             )}
           </Pressable>
         </View>

@@ -5,11 +5,16 @@ import { useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { NitipIcon, type NitipIconName } from "../../components/NitipIcon";
 import { useAuth } from "../../context/AuthContext";
 import { useNitipTheme } from "../../hooks/useNitipTheme";
 import { createAddress } from "../../lib/api";
 
-const labels: AddressLabel[] = ["home", "office", "other"];
+const labels: { value: AddressLabel; icon: NitipIconName }[] = [
+  { value: "home", icon: "home" },
+  { value: "office", icon: "office" },
+  { value: "other", icon: "location" },
+];
 
 export default function NewAddressScreen() {
   const { t } = useNitipTranslation();
@@ -76,9 +81,10 @@ export default function NewAddressScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View className="flex-row items-center justify-between">
-        <Pressable className="min-h-10 justify-center pr-4" onPress={() => router.back()}>
-          <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
-            ‹ {t("common.back")}
+        <Pressable className="min-h-10 flex-row items-center justify-center pr-4" onPress={() => router.back()}>
+          <NitipIcon color={theme.colors.primary} name="back" size={18} />
+          <Text className="ml-1 text-xs font-black" style={{ color: theme.colors.primary }}>
+            {t("common.back")}
           </Text>
         </Pressable>
         <Text className="text-2xl font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>
@@ -106,23 +112,25 @@ export default function NewAddressScreen() {
           {t("address.label")}
         </Text>
         <View className="flex-row gap-2">
-          {labels.map((value) => {
-            const selected = label === value;
+          {labels.map((item) => {
+            const selected = label === item.value;
+            const color = selected ? "#FFFFFF" : theme.colors.text;
             return (
               <Pressable
-                className="flex-1 rounded-2xl border px-2 py-3"
-                key={value}
-                onPress={() => setLabel(value)}
+                className="flex-1 items-center rounded-2xl border px-2 py-3"
+                key={item.value}
+                onPress={() => setLabel(item.value)}
                 style={{
                   backgroundColor: selected ? theme.colors.primary : "transparent",
                   borderColor: selected ? theme.colors.primary : theme.colors.border,
                 }}
               >
+                <NitipIcon color={color} name={item.icon} size={18} />
                 <Text
-                  className="text-center text-xs font-black"
-                  style={{ color: selected ? "#FFFFFF" : theme.colors.text }}
+                  className="mt-1.5 text-center text-xs font-black"
+                  style={{ color }}
                 >
-                  {labelText(value)}
+                  {labelText(item.value)}
                 </Text>
               </Pressable>
             );
@@ -219,7 +227,7 @@ export default function NewAddressScreen() {
               borderColor: isDefault ? theme.colors.primary : theme.colors.border,
             }}
           >
-            {isDefault ? <Text className="font-black text-white">✓</Text> : null}
+            {isDefault ? <NitipIcon color="#FFFFFF" name="check" size={15} /> : null}
           </View>
           <View className="flex-1 pl-3">
             <Text className="text-sm font-black" style={{ color: theme.colors.text }}>

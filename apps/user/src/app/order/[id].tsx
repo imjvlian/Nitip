@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { NitipIcon, type NitipIconName } from "../../components/NitipIcon";
 import { useAuth } from "../../context/AuthContext";
 import { useNitipTheme } from "../../hooks/useNitipTheme";
 import { getOrder, simulateOrderPayment } from "../../lib/api";
@@ -85,11 +86,11 @@ export default function OrderDetailScreen() {
 
   const deadline = reservationDeadline(order?.stockReservationExpiresAt ?? null, language);
   const progress = order ? orderProgress(order.status) : 0;
-  const progressSteps = [
-    t("orderDetail.progressPayment"),
-    t("orderDetail.progressPreparing"),
-    t("orderDetail.progressDelivery"),
-    t("orderDetail.progressDone"),
+  const progressSteps: { label: string; icon: NitipIconName }[] = [
+    { label: t("orderDetail.progressPayment"), icon: "receipt" },
+    { label: t("orderDetail.progressPreparing"), icon: "clock" },
+    { label: t("orderDetail.progressDelivery"), icon: "location" },
+    { label: t("orderDetail.progressDone"), icon: "check" },
   ];
 
   return (
@@ -104,9 +105,10 @@ export default function OrderDetailScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View className="flex-row items-center justify-between">
-        <Pressable className="min-h-10 justify-center pr-4" onPress={() => router.replace("/orders")}>
-          <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
-            ‹ {t("navigation.orders")}
+        <Pressable className="min-h-10 flex-row items-center justify-center pr-4" onPress={() => router.replace("/orders")}>
+          <NitipIcon color={theme.colors.primary} name="back" size={18} />
+          <Text className="ml-1 text-xs font-black" style={{ color: theme.colors.primary }}>
+            {t("navigation.orders")}
           </Text>
         </Pressable>
         <Text className="text-2xl font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>
@@ -156,10 +158,11 @@ export default function OrderDetailScreen() {
               style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
             >
               <View className="flex-row items-start">
-                {progressSteps.map((label, index) => {
+                {progressSteps.map((step, index) => {
                   const reached = index <= progress;
+                  const stepColor = reached ? theme.colors.primary : theme.colors.textMuted;
                   return (
-                    <View className="flex-1 items-center" key={label}>
+                    <View className="flex-1 items-center" key={step.label}>
                       <View className="w-full flex-row items-center">
                         {index > 0 ? (
                           <View
@@ -170,13 +173,10 @@ export default function OrderDetailScreen() {
                           <View className="flex-1" />
                         )}
                         <View
-                          className="h-5 w-5 items-center justify-center rounded-full"
-                          style={{ backgroundColor: reached ? theme.colors.primary : theme.colors.surfaceAccent }}
+                          className="h-8 w-8 items-center justify-center rounded-full"
+                          style={{ backgroundColor: reached ? theme.colors.surfaceAccent : theme.colors.background }}
                         >
-                          <View
-                            className="h-1.5 w-1.5 rounded-full"
-                            style={{ backgroundColor: reached ? "#FFFFFF" : theme.colors.textMuted }}
-                          />
+                          <NitipIcon color={stepColor} name={step.icon} size={16} />
                         </View>
                         {index < progressSteps.length - 1 ? (
                           <View
@@ -191,7 +191,7 @@ export default function OrderDetailScreen() {
                         className="mt-2 text-center text-[9px] font-extrabold"
                         style={{ color: reached ? theme.colors.text : theme.colors.textMuted }}
                       >
-                        {label}
+                        {step.label}
                       </Text>
                     </View>
                   );
@@ -226,7 +226,7 @@ export default function OrderDetailScreen() {
               ) : null}
 
               <Pressable
-                className="mt-4 min-h-12 items-center justify-center rounded-2xl"
+                className="mt-4 min-h-12 flex-row items-center justify-center gap-2 rounded-2xl"
                 disabled={simulating}
                 onPress={() => void simulatePayment()}
                 style={{ backgroundColor: theme.colors.primary, opacity: simulating ? 0.55 : 1 }}
@@ -234,7 +234,10 @@ export default function OrderDetailScreen() {
                 {simulating ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text className="text-xs font-black text-white">{t("orderDetail.simulatePayment")}</Text>
+                  <>
+                    <NitipIcon color="#FFFFFF" name="check" size={17} />
+                    <Text className="text-xs font-black text-white">{t("orderDetail.simulatePayment")}</Text>
+                  </>
                 )}
               </Pressable>
             </View>
@@ -288,20 +291,25 @@ export default function OrderDetailScreen() {
             className="mt-3 rounded-3xl border p-5"
             style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
           >
-            <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
-              {order.address.recipientName}
-            </Text>
-            <Text className="mt-1 text-xs font-extrabold" style={{ color: theme.colors.primary }}>
-              {order.address.phoneNumber}
-            </Text>
-            <Text className="mt-2 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
-              {order.address.addressLine}
-            </Text>
-            {order.address.notes ? (
-              <Text className="mt-2 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
-                {t("orderDetail.notesPrefix", { notes: order.address.notes })}
-              </Text>
-            ) : null}
+            <View className="flex-row items-start gap-2">
+              <NitipIcon color={theme.colors.primary} name="location" size={18} />
+              <View className="flex-1">
+                <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
+                  {order.address.recipientName}
+                </Text>
+                <Text className="mt-1 text-xs font-extrabold" style={{ color: theme.colors.primary }}>
+                  {order.address.phoneNumber}
+                </Text>
+                <Text className="mt-2 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+                  {order.address.addressLine}
+                </Text>
+                {order.address.notes ? (
+                  <Text className="mt-2 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
+                    {t("orderDetail.notesPrefix", { notes: order.address.notes })}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
           </View>
 
           <Text className="mt-8 text-lg font-black" style={{ color: theme.colors.text }}>
@@ -336,10 +344,11 @@ export default function OrderDetailScreen() {
           ) : null}
 
           <Pressable
-            className="mt-7 min-h-[52px] items-center justify-center rounded-2xl"
+            className="mt-7 min-h-[52px] flex-row items-center justify-center gap-2 rounded-2xl"
             onPress={() => router.replace("/orders")}
             style={{ backgroundColor: theme.colors.primary }}
           >
+            <NitipIcon color="#FFFFFF" name="orders" size={18} />
             <Text className="text-sm font-black text-white">{t("orderDetail.backOrders")}</Text>
           </Pressable>
         </>

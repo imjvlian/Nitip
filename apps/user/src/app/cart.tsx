@@ -4,6 +4,7 @@ import { Redirect, router } from "expo-router";
 import { Image, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { NitipIcon } from "../components/NitipIcon";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
@@ -28,9 +29,10 @@ export default function CartScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View className="flex-row items-center justify-between">
-          <Pressable className="min-h-10 justify-center pr-4" onPress={() => router.back()}>
-            <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
-              ‹ {t("common.back")}
+          <Pressable className="min-h-10 flex-row items-center justify-center pr-4" onPress={() => router.back()}>
+            <NitipIcon color={theme.colors.primary} name="back" size={18} />
+            <Text className="ml-1 text-xs font-black" style={{ color: theme.colors.primary }}>
+              {t("common.back")}
             </Text>
           </Pressable>
           <Text className="text-2xl font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>
@@ -57,6 +59,12 @@ export default function CartScreen() {
             className="mt-6 rounded-3xl border p-6"
             style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
           >
+            <View
+              className="mb-4 h-12 w-12 items-center justify-center rounded-full"
+              style={{ backgroundColor: theme.colors.surfaceAccent }}
+            >
+              <NitipIcon color={theme.colors.primary} name="cart" size={24} />
+            </View>
             <Text className="text-base font-black" style={{ color: theme.colors.text }}>
               {t("cart.noProducts")}
             </Text>
@@ -64,10 +72,11 @@ export default function CartScreen() {
               {t("cart.noProductsDescription")}
             </Text>
             <Pressable
-              className="mt-5 min-h-12 items-center justify-center rounded-2xl"
+              className="mt-5 min-h-12 flex-row items-center justify-center gap-2 rounded-2xl"
               onPress={() => router.replace("/home")}
               style={{ backgroundColor: theme.colors.primary }}
             >
+              <NitipIcon color="#FFFFFF" name="store" size={18} />
               <Text className="text-xs font-black text-white">{t("cart.browseMerchants")}</Text>
             </Pressable>
           </View>
@@ -113,7 +122,7 @@ export default function CartScreen() {
                           onPress={() => cart.setQuantity(item.product.id, item.quantity - 1)}
                           style={{ borderColor: theme.colors.border }}
                         >
-                          <Text className="text-lg font-black" style={{ color: theme.colors.text }}>−</Text>
+                          <NitipIcon color={theme.colors.text} name="minus" size={18} />
                         </Pressable>
                         <Text className="min-w-7 text-center text-sm font-black" style={{ color: theme.colors.text }}>
                           {item.quantity}
@@ -127,9 +136,13 @@ export default function CartScreen() {
                             opacity: item.quantity >= maxQuantity ? 0.35 : 1,
                           }}
                         >
-                          <Text className="text-lg font-black" style={{ color: theme.colors.text }}>+</Text>
+                          <NitipIcon color={theme.colors.text} name="plus" size={18} />
                         </Pressable>
-                        <Pressable className="ml-2 py-2" onPress={() => cart.removeItem(item.product.id)}>
+                        <Pressable
+                          className="ml-2 flex-row items-center gap-1.5 py-2"
+                          onPress={() => cart.removeItem(item.product.id)}
+                        >
+                          <NitipIcon color={theme.colors.danger} name="trash" size={15} />
                           <Text className="text-[11px] font-black" style={{ color: theme.colors.danger }}>
                             {t("cart.remove")}
                           </Text>
@@ -162,7 +175,8 @@ export default function CartScreen() {
               </Text>
             </View>
 
-            <Pressable className="mt-4 items-center py-3" onPress={cart.clearCart}>
+            <Pressable className="mt-4 flex-row items-center justify-center gap-2 py-3" onPress={cart.clearCart}>
+              <NitipIcon color={theme.colors.danger} name="trash" size={16} />
               <Text className="text-xs font-black" style={{ color: theme.colors.danger }}>
                 {t("cart.clear")}
               </Text>
@@ -190,13 +204,14 @@ export default function CartScreen() {
               </Text>
             </View>
             <Pressable
-              className="min-h-[52px] flex-[1.45] items-center justify-center rounded-2xl px-4 py-4"
+              className="min-h-[52px] flex-[1.45] flex-row items-center justify-center gap-2 rounded-2xl px-4 py-4"
               onPress={() => router.push("/checkout")}
               style={{ backgroundColor: theme.colors.primary }}
             >
               <Text className="text-center text-xs font-black text-white">
                 {t("cart.checkoutCta", { count: cart.itemCount })}
               </Text>
+              <NitipIcon color="#FFFFFF" name="next" size={17} />
             </Pressable>
           </View>
         </View>

@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import MapView, { Marker, type MapPressEvent } from "react-native-maps";
 
 import { useNitipTheme } from "../hooks/useNitipTheme";
+import { NitipIcon } from "./NitipIcon";
 
 interface LocationPickerProps {
   latitude: number | null;
@@ -66,9 +67,12 @@ export default function LocationPicker({ latitude, longitude, onChange }: Locati
 
   return (
     <View className="mt-6">
-      <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
-        {t("location.pointTitle")}
-      </Text>
+      <View className="flex-row items-center gap-2">
+        <NitipIcon color={theme.colors.text} name="location" size={18} />
+        <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
+          {t("location.pointTitle")}
+        </Text>
+      </View>
       <Text className="mb-3 mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
         {t("location.helper")}
       </Text>
@@ -106,23 +110,27 @@ export default function LocationPicker({ latitude, longitude, onChange }: Locati
         <Pressable
           disabled={locating}
           onPress={() => void useCurrentLocation()}
-          className="min-h-12 flex-1 items-center justify-center rounded-2xl px-4"
+          className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl px-4"
           style={{ backgroundColor: theme.colors.primary, opacity: locating ? 0.65 : 1 }}
         >
           {locating ? (
             <ActivityIndicator color={theme.colors.onPrimary} />
           ) : (
-            <Text className="text-xs font-black" style={{ color: theme.colors.onPrimary }}>
-              {t("location.useCurrent")}
-            </Text>
+            <>
+              <NitipIcon color={theme.colors.onPrimary} name="location" size={18} />
+              <Text className="text-xs font-black" style={{ color: theme.colors.onPrimary }}>
+                {t("location.useCurrent")}
+              </Text>
+            </>
           )}
         </Pressable>
         {point ? (
           <Pressable
             onPress={() => onChange(null, null)}
-            className="min-h-12 items-center justify-center rounded-2xl px-4"
+            className="min-h-12 flex-row items-center justify-center gap-1.5 rounded-2xl px-4"
             style={{ backgroundColor: theme.colors.dangerSurface }}
           >
+            <NitipIcon color={theme.colors.danger} name="trash" size={16} />
             <Text className="text-xs font-extrabold" style={{ color: theme.colors.danger }}>
               {t("location.clearPoint")}
             </Text>
@@ -130,11 +138,14 @@ export default function LocationPicker({ latitude, longitude, onChange }: Locati
         ) : null}
       </View>
 
-      <Text className="mt-3 text-xs font-extrabold" style={{ color: theme.colors.primary }}>
-        {point
-          ? `${point.latitude.toFixed(6)}, ${point.longitude.toFixed(6)}`
-          : t("location.noPoint")}
-      </Text>
+      <View className="mt-3 flex-row items-center gap-1.5">
+        <NitipIcon color={theme.colors.primary} name="location" size={14} />
+        <Text className="text-xs font-extrabold" style={{ color: theme.colors.primary }}>
+          {point
+            ? `${point.latitude.toFixed(6)}, ${point.longitude.toFixed(6)}`
+            : t("location.noPoint")}
+        </Text>
+      </View>
       {error ? (
         <Text className="mt-2 text-xs leading-5" style={{ color: theme.colors.danger }}>
           {error}

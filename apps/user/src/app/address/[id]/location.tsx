@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-nati
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import LocationPicker from "../../../components/LocationPicker";
+import { NitipIcon } from "../../../components/NitipIcon";
 import { useAuth } from "../../../context/AuthContext";
 import { useNitipTheme } from "../../../hooks/useNitipTheme";
 import { listAddresses, updateAddress } from "../../../lib/api";
@@ -79,9 +80,10 @@ export default function AddressLocationScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View className="flex-row items-center justify-between">
-        <Pressable className="min-h-10 justify-center pr-4" onPress={() => router.back()}>
-          <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
-            ‹ {t("common.back")}
+        <Pressable className="min-h-10 flex-row items-center justify-center pr-4" onPress={() => router.back()}>
+          <NitipIcon color={theme.colors.primary} name="back" size={18} />
+          <Text className="ml-1 text-xs font-black" style={{ color: theme.colors.primary }}>
+            {t("common.back")}
           </Text>
         </Pressable>
         <Text className="text-2xl font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>
@@ -125,12 +127,17 @@ export default function AddressLocationScreen() {
           className="mt-6 rounded-3xl border p-5"
           style={{ backgroundColor: theme.colors.surface, borderColor: theme.colors.border }}
         >
-          <Text className="text-sm font-black leading-5" style={{ color: theme.colors.text }}>
-            {address.addressLine}
-          </Text>
-          <Text className="mt-1 text-xs" style={{ color: theme.colors.textMuted }}>
-            {address.recipientName} · {address.phoneNumber}
-          </Text>
+          <View className="flex-row items-start gap-2">
+            <NitipIcon color={theme.colors.primary} name="location" size={18} />
+            <View className="flex-1">
+              <Text className="text-sm font-black leading-5" style={{ color: theme.colors.text }}>
+                {address.addressLine}
+              </Text>
+              <Text className="mt-1 text-xs" style={{ color: theme.colors.textMuted }}>
+                {address.recipientName} · {address.phoneNumber}
+              </Text>
+            </View>
+          </View>
 
           <LocationPicker
             latitude={latitude}
@@ -148,11 +155,12 @@ export default function AddressLocationScreen() {
           ) : null}
 
           <Pressable
-            className="mt-5 min-h-[52px] items-center justify-center rounded-2xl"
+            className="mt-5 min-h-[52px] flex-row items-center justify-center gap-2 rounded-2xl"
             disabled={saving}
             onPress={() => void save()}
             style={{ backgroundColor: theme.colors.primary, opacity: saving ? 0.55 : 1 }}
           >
+            {!saving ? <NitipIcon color="#FFFFFF" name="location" size={18} /> : null}
             <Text className="text-sm font-black text-white">
               {saving ? t("common.saving") : t("location.savePoint")}
             </Text>
