@@ -16,6 +16,12 @@
           "cameraPermission": false,
           "microphonePermission": false
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Nitip Mitra memerlukan lokasi untuk menentukan titik pickup outlet."
+        }
       ]
     ],
     "android": { "package": "id.nitip.merchant" },

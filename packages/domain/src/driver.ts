@@ -18,6 +18,10 @@ export interface NitipDriverProfile {
   vehiclePlate: string;
   status: DriverOnboardingStatus;
   isOnline: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  locationAccuracyMeters: number | null;
+  locationUpdatedAt: string | null;
   submittedAt: string | null;
   reviewedAt: string | null;
   rejectionReason: string | null;
@@ -44,6 +48,12 @@ export interface ReviewNitipDriverInput {
 
 export interface UpdateDriverAvailabilityInput {
   isOnline: boolean;
+}
+
+export interface UpdateDriverLocationInput {
+  latitude: number;
+  longitude: number;
+  accuracyMeters?: number | null;
 }
 
 export interface NitipDriverPickup {

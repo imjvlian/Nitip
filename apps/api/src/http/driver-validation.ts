@@ -2,6 +2,7 @@ import type {
   CreateNitipDriverInput,
   ReviewNitipDriverInput,
   UpdateDriverAvailabilityInput,
+  UpdateDriverLocationInput,
   UpdateNitipDriverInput,
 } from "@nitip/domain/driver";
 
@@ -42,6 +43,19 @@ function optionalString(
 function vehicleType(value: unknown) {
   if (value !== "motorcycle" && value !== "car") {
     throw new ValidationError("vehicleType must be motorcycle or car");
+  }
+  return value;
+}
+
+function coordinate(value: unknown, key: "latitude" | "longitude") {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new ValidationError(`${key} must be a finite number`);
+  }
+  if (key === "latitude" && (value < -90 || value > 90)) {
+    throw new ValidationError("latitude must be between -90 and 90");
+  }
+  if (key === "longitude" && (value < -180 || value > 180)) {
+    throw new ValidationError("longitude must be between -180 and 180");
   }
   return value;
 }
@@ -89,6 +103,33 @@ export function parseDriverAvailability(
     throw new ValidationError("isOnline must be a boolean");
   }
   return { isOnline: record.isOnline };
+}
+
+export function parseDriverLocation(body: unknown): UpdateDriverLocationInput {
+  const record = asRecord(body);
+  const latitude = coordinate(record.latitude, "latitude");
+  const longitude = coordinate(record.longitude, "longitude");
+
+  let accuracyMeters: number | null | undefined;
+  if (Object.prototype.hasOwnProperty.call(record, "accuracyMeters")) {
+    if (record.accuracyMeters === null) {
+      accuracyMeters = null;
+    } else if (
+      typeof record.accuracyMeters === "number" &&
+      Number.isFinite(record.accuracyMeters) &&
+      record.accuracyMeters >= 0
+    ) {
+      accuracyMeters = record.accuracyMeters;
+    } else {
+      throw new ValidationError("accuracyMeters must be a non-negative number or null");
+    }
+  }
+
+  return {
+    latitude,
+    longitude,
+    ...(accuracyMeters !== undefined ? { accuracyMeters } : {}),
+  };
 }
 
 export function parseDriverReview(body: unknown): ReviewNitipDriverInput {

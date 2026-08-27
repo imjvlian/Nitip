@@ -154,8 +154,11 @@ export default function MerchantHomeScreen() {
           <View style={styles.sectionHeader}><View><Text style={styles.cardTitle}>Outlet</Text><Text style={styles.muted}>{outlets.length} outlet</Text></View><Pressable onPress={() => router.push("/outlet/new")} style={styles.smallButton}><Text style={styles.smallButtonText}>+ Tambah</Text></Pressable></View>
           {outlets.length === 0 ? <View style={styles.card}><Text style={styles.cardTitle}>Belum ada outlet</Text><Text style={styles.muted}>Tambahkan lokasi jualan pertama.</Text></View> : outlets.map((outlet) => <View key={outlet.id} style={styles.outletCard}>
             <View style={styles.outletTop}><View style={styles.outletInfo}><Text style={styles.outletName}>{outlet.name}</Text><Text style={styles.muted}>{outlet.addressLine}</Text></View><View style={styles.badge}><Text style={styles.badgeText}>{outlet.acceptingOrders ? "BUKA" : "TUTUP"}</Text></View></View>
-            <Text style={styles.meta}>{outlet.isActive ? "Outlet aktif" : "Outlet nonaktif"} · {outlet.latitude != null ? "Lokasi tersimpan" : "Lokasi belum dipilih"}</Text>
+            <Text style={styles.meta}>
+              {outlet.isActive ? "Outlet aktif" : "Outlet nonaktif"} · {outlet.latitude != null && outlet.longitude != null ? `${outlet.latitude.toFixed(6)}, ${outlet.longitude.toFixed(6)}` : "Lokasi belum dipilih"}
+            </Text>
             <View style={styles.actions}>
+              <Pressable onPress={() => router.push({ pathname: "/outlet/[id]/location", params: { id: outlet.id } })}><Text style={styles.linkText}>{outlet.latitude != null ? "Ubah lokasi" : "Atur lokasi"}</Text></Pressable>
               <Pressable onPress={() => router.push({ pathname: "/menu", params: { outletId: outlet.id, outletName: outlet.name } })}><Text style={styles.linkText}>Kelola menu</Text></Pressable>
               <Pressable onPress={() => void toggleOrders(outlet)}><Text style={styles.linkText}>{outlet.acceptingOrders ? "Tutup sementara" : "Buka pesanan"}</Text></Pressable>
               <Pressable onPress={() => confirmDelete(outlet)}><Text style={styles.dangerText}>Hapus</Text></Pressable>

@@ -2,6 +2,7 @@ import type {
   CreateNitipDriverInput,
   NitipDriverProfile,
   ReviewNitipDriverInput,
+  UpdateDriverLocationInput,
   UpdateNitipDriverInput,
 } from "@nitip/domain/driver";
 import type { Collection, WithId } from "mongodb";
@@ -18,6 +19,10 @@ interface DriverDocument {
   vehiclePlate: string;
   status: NitipDriverProfile["status"];
   isOnline: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  locationAccuracyMeters: number | null;
+  locationUpdatedAt: Date | null;
   submittedAt: Date | null;
   reviewedAt: Date | null;
   reviewedByFirebaseUid: string | null;
@@ -62,6 +67,10 @@ function serializeDriver(document: WithId<DriverDocument>): NitipDriverProfile {
     vehiclePlate: document.vehiclePlate,
     status: document.status,
     isOnline: document.isOnline,
+    latitude: document.latitude ?? null,
+    longitude: document.longitude ?? null,
+    locationAccuracyMeters: document.locationAccuracyMeters ?? null,
+    locationUpdatedAt: document.locationUpdatedAt?.toISOString() ?? null,
     submittedAt: document.submittedAt?.toISOString() ?? null,
     reviewedAt: document.reviewedAt?.toISOString() ?? null,
     rejectionReason: document.rejectionReason ?? null,
@@ -122,6 +131,10 @@ export async function createDriverProfile(
     vehiclePlate: input.vehiclePlate,
     status: "draft",
     isOnline: false,
+    latitude: null,
+    longitude: null,
+    locationAccuracyMeters: null,
+    locationUpdatedAt: null,
     submittedAt: null,
     reviewedAt: null,
     reviewedByFirebaseUid: null,
@@ -226,6 +239,29 @@ export async function setDriverAvailability(
   const document = await drivers.findOneAndUpdate(
     { ownerFirebaseUid, status: "approved" },
     { $set: { isOnline, updatedAt: new Date() } },
+    { returnDocument: "after" },
+  );
+
+  return document ? serializeDriver(document) : null;
+}
+
+export async function setDriverLocation(
+  ownerFirebaseUid: string,
+  input: UpdateDriverLocationInput,
+): Promise<NitipDriverProfile | null> {
+  const drivers = await getDriversCollection();
+  const now = new Date();
+  const document = await drivers.findOneAndUpdate(
+    { ownerFirebaseUid, status: "approved" },
+    {
+      $set: {
+        latitude: input.latitude,
+        longitude: input.longitude,
+        locationAccuracyMeters: input.accuracyMeters ?? null,
+        locationUpdatedAt: now,
+        updatedAt: now,
+      },
+    },
     { returnDocument: "after" },
   );
 

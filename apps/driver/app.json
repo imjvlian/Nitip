@@ -7,7 +7,15 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Nitip Driver memerlukan lokasi untuk memperbarui posisi saat aplikasi digunakan."
+        }
+      ]
+    ],
     "android": { "package": "id.nitip.driver" },
     "ios": { "bundleIdentifier": "id.nitip.driver" }
   }

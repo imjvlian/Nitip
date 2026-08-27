@@ -7,7 +7,15 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Nitip memerlukan lokasi untuk menentukan titik alamat pengantaran."
+        }
+      ]
+    ],
     "android": {
       "package": "id.nitip.user"
     },

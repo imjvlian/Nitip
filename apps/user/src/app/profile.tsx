@@ -216,11 +216,24 @@ export default function ProfileScreen() {
                 {address.notes ? <Text style={styles.notes}>Catatan: {address.notes}</Text> : null}
                 <Text style={styles.coordinateText}>
                   {address.latitude != null && address.longitude != null
-                    ? "Lokasi peta tersimpan"
+                    ? `${address.latitude.toFixed(6)}, ${address.longitude.toFixed(6)}`
                     : "Lokasi peta belum ditentukan"}
                 </Text>
 
                 <View style={styles.addressActions}>
+                  <Pressable
+                    onPress={() =>
+                      router.push({
+                        pathname: "/address/[id]/location",
+                        params: { id: address.id },
+                      })
+                    }
+                    style={styles.linkButton}
+                  >
+                    <Text style={styles.linkText}>
+                      {address.latitude != null ? "Ubah titik peta" : "Atur titik peta"}
+                    </Text>
+                  </Pressable>
                   {!address.isDefault && (
                     <Pressable onPress={() => void makeDefault(address)} style={styles.linkButton}>
                       <Text style={styles.linkText}>Jadikan utama</Text>
@@ -291,7 +304,7 @@ function createStyles(colors: {
     addressText: { color: colors.textMuted, fontSize: 12, lineHeight: 18, marginTop: 2 },
     notes: { color: colors.textMuted, fontSize: 11, lineHeight: 17, marginTop: 7 },
     coordinateText: { color: colors.primary, fontSize: 10, fontWeight: "700", marginTop: 9 },
-    addressActions: { flexDirection: "row", gap: 14, marginTop: 13 },
+    addressActions: { flexDirection: "row", flexWrap: "wrap", gap: 14, marginTop: 13 },
     linkButton: { paddingVertical: 4 },
     linkText: { color: colors.primary, fontWeight: "800", fontSize: 12 },
     dangerText: { color: "#B42318", fontWeight: "800", fontSize: 12 },

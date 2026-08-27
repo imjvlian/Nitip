@@ -6,6 +6,7 @@ import {
   createDriverProfile,
   getDriverProfileByOwner,
   setDriverAvailability,
+  setDriverLocation,
   submitDriverProfile,
   updateDriverProfile,
 } from "../repositories/drivers.js";
@@ -13,6 +14,7 @@ import { upsertUserFromFirebase } from "../repositories/users.js";
 import {
   parseCreateDriver,
   parseDriverAvailability,
+  parseDriverLocation,
   parseUpdateDriver,
 } from "./driver-validation.js";
 import { ValidationError } from "./validation.js";
@@ -115,6 +117,25 @@ export function registerDriverRoutes(app: FastifyInstance) {
         return reply.code(409).send({
           error: "driver_not_available",
           message: "Driver harus approved sebelum dapat online",
+        });
+      }
+      return { data: profile };
+    } catch (error) {
+      return routeError(request, reply, error);
+    }
+  });
+
+  app.patch("/driver/me/location", async (request, reply) => {
+    const identity = await authenticateRequest(request, reply);
+    if (!identity) return;
+
+    try {
+      const input = parseDriverLocation(request.body);
+      const profile = await setDriverLocation(identity.uid, input);
+      if (!profile) {
+        return reply.code(409).send({
+          error: "driver_location_not_available",
+          message: "Driver harus approved sebelum lokasi dapat diperbarui",
         });
       }
       return { data: profile };
