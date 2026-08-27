@@ -23,11 +23,12 @@ export default function SettingsScreen() {
   const themeLabel = c.settings[preference];
   const languageLabel = language === "id" ? c.settings.indonesia : c.settings.english;
   const needle = query.trim().toLowerCase();
+  const showBusiness = !needle || [c.home.businessProfile, c.home.subtitle].some((value) => value.toLowerCase().includes(needle));
   const showAccount = !needle || [c.settings.accountSection, c.settings.accountInfo, user.email ?? ""].some((value) => value.toLowerCase().includes(needle));
   const showLanguage = !needle || [c.settings.language, c.settings.languageDescription, languageLabel].some((value) => value.toLowerCase().includes(needle));
   const showAppearance = !needle || [c.settings.appearance, c.settings.appearanceDescription, themeLabel].some((value) => value.toLowerCase().includes(needle));
   const showSignOut = !needle || [c.settings.signOut, c.settings.signOutDescription].some((value) => value.toLowerCase().includes(needle));
-  const anyResult = showAccount || showLanguage || showAppearance || showSignOut;
+  const anyResult = showBusiness || showAccount || showLanguage || showAppearance || showSignOut;
 
   return (
     <ScrollView
@@ -58,12 +59,31 @@ export default function SettingsScreen() {
         />
       </View>
 
-      {showAccount ? (
+      {showBusiness || showAccount ? (
         <View className="mt-7">
           <Text className="text-[15px] font-black" style={{ color: theme.colors.text }}>{c.settings.accountSection}</Text>
           <Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{c.settings.accountDescription}</Text>
           <View className="mt-3 overflow-hidden rounded-[22px]" style={{ backgroundColor: theme.colors.surface }}>
-            <SettingsRow icon="profile" title={c.settings.accountInfo} description={c.settings.accountInfoDescription} value={user.email ?? "—"} onPress={() => undefined} showChevron={false} last />
+            {showBusiness ? (
+              <SettingsRow
+                icon="store"
+                title={c.home.businessProfile}
+                description={c.home.subtitle}
+                onPress={() => router.push("/settings/business")}
+                last={!showAccount}
+              />
+            ) : null}
+            {showAccount ? (
+              <SettingsRow
+                icon="profile"
+                title={c.settings.accountInfo}
+                description={c.settings.accountInfoDescription}
+                value={user.email ?? "—"}
+                onPress={() => undefined}
+                showChevron={false}
+                last
+              />
+            ) : null}
           </View>
         </View>
       ) : null}
@@ -74,10 +94,24 @@ export default function SettingsScreen() {
           <Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{c.settings.preferencesDescription}</Text>
           <View className="mt-3 overflow-hidden rounded-[22px]" style={{ backgroundColor: theme.colors.surface }}>
             {showLanguage ? (
-              <SettingsRow icon="language" title={c.settings.language} description={c.settings.languageDescription} value={languageLabel} onPress={() => router.push("/settings/language")} last={!showAppearance} />
+              <SettingsRow
+                icon="language"
+                title={c.settings.language}
+                description={c.settings.languageDescription}
+                value={languageLabel}
+                onPress={() => router.push("/settings/language")}
+                last={!showAppearance}
+              />
             ) : null}
             {showAppearance ? (
-              <SettingsRow icon="theme" title={c.settings.appearance} description={c.settings.appearanceDescription} value={themeLabel} onPress={() => router.push("/settings/appearance")} last />
+              <SettingsRow
+                icon="theme"
+                title={c.settings.appearance}
+                description={c.settings.appearanceDescription}
+                value={themeLabel}
+                onPress={() => router.push("/settings/appearance")}
+                last
+              />
             ) : null}
           </View>
         </View>
