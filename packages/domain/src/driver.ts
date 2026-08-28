@@ -1,11 +1,6 @@
 import type { OrderStatus } from "./index.js";
 
-export type DriverOnboardingStatus =
-  | "draft"
-  | "pending_review"
-  | "approved"
-  | "rejected";
-
+export type DriverOnboardingStatus = "draft" | "pending_review" | "approved" | "rejected";
 export type DriverVehicleType = "motorcycle" | "car";
 
 export interface NitipDriverProfile {
@@ -45,10 +40,7 @@ export interface ReviewNitipDriverInput {
   reason?: string | null;
 }
 
-export interface UpdateDriverAvailabilityInput {
-  isOnline: boolean;
-}
-
+export interface UpdateDriverAvailabilityInput { isOnline: boolean; }
 export interface UpdateDriverLocationInput {
   latitude: number;
   longitude: number;
@@ -77,12 +69,7 @@ export interface NitipDriverOffer {
   createdAt: string;
 }
 
-export interface NitipDriverOrderItem {
-  productId: string;
-  name: string;
-  quantity: number;
-}
-
+export interface NitipDriverOrderItem { productId: string; name: string; quantity: number; }
 export interface NitipDriverDestination {
   recipientName: string;
   phoneNumber: string;
@@ -92,18 +79,13 @@ export interface NitipDriverDestination {
   longitude: number | null;
 }
 
-export type DriverDeliveryStatus = Extract<
-  OrderStatus,
-  "driver_assigned" | "picked_up" | "on_delivery" | "delivered"
->;
-
-export type DriverDeliveryAction =
-  | "confirm_pickup"
-  | "start_delivery"
-  | "complete_delivery";
+export type DriverDeliveryStatus = Extract<OrderStatus, "driver_assigned" | "picked_up" | "on_delivery" | "delivered">;
+export type DriverDeliveryAction = "confirm_pickup" | "start_delivery" | "complete_delivery";
 
 export interface DriverDeliveryActionInput {
   action: DriverDeliveryAction;
+  otp?: string;
+  proofUrl?: string | null;
 }
 
 export interface NitipDriverOrder extends Omit<NitipDriverOffer, "status"> {

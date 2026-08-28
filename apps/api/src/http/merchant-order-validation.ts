@@ -1,51 +1,42 @@
-import type {
-  MerchantOrderAction,
-  MerchantOrderActionInput,
-} from "@nitip/domain/commerce";
+import type { MerchantOrderAction, MerchantOrderActionInput } from "@nitip/domain/commerce";
 
 import { ValidationError } from "./validation.js";
 
 function asRecord(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new ValidationError("Request body must be a JSON object");
-  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new ValidationError("Request body must be a JSON object");
   return value as Record<string, unknown>;
 }
 
 function isAction(value: unknown): value is MerchantOrderAction {
-  return (
-    value === "confirm" ||
-    value === "reject" ||
-    value === "start_preparing" ||
-    value === "ready_for_pickup"
-  );
+  return value === "confirm" || value === "reject" || value === "start_preparing" || value === "ready_for_pickup";
 }
 
-export function parseMerchantOrderAction(
-  body: unknown,
-): MerchantOrderActionInput {
+export function parseMerchantOrderAction(body: unknown): MerchantOrderActionInput {
   const record = asRecord(body);
-  if (!isAction(record.action)) {
-    throw new ValidationError("action is not supported");
-  }
+  if (!isAction(record.action)) throw new ValidationError("action is not supported");
 
   let reason: string | null | undefined;
   if (Object.prototype.hasOwnProperty.call(record, "reason")) {
-    if (record.reason === null) {
-      reason = null;
-    } else if (typeof record.reason === "string") {
+    if (record.reason === null) reason = null;
+    else if (typeof record.reason === "string") {
       const trimmed = record.reason.trim();
-      if (trimmed.length > 300) {
-        throw new ValidationError("reason is too long");
-      }
+      if (trimmed.length > 300) throw new ValidationError("reason is too long");
       reason = trimmed || null;
-    } else {
-      throw new ValidationError("reason must be a string or null");
+    } else throw new ValidationError("reason must be a string or null");
+  }
+
+  let preparationMinutes: number | undefined;
+  if (record.action === "confirm") {
+    const raw = record.preparationMinutes ?? 15;
+    if (typeof raw !== "number" || !Number.isInteger(raw) || raw < 5 || raw > 60) {
+      throw new ValidationError("preparationMinutes must be an integer from 5 to 60");
     }
+    preparationMinutes = raw;
   }
 
   return {
     action: record.action,
     ...(reason !== undefined ? { reason } : {}),
+    ...(preparationMinutes !== undefined ? { preparationMinutes } : {}),
   };
 }

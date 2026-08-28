@@ -57,30 +57,10 @@ export interface NitipCheckoutQuote {
   customerTotal: number;
 }
 
-export type StockReservationStatus =
-  | "reserved"
-  | "committed"
-  | "released"
-  | "not_required";
-
+export type StockReservationStatus = "reserved" | "committed" | "released" | "not_required";
 export type PaymentProvider = "development" | "doku";
-
-export type PaymentStatus =
-  | "pending"
-  | "paid"
-  | "failed"
-  | "expired"
-  | "refunded";
-
-export type PaymentMethod =
-  | "simulation"
-  | "qris"
-  | "virtual_account"
-  | "card"
-  | "e_wallet"
-  | "paylater"
-  | "convenience_store"
-  | "unknown";
+export type PaymentStatus = "pending" | "paid" | "failed" | "expired" | "refunded";
+export type PaymentMethod = "simulation" | "qris" | "virtual_account" | "card" | "e_wallet" | "paylater" | "convenience_store" | "unknown";
 
 export interface NitipPaymentSnapshot {
   provider: PaymentProvider | null;
@@ -93,11 +73,7 @@ export interface NitipPaymentSnapshot {
   refundedAt: string | null;
 }
 
-export type MerchantSettlementStatus =
-  | "pending"
-  | "eligible"
-  | "settled"
-  | "reversed";
+export type MerchantSettlementStatus = "pending" | "eligible" | "settled" | "reversed";
 
 export interface NitipMerchantSettlementSnapshot {
   status: MerchantSettlementStatus;
@@ -117,6 +93,14 @@ export interface NitipOrder extends NitipCheckoutQuote {
   payment?: NitipPaymentSnapshot | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface NitipOrderOperations {
+  preparationMinutes: number | null;
+  estimatedReadyAt: string | null;
+  deliveryOtp: string | null;
+  proofUrl: string | null;
+  proofUploadedAt: string | null;
 }
 
 export interface NitipOrderRating {
@@ -140,13 +124,10 @@ export interface NitipMerchantOrder extends NitipOrder {
   settlement?: NitipMerchantSettlementSnapshot | null;
 }
 
-export type MerchantOrderAction =
-  | "confirm"
-  | "reject"
-  | "start_preparing"
-  | "ready_for_pickup";
+export type MerchantOrderAction = "confirm" | "reject" | "start_preparing" | "ready_for_pickup";
 
 export interface MerchantOrderActionInput {
   action: MerchantOrderAction;
   reason?: string | null;
+  preparationMinutes?: number;
 }
