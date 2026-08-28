@@ -186,6 +186,7 @@ export default function HomeScreen() {
   const heroSearchBackground = theme.mode === "dark" ? theme.colors.surfaceRaised : "#FFFFFF";
   const heroSearchText = theme.mode === "dark" ? theme.colors.text : "#111318";
   const heroSearchMuted = theme.mode === "dark" ? theme.colors.textMuted : "#8A8F9D";
+  const pageBackground = theme.mode === "dark" ? theme.colors.background : theme.colors.surface;
   const merchantCardWidth = Math.max(174, Math.min(206, Math.floor((width - 38) / 1.82)));
   const featuredPromotion = promotions[0] ?? null;
   const promotionDestination = featuredPromotion?.outletId
@@ -199,7 +200,7 @@ export default function HomeScreen() {
   ];
 
   return (
-    <View className="flex-1" style={{ backgroundColor: theme.colors.background }}>
+    <View className="flex-1" style={{ backgroundColor: pageBackground }}>
       <ScrollView
         contentContainerStyle={{ paddingBottom: 30 }}
         keyboardShouldPersistTaps="handled"
@@ -473,12 +474,7 @@ export default function HomeScreen() {
                   backgroundColor: theme.colors.surfaceRaised,
                   borderColor: theme.colors.border,
                   borderWidth: 1,
-                  elevation: 2,
                   marginRight: index === categories.length - 1 ? 0 : 9,
-                  shadowColor: theme.colors.shadow,
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: theme.mode === "dark" ? 0.12 : 0.05,
-                  shadowRadius: 7,
                 }}
               >
                 <View
