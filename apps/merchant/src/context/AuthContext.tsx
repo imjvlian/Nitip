@@ -1,3 +1,4 @@
+import { useNitipLanguage } from "@nitip/i18n";
 import {
   createContext,
   type PropsWithChildren,
@@ -6,9 +7,11 @@ import {
   useMemo,
   useState,
 } from "react";
+import { Alert } from "react-native";
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   updateProfile,
@@ -23,6 +26,7 @@ interface AuthContextValue {
   configured: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (displayName: string, email: string, password: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -36,6 +40,7 @@ function requireAuth() {
 }
 
 export function AuthProvider({ children }: PropsWithChildren) {
+  const { language } = useNitipLanguage();
   const [user, setUser] = useState<User | null>(firebaseAuth?.currentUser ?? null);
   const [loading, setLoading] = useState(Boolean(firebaseAuth));
 
@@ -71,11 +76,32 @@ export function AuthProvider({ children }: PropsWithChildren) {
           await updateProfile(credential.user, { displayName: trimmedName });
         }
       },
+      async resetPassword(email) {
+        const normalizedEmail = email.trim();
+        if (!normalizedEmail) throw new Error(language === "id" ? "Email wajib diisi" : "Email is required");
+        await sendPasswordResetEmail(requireAuth(), normalizedEmail);
+      },
       async signOut() {
-        await firebaseSignOut(requireAuth());
+        const auth = requireAuth();
+        await new Promise<void>((resolve, reject) => {
+          Alert.alert(
+            language === "id" ? "Keluar dari akun mitra?" : "Sign out of merchant account?",
+            language === "id"
+              ? "Sesi Nitip Mitra di perangkat ini akan diakhiri."
+              : "Your Nitip Merchant session on this device will be ended.",
+            [
+              { text: language === "id" ? "Batal" : "Cancel", style: "cancel", onPress: resolve },
+              {
+                text: language === "id" ? "Keluar" : "Sign out",
+                style: "destructive",
+                onPress: () => { void firebaseSignOut(auth).then(() => resolve()).catch(reject); },
+              },
+            ],
+          );
+        });
       },
     }),
-    [loading, user],
+    [language, loading, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

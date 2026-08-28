@@ -1,7 +1,7 @@
 import { useNitipLanguage } from "@nitip/i18n";
 import { router } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppHeader } from "../components/AppHeader";
@@ -19,7 +19,9 @@ const COPY = {
     send: "Kirim tautan reset",
     sending: "Mengirim...",
     sent: "Tautan reset sudah dikirim. Periksa inbox dan folder spam.",
+    sentTitle: "Tautan reset dikirim",
     required: "Masukkan email terlebih dahulu.",
+    requiredTitle: "Email wajib diisi",
     error: "Gagal mengirim tautan reset",
     backLogin: "Kembali ke halaman masuk",
   },
@@ -32,7 +34,9 @@ const COPY = {
     send: "Send reset link",
     sending: "Sending...",
     sent: "The reset link has been sent. Check your inbox and spam folder.",
+    sentTitle: "Reset link sent",
     required: "Enter your email first.",
+    requiredTitle: "Email is required",
     error: "Failed to send reset link",
     backLogin: "Back to sign in",
   },
@@ -52,6 +56,7 @@ export default function ForgotPasswordScreen() {
   async function send() {
     if (!email.trim()) {
       setError(copy.required);
+      Alert.alert(copy.requiredTitle, copy.required);
       return;
     }
     if (!configured || sending) return;
@@ -61,8 +66,11 @@ export default function ForgotPasswordScreen() {
     try {
       await resetPassword(email);
       setSent(true);
+      Alert.alert(copy.sentTitle, copy.sent);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : copy.error);
+      const message = nextError instanceof Error ? nextError.message : copy.error;
+      setError(message);
+      Alert.alert(copy.error, message);
     } finally {
       setSending(false);
     }
