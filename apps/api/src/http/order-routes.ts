@@ -1,3 +1,4 @@
+import type { UpsertNitipOrderRatingInput } from "@nitip/domain/commerce";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import {
@@ -13,6 +14,11 @@ import {
   quoteCheckout,
   simulateCustomerPayment,
 } from "../repositories/orders.js";
+import {
+  getCustomerOrderRating,
+  RatingError,
+  upsertCustomerOrderRating,
+} from "../repositories/ratings.js";
 import { parseCheckoutRequest } from "./checkout-validation.js";
 import { ValidationError } from "./validation.js";
 
@@ -31,6 +37,13 @@ function handleOrderError(
   if (error instanceof ValidationError) {
     return reply.code(400).send({
       error: "validation_error",
+      message: error.message,
+    });
+  }
+
+  if (error instanceof RatingError) {
+    return reply.code(error.statusCode).send({
+      error: error.code,
       message: error.message,
     });
   }
@@ -70,6 +83,39 @@ function parseIdempotencyKey(request: FastifyRequest) {
   }
 
   return key;
+}
+
+function parseRatingInput(value: unknown): UpsertNitipOrderRatingInput {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new ValidationError("Rating body must be an object");
+  }
+
+  const body = value as Record<string, unknown>;
+  const score = body.score;
+  if (
+    typeof score !== "number" ||
+    !Number.isInteger(score) ||
+    score < 1 ||
+    score > 5
+  ) {
+    throw new ValidationError("Rating score must be an integer from 1 to 5");
+  }
+
+  const rawComment = body.comment;
+  if (
+    rawComment !== undefined &&
+    rawComment !== null &&
+    typeof rawComment !== "string"
+  ) {
+    throw new ValidationError("Rating comment must be a string");
+  }
+
+  const comment = typeof rawComment === "string" ? rawComment.trim() : null;
+  if (comment && comment.length > 500) {
+    throw new ValidationError("Rating comment must not exceed 500 characters");
+  }
+
+  return { score, comment: comment || null };
 }
 
 export function registerOrderRoutes(app: FastifyInstance) {
@@ -128,6 +174,43 @@ export function registerOrderRoutes(app: FastifyInstance) {
       return handleOrderError(request, reply, error);
     }
   });
+
+  app.get<{ Params: { id: string } }>(
+    "/orders/:id/rating",
+    async (request, reply) => {
+      const identity = await authenticateRequest(request, reply);
+      if (!identity) return;
+
+      try {
+        return {
+          data: await getCustomerOrderRating(identity.uid, request.params.id),
+        };
+      } catch (error) {
+        return handleOrderError(request, reply, error);
+      }
+    },
+  );
+
+  app.put<{ Params: { id: string } }>(
+    "/orders/:id/rating",
+    async (request, reply) => {
+      const identity = await authenticateRequest(request, reply);
+      if (!identity) return;
+
+      try {
+        const input = parseRatingInput(request.body);
+        return {
+          data: await upsertCustomerOrderRating(
+            identity.uid,
+            request.params.id,
+            input,
+          ),
+        };
+      } catch (error) {
+        return handleOrderError(request, reply, error);
+      }
+    },
+  );
 
   app.post<{ Params: { id: string } }>(
     "/orders/:id/simulate-payment",

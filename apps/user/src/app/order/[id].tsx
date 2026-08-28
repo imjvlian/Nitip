@@ -1,16 +1,28 @@
 import { formatRupiah } from "@nitip/domain";
-import type { NitipOrder } from "@nitip/domain/commerce";
+import type { NitipOrder, NitipOrderRating } from "@nitip/domain/commerce";
 import { useNitipLanguage, useNitipTranslation } from "@nitip/i18n";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppHeader } from "../../components/AppHeader";
 import { NitipIcon, type NitipIconName } from "../../components/NitipIcon";
 import { useAuth } from "../../context/AuthContext";
 import { useNitipTheme } from "../../hooks/useNitipTheme";
-import { getOrder, simulateOrderPayment } from "../../lib/api";
+import {
+  getOrder,
+  getOrderRating,
+  simulateOrderPayment,
+  upsertOrderRating,
+} from "../../lib/api";
 
 function reservationDeadline(value: string | null, language: "id" | "en") {
   if (!value) return null;
@@ -25,7 +37,14 @@ function reservationDeadline(value: string | null, language: "id" | "en") {
 function orderProgress(status: NitipOrder["status"]) {
   if (status === "delivered") return 3;
   if (status === "driver_assigned" || status === "picked_up" || status === "on_delivery") return 2;
-  if (status === "paid" || status === "merchant_confirmed" || status === "preparing" || status === "ready_for_pickup") return 1;
+  if (
+    status === "paid" ||
+    status === "merchant_confirmed" ||
+    status === "preparing" ||
+    status === "ready_for_pickup"
+  ) {
+    return 1;
+  }
   return 0;
 }
 
@@ -54,6 +73,38 @@ export default function OrderDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [simulating, setSimulating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rating, setRating] = useState<NitipOrderRating | null>(null);
+  const [ratingScore, setRatingScore] = useState(0);
+  const [ratingComment, setRatingComment] = useState("");
+  const [ratingLoading, setRatingLoading] = useState(false);
+  const [ratingSaving, setRatingSaving] = useState(false);
+  const [ratingError, setRatingError] = useState<string | null>(null);
+  const [ratingSaved, setRatingSaved] = useState(false);
+
+  const ratingCopy =
+    language === "en"
+      ? {
+          title: "Rate this order",
+          description: "Only completed deliveries can be rated. Your score contributes to the outlet's real public rating.",
+          choose: "Choose 1–5 stars before submitting.",
+          commentPlaceholder: "Optional: tell us about the food or merchant",
+          submit: "Submit rating",
+          update: "Update rating",
+          saved: "Rating saved. Thank you.",
+          loadError: "Unable to load your rating.",
+          saveError: "Unable to save your rating.",
+        }
+      : {
+          title: "Nilai pesanan ini",
+          description: "Hanya pesanan yang selesai diantar yang bisa dinilai. Nilaimu masuk ke rating publik outlet secara nyata.",
+          choose: "Pilih 1–5 bintang sebelum mengirim.",
+          commentPlaceholder: "Opsional: ceritakan pengalaman makanan atau merchant",
+          submit: "Kirim rating",
+          update: "Perbarui rating",
+          saved: "Rating tersimpan. Terima kasih.",
+          loadError: "Rating kamu belum bisa dimuat.",
+          saveError: "Rating belum bisa disimpan.",
+        };
 
   useEffect(() => {
     if (!user || !id) return;
@@ -65,7 +116,9 @@ export default function OrderDetailScreen() {
         if (active) setOrder(next);
       })
       .catch((nextError: unknown) => {
-        if (active) setError(nextError instanceof Error ? nextError.message : t("orderDetail.loadError"));
+        if (active) {
+          setError(nextError instanceof Error ? nextError.message : t("orderDetail.loadError"));
+        }
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -74,6 +127,42 @@ export default function OrderDetailScreen() {
       active = false;
     };
   }, [id, t, user]);
+
+  useEffect(() => {
+    if (!user || !order || order.status !== "delivered") {
+      setRating(null);
+      setRatingScore(0);
+      setRatingComment("");
+      setRatingLoading(false);
+      setRatingError(null);
+      setRatingSaved(false);
+      return;
+    }
+
+    let active = true;
+    setRatingLoading(true);
+    setRatingError(null);
+    getOrderRating(user, order.id)
+      .then((nextRating) => {
+        if (!active) return;
+        setRating(nextRating);
+        setRatingScore(nextRating?.score ?? 0);
+        setRatingComment(nextRating?.comment ?? "");
+      })
+      .catch((nextError: unknown) => {
+        if (!active) return;
+        setRatingError(
+          nextError instanceof Error ? nextError.message : ratingCopy.loadError,
+        );
+      })
+      .finally(() => {
+        if (active) setRatingLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [order, ratingCopy.loadError, user]);
 
   if (!user) return <Redirect href="/login" />;
 
@@ -87,6 +176,34 @@ export default function OrderDetailScreen() {
       setError(nextError instanceof Error ? nextError.message : t("orderDetail.simulateError"));
     } finally {
       setSimulating(false);
+    }
+  }
+
+  async function submitRating() {
+    if (!order || order.status !== "delivered") return;
+    if (ratingScore < 1 || ratingScore > 5) {
+      setRatingError(ratingCopy.choose);
+      return;
+    }
+
+    setRatingSaving(true);
+    setRatingError(null);
+    setRatingSaved(false);
+    try {
+      const nextRating = await upsertOrderRating(user, order.id, {
+        score: ratingScore,
+        comment: ratingComment.trim() || null,
+      });
+      setRating(nextRating);
+      setRatingScore(nextRating.score);
+      setRatingComment(nextRating.comment ?? "");
+      setRatingSaved(true);
+    } catch (nextError) {
+      setRatingError(
+        nextError instanceof Error ? nextError.message : ratingCopy.saveError,
+      );
+    } finally {
+      setRatingSaving(false);
     }
   }
 
@@ -113,6 +230,7 @@ export default function OrderDetailScreen() {
         paddingBottom: Math.max(insets.bottom + 28, 40),
         backgroundColor: theme.colors.background,
       }}
+      keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
       <AppHeader title={t("orderDetail.title")} onBack={() => router.back()} />
@@ -120,12 +238,18 @@ export default function OrderDetailScreen() {
       {loading ? (
         <View className="mt-6 items-center rounded-[22px] p-7" style={{ backgroundColor: theme.colors.surface }}>
           <ActivityIndicator color={theme.colors.primary} />
-          <Text className="mt-3 text-[10px]" style={{ color: theme.colors.textMuted }}>{t("orderDetail.loading")}</Text>
+          <Text className="mt-3 text-[10px]" style={{ color: theme.colors.textMuted }}>
+            {t("orderDetail.loading")}
+          </Text>
         </View>
       ) : error && !order ? (
         <View className="mt-6 rounded-[22px] p-5" style={{ backgroundColor: theme.colors.dangerSurface }}>
-          <Text className="text-sm font-black" style={{ color: theme.colors.danger }}>{t("orderDetail.notFound")}</Text>
-          <Text className="mt-1 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>{error}</Text>
+          <Text className="text-sm font-black" style={{ color: theme.colors.danger }}>
+            {t("orderDetail.notFound")}
+          </Text>
+          <Text className="mt-1 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
+            {error}
+          </Text>
         </View>
       ) : order ? (
         <>
@@ -138,8 +262,12 @@ export default function OrderDetailScreen() {
             <Text className="mt-4 text-[26px] font-black tracking-tighter" style={{ color: theme.colors.text }}>
               {order.businessName}
             </Text>
-            <Text className="mt-1 text-[11px] font-black" style={{ color: theme.colors.primary }}>{order.orderCode}</Text>
-            <Text className="mt-1 text-[10px]" style={{ color: theme.colors.textMuted }}>{order.outletName}</Text>
+            <Text className="mt-1 text-[11px] font-black" style={{ color: theme.colors.primary }}>
+              {order.orderCode}
+            </Text>
+            <Text className="mt-1 text-[10px]" style={{ color: theme.colors.textMuted }}>
+              {order.outletName}
+            </Text>
           </View>
 
           {order.status !== "cancelled" && order.status !== "refunded" ? (
@@ -151,13 +279,33 @@ export default function OrderDetailScreen() {
                   return (
                     <View className="flex-1 items-center" key={step.label}>
                       <View className="w-full flex-row items-center">
-                        {index > 0 ? <View className="h-0.5 flex-1" style={{ backgroundColor: index <= progress ? theme.colors.primary : theme.colors.border }} /> : <View className="flex-1" />}
-                        <View className="h-8 w-8 items-center justify-center rounded-full" style={{ backgroundColor: reached ? theme.colors.surfaceRaised : theme.colors.background }}>
+                        {index > 0 ? (
+                          <View
+                            className="h-0.5 flex-1"
+                            style={{ backgroundColor: index <= progress ? theme.colors.primary : theme.colors.border }}
+                          />
+                        ) : (
+                          <View className="flex-1" />
+                        )}
+                        <View
+                          className="h-8 w-8 items-center justify-center rounded-full"
+                          style={{ backgroundColor: reached ? theme.colors.surfaceRaised : theme.colors.background }}
+                        >
                           <NitipIcon color={stepColor} name={step.icon} size={15} />
                         </View>
-                        {index < progressSteps.length - 1 ? <View className="h-0.5 flex-1" style={{ backgroundColor: index < progress ? theme.colors.primary : theme.colors.border }} /> : <View className="flex-1" />}
+                        {index < progressSteps.length - 1 ? (
+                          <View
+                            className="h-0.5 flex-1"
+                            style={{ backgroundColor: index < progress ? theme.colors.primary : theme.colors.border }}
+                          />
+                        ) : (
+                          <View className="flex-1" />
+                        )}
                       </View>
-                      <Text className="mt-2 text-center text-[8px] font-extrabold" style={{ color: reached ? theme.colors.text : theme.colors.textMuted }}>
+                      <Text
+                        className="mt-2 text-center text-[8px] font-extrabold"
+                        style={{ color: reached ? theme.colors.text : theme.colors.textMuted }}
+                      >
                         {step.label}
                       </Text>
                     </View>
@@ -169,67 +317,267 @@ export default function OrderDetailScreen() {
 
           {order.status === "pending_payment" ? (
             <View className="mt-4 rounded-[22px] p-5" style={{ backgroundColor: theme.colors.warningSurface }}>
-              <Text className="text-xs font-black" style={{ color: theme.colors.warning }}>{t("orderDetail.paymentGatewayDev")}</Text>
-              <Text className="mt-1 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>{t("orderDetail.paymentGatewayDevDescription")}</Text>
+              <Text className="text-xs font-black" style={{ color: theme.colors.warning }}>
+                {t("orderDetail.paymentGatewayDev")}
+              </Text>
+              <Text className="mt-1 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
+                {t("orderDetail.paymentGatewayDevDescription")}
+              </Text>
               {order.stockReservationStatus === "reserved" ? (
                 <View className="mt-4 rounded-[16px] p-3" style={{ backgroundColor: theme.colors.surface }}>
-                  <Text className="text-[8px] font-black tracking-wide" style={{ color: theme.colors.primary }}>{t("orderDetail.stockReserved")}</Text>
+                  <Text className="text-[8px] font-black tracking-wide" style={{ color: theme.colors.primary }}>
+                    {t("orderDetail.stockReserved")}
+                  </Text>
                   <Text className="mt-1 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
-                    {deadline ? t("orderDetail.stockReservedDeadline", { deadline }) : t("orderDetail.stockReservedGeneric")}
+                    {deadline
+                      ? t("orderDetail.stockReservedDeadline", { deadline })
+                      : t("orderDetail.stockReservedGeneric")}
                   </Text>
                 </View>
               ) : null}
-              <Pressable className="mt-4 min-h-[48px] flex-row items-center justify-center gap-2 rounded-[16px]" disabled={simulating} onPress={() => void simulatePayment()} style={{ backgroundColor: theme.colors.primary, opacity: simulating ? 0.55 : 1 }}>
-                {simulating ? <ActivityIndicator color="#FFFFFF" /> : <><NitipIcon color="#FFFFFF" name="check" size={16} /><Text className="text-[11px] font-black text-white">{t("orderDetail.simulatePayment")}</Text></>}
+              <Pressable
+                className="mt-4 min-h-[48px] flex-row items-center justify-center gap-2 rounded-[16px]"
+                disabled={simulating}
+                onPress={() => void simulatePayment()}
+                style={{ backgroundColor: theme.colors.primary, opacity: simulating ? 0.55 : 1 }}
+              >
+                {simulating ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <>
+                    <NitipIcon color="#FFFFFF" name="check" size={16} />
+                    <Text className="text-[11px] font-black text-white">
+                      {t("orderDetail.simulatePayment")}
+                    </Text>
+                  </>
+                )}
               </Pressable>
             </View>
           ) : null}
 
           {order.status === "paid" ? (
             <View className="mt-4 rounded-[22px] p-5" style={{ backgroundColor: theme.colors.successSurface }}>
-              <Text className="text-xs font-black" style={{ color: theme.colors.success }}>{t("orderDetail.paymentReceived")}</Text>
-              <Text className="mt-1 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>{t("orderDetail.paymentReceivedDescription")}</Text>
+              <Text className="text-xs font-black" style={{ color: theme.colors.success }}>
+                {t("orderDetail.paymentReceived")}
+              </Text>
+              <Text className="mt-1 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
+                {t("orderDetail.paymentReceivedDescription")}
+              </Text>
             </View>
           ) : null}
 
           {order.status === "cancelled" ? (
             <View className="mt-4 rounded-[22px] p-5" style={{ backgroundColor: theme.colors.dangerSurface }}>
-              <Text className="text-xs font-black" style={{ color: theme.colors.danger }}>{t("orderDetail.cancelled")}</Text>
-              <Text className="mt-1 text-[10px] leading-4" style={{ color: theme.colors.danger }}>{order.cancellationReason ?? t("orderDetail.cancelledFallback")}</Text>
+              <Text className="text-xs font-black" style={{ color: theme.colors.danger }}>
+                {t("orderDetail.cancelled")}
+              </Text>
+              <Text className="mt-1 text-[10px] leading-4" style={{ color: theme.colors.danger }}>
+                {order.cancellationReason ?? t("orderDetail.cancelledFallback")}
+              </Text>
             </View>
           ) : null}
 
-          <Text className="mt-7 text-sm font-black" style={{ color: theme.colors.text }}>{t("orderDetail.items")}</Text>
+          {order.status === "delivered" ? (
+            <View
+              className="mt-5 rounded-[24px] p-5"
+              style={{
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border,
+                borderWidth: 1,
+              }}
+            >
+              <View className="flex-row items-start justify-between gap-4">
+                <View className="flex-1">
+                  <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
+                    {ratingCopy.title}
+                  </Text>
+                  <Text className="mt-1 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
+                    {ratingCopy.description}
+                  </Text>
+                </View>
+                {rating ? (
+                  <View className="rounded-full px-3 py-1.5" style={{ backgroundColor: theme.colors.successSurface }}>
+                    <Text className="text-[9px] font-black" style={{ color: theme.colors.success }}>
+                      {rating.score}/5
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+
+              {ratingLoading ? (
+                <View className="mt-5 items-center py-3">
+                  <ActivityIndicator color={theme.colors.primary} />
+                </View>
+              ) : (
+                <>
+                  <View className="mt-5 flex-row items-center justify-between">
+                    {[1, 2, 3, 4, 5].map((score) => {
+                      const selected = score <= ratingScore;
+                      return (
+                        <Pressable
+                          accessibilityLabel={`${score} star`}
+                          accessibilityRole="button"
+                          key={score}
+                          onPress={() => {
+                            setRatingScore(score);
+                            setRatingSaved(false);
+                            setRatingError(null);
+                          }}
+                          style={({ pressed }) => ({
+                            alignItems: "center",
+                            backgroundColor: selected ? "#FFF3C4" : theme.colors.surfaceRaised,
+                            borderColor: selected ? "#F4B400" : theme.colors.border,
+                            borderRadius: 14,
+                            borderWidth: 1,
+                            height: 48,
+                            justifyContent: "center",
+                            opacity: pressed ? 0.72 : 1,
+                            width: 48,
+                          })}
+                        >
+                          <Text
+                            className="text-[25px] leading-[28px]"
+                            style={{ color: selected ? "#F4B400" : theme.colors.textMuted }}
+                          >
+                            ★
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  <TextInput
+                    className="mt-4 min-h-[88px] rounded-[18px] px-4 py-3 text-[11px] leading-5"
+                    maxLength={500}
+                    multiline
+                    onChangeText={(value) => {
+                      setRatingComment(value);
+                      setRatingSaved(false);
+                    }}
+                    placeholder={ratingCopy.commentPlaceholder}
+                    placeholderTextColor={theme.colors.textMuted}
+                    style={{
+                      backgroundColor: theme.colors.surfaceRaised,
+                      borderColor: theme.colors.border,
+                      borderWidth: 1,
+                      color: theme.colors.text,
+                      textAlignVertical: "top",
+                    }}
+                    value={ratingComment}
+                  />
+
+                  <Pressable
+                    className="mt-4 min-h-[48px] items-center justify-center rounded-[16px]"
+                    disabled={ratingSaving}
+                    onPress={() => void submitRating()}
+                    style={{
+                      backgroundColor: theme.colors.primary,
+                      opacity: ratingSaving ? 0.55 : 1,
+                    }}
+                  >
+                    {ratingSaving ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <Text className="text-[11px] font-black text-white">
+                        {rating ? ratingCopy.update : ratingCopy.submit}
+                      </Text>
+                    )}
+                  </Pressable>
+                </>
+              )}
+
+              {ratingSaved ? (
+                <Text className="mt-3 text-[10px] font-extrabold" style={{ color: theme.colors.success }}>
+                  {ratingCopy.saved}
+                </Text>
+              ) : null}
+              {ratingError ? (
+                <Text className="mt-3 text-[10px] leading-4" style={{ color: theme.colors.danger }}>
+                  {ratingError}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
+
+          <Text className="mt-7 text-sm font-black" style={{ color: theme.colors.text }}>
+            {t("orderDetail.items")}
+          </Text>
           <View className="mt-3 rounded-[22px] p-4" style={{ backgroundColor: theme.colors.surface }}>
             {order.items.map((item) => (
               <View className="flex-row justify-between gap-4 py-1.5" key={item.productId}>
-                <Text className="flex-1 text-[10px]" style={{ color: theme.colors.textMuted }}>{item.quantity}× {item.name}</Text>
-                <Text className="text-[10px] font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(item.lineTotal)}</Text>
+                <Text className="flex-1 text-[10px]" style={{ color: theme.colors.textMuted }}>
+                  {item.quantity}× {item.name}
+                </Text>
+                <Text className="text-[10px] font-extrabold" style={{ color: theme.colors.text }}>
+                  {formatRupiah(item.lineTotal)}
+                </Text>
               </View>
             ))}
           </View>
 
-          <Text className="mt-7 text-sm font-black" style={{ color: theme.colors.text }}>{t("orderDetail.deliverTo")}</Text>
+          <Text className="mt-7 text-sm font-black" style={{ color: theme.colors.text }}>
+            {t("orderDetail.deliverTo")}
+          </Text>
           <View className="mt-3 rounded-[22px] p-4" style={{ backgroundColor: theme.colors.surface }}>
             <View className="flex-row items-start gap-3">
               <View className="h-9 w-9 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surfaceRaised }}>
                 <NitipIcon color={theme.colors.primary} name="location" size={16} />
               </View>
               <View className="flex-1">
-                <Text className="text-xs font-black" style={{ color: theme.colors.text }}>{order.address.recipientName}</Text>
-                <Text className="mt-0.5 text-[9px] font-extrabold" style={{ color: theme.colors.primary }}>{order.address.phoneNumber}</Text>
-                <Text className="mt-2 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>{order.address.addressLine}</Text>
-                {order.address.notes ? <Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{t("orderDetail.notesPrefix", { notes: order.address.notes })}</Text> : null}
+                <Text className="text-xs font-black" style={{ color: theme.colors.text }}>
+                  {order.address.recipientName}
+                </Text>
+                <Text className="mt-0.5 text-[9px] font-extrabold" style={{ color: theme.colors.primary }}>
+                  {order.address.phoneNumber}
+                </Text>
+                <Text className="mt-2 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
+                  {order.address.addressLine}
+                </Text>
+                {order.address.notes ? (
+                  <Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>
+                    {t("orderDetail.notesPrefix", { notes: order.address.notes })}
+                  </Text>
+                ) : null}
               </View>
             </View>
           </View>
 
-          <Text className="mt-7 text-sm font-black" style={{ color: theme.colors.text }}>{t("orderDetail.payment")}</Text>
+          <Text className="mt-7 text-sm font-black" style={{ color: theme.colors.text }}>
+            {t("orderDetail.payment")}
+          </Text>
           <View className="mt-3 rounded-[22px] p-4" style={{ backgroundColor: theme.colors.surface }}>
-            <View className="flex-row justify-between py-1.5"><Text className="text-[10px]" style={{ color: theme.colors.textMuted }}>{t("common.subtotal")}</Text><Text className="text-[10px] font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(order.subtotal)}</Text></View>
-            <View className="flex-row justify-between py-1.5"><Text className="text-[10px]" style={{ color: theme.colors.textMuted }}>{t("common.deliveryFee")}</Text><Text className="text-[10px] font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(order.deliveryFare)}</Text></View>
-            <View className="flex-row justify-between py-1.5"><Text className="text-[10px]" style={{ color: theme.colors.textMuted }}>{t("common.serviceFee")}</Text><Text className="text-[10px] font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(order.serviceFee)}</Text></View>
-            <View className="mt-3 flex-row justify-between border-t pt-4" style={{ borderTopColor: theme.colors.border }}><Text className="text-sm font-black" style={{ color: theme.colors.text }}>{t("common.total")}</Text><Text className="text-base font-black" style={{ color: theme.colors.primary }}>{formatRupiah(order.customerTotal)}</Text></View>
+            <View className="flex-row justify-between py-1.5">
+              <Text className="text-[10px]" style={{ color: theme.colors.textMuted }}>
+                {t("common.subtotal")}
+              </Text>
+              <Text className="text-[10px] font-extrabold" style={{ color: theme.colors.text }}>
+                {formatRupiah(order.subtotal)}
+              </Text>
+            </View>
+            <View className="flex-row justify-between py-1.5">
+              <Text className="text-[10px]" style={{ color: theme.colors.textMuted }}>
+                {t("common.deliveryFee")}
+              </Text>
+              <Text className="text-[10px] font-extrabold" style={{ color: theme.colors.text }}>
+                {formatRupiah(order.deliveryFare)}
+              </Text>
+            </View>
+            <View className="flex-row justify-between py-1.5">
+              <Text className="text-[10px]" style={{ color: theme.colors.textMuted }}>
+                {t("common.serviceFee")}
+              </Text>
+              <Text className="text-[10px] font-extrabold" style={{ color: theme.colors.text }}>
+                {formatRupiah(order.serviceFee)}
+              </Text>
+            </View>
+            <View className="mt-3 flex-row justify-between border-t pt-4" style={{ borderTopColor: theme.colors.border }}>
+              <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
+                {t("common.total")}
+              </Text>
+              <Text className="text-base font-black" style={{ color: theme.colors.primary }}>
+                {formatRupiah(order.customerTotal)}
+              </Text>
+            </View>
           </View>
 
           {receiptAvailable(order.status) ? (
@@ -242,16 +590,30 @@ export default function OrderDetailScreen() {
                 <NitipIcon color={theme.colors.primary} name="receipt" size={18} />
               </View>
               <View className="ml-3 flex-1">
-                <Text className="text-[11px] font-black" style={{ color: theme.colors.text }}>{receiptLabel}</Text>
-                <Text className="mt-0.5 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{receiptDescription}</Text>
+                <Text className="text-[11px] font-black" style={{ color: theme.colors.text }}>
+                  {receiptLabel}
+                </Text>
+                <Text className="mt-0.5 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>
+                  {receiptDescription}
+                </Text>
               </View>
               <NitipIcon color={theme.colors.textMuted} name="next" size={16} />
             </Pressable>
           ) : null}
 
-          {error ? <View className="mt-4 rounded-[16px] p-4" style={{ backgroundColor: theme.colors.dangerSurface }}><Text className="text-[10px] leading-4" style={{ color: theme.colors.danger }}>{error}</Text></View> : null}
+          {error ? (
+            <View className="mt-4 rounded-[16px] p-4" style={{ backgroundColor: theme.colors.dangerSurface }}>
+              <Text className="text-[10px] leading-4" style={{ color: theme.colors.danger }}>
+                {error}
+              </Text>
+            </View>
+          ) : null}
 
-          <Pressable className="mt-6 min-h-[50px] flex-row items-center justify-center gap-2 rounded-[16px]" onPress={() => router.replace("/orders")} style={{ backgroundColor: theme.colors.primary }}>
+          <Pressable
+            className="mt-6 min-h-[50px] flex-row items-center justify-center gap-2 rounded-[16px]"
+            onPress={() => router.replace("/orders")}
+            style={{ backgroundColor: theme.colors.primary }}
+          >
             <NitipIcon color="#FFFFFF" name="orders" size={16} />
             <Text className="text-xs font-black text-white">{t("orderDetail.backOrders")}</Text>
           </Pressable>

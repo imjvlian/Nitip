@@ -16,6 +16,8 @@ import type {
   NitipCheckoutQuote,
   NitipCheckoutRequest,
   NitipOrder,
+  NitipOrderRating,
+  UpsertNitipOrderRatingInput,
 } from "@nitip/domain/commerce";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { File, UploadType } from "expo-file-system";
@@ -305,6 +307,21 @@ export function getOrder(user: User | null, id: string) {
 
 export function listOrders(user: User | null) {
   return apiRequest<NitipOrder[]>(user, "/me/orders");
+}
+
+export function getOrderRating(user: User | null, id: string) {
+  return apiRequest<NitipOrderRating | null>(user, `/orders/${id}/rating`);
+}
+
+export function upsertOrderRating(
+  user: User | null,
+  id: string,
+  input: UpsertNitipOrderRatingInput,
+) {
+  return apiRequest<NitipOrderRating>(user, `/orders/${id}/rating`, {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
 }
 
 export function simulateOrderPayment(user: User | null, id: string) {

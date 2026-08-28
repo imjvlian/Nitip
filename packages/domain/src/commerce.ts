@@ -111,6 +111,21 @@ export interface NitipOrder extends NitipCheckoutQuote {
   updatedAt: string;
 }
 
+export interface NitipOrderRating {
+  id: string;
+  orderId: string;
+  outletId: string;
+  score: number;
+  comment: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpsertNitipOrderRatingInput {
+  score: number;
+  comment?: string | null;
+}
+
 export interface NitipMerchantOrder extends NitipOrder {
   merchantCommission: number;
   merchantNet: number;

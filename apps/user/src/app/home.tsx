@@ -57,6 +57,7 @@ const HOME_COPY = {
     merchantSubtitle: "Pilihan yang sedang tersedia untuk dipesan.",
     openOnly: "Buka saja",
     openOnlyActive: "Hanya yang buka",
+    unrated: "Belum ada rating",
   },
   en: {
     deliveryLocation: "Delivery location",
@@ -78,6 +79,7 @@ const HOME_COPY = {
     merchantSubtitle: "Places currently available to take your order.",
     openOnly: "Open only",
     openOnlyActive: "Showing open",
+    unrated: "No ratings yet",
   },
 } as const;
 
@@ -159,7 +161,6 @@ export default function HomeScreen() {
     if (!user || !apiConfigured) return;
 
     let active = true;
-
     listAddresses(user)
       .then((items) => {
         if (active) setAddresses(items);
@@ -208,16 +209,10 @@ export default function HomeScreen() {
     let active = true;
     setMenuLoading(true);
 
-    Promise.all(
-      catalog.map((outlet) =>
-        getCatalogOutlet(outlet.id).catch(() => null),
-      ),
-    )
+    Promise.all(catalog.map((outlet) => getCatalogOutlet(outlet.id).catch(() => null)))
       .then((items) => {
         if (!active) return;
-        setCatalogDetails(
-          items.filter((item): item is NitipCatalogOutlet => item !== null),
-        );
+        setCatalogDetails(items.filter((item): item is NitipCatalogOutlet => item !== null));
       })
       .finally(() => {
         if (active) setMenuLoading(false);
@@ -232,7 +227,6 @@ export default function HomeScreen() {
     if (!apiConfigured) return;
 
     let active = true;
-
     listCatalogPromotions()
       .then((items) => {
         if (active) setPromotions(items);
@@ -313,9 +307,10 @@ export default function HomeScreen() {
       if (openOnly && !outlet.acceptingOrders) return false;
 
       const detail = detailsByOutlet.get(outlet.id);
-      const outletProducts = detail?.categories.flatMap((category) =>
-        category.products.map((product) => ({ category, product })),
-      ) ?? [];
+      const outletProducts =
+        detail?.categories.flatMap((category) =>
+          category.products.map((product) => ({ category, product })),
+        ) ?? [];
 
       if (
         selectedCategory !== ALL_CATEGORY &&
@@ -362,7 +357,10 @@ export default function HomeScreen() {
   const heroSearchMuted = theme.mode === "dark" ? theme.colors.textMuted : "#8A8F9D";
   const pageBackground = theme.mode === "dark" ? theme.colors.background : "#F2F3F5";
   const merchantCardWidth = Math.max(194, Math.min(220, Math.floor((width - 44) / 1.65)));
-  const productCardWidth = Math.max(176, Math.min(194, Math.floor((width - 48) / 1.8)));
+  const productCardWidth = Math.max(182, Math.min(202, Math.floor((width - 46) / 1.72)));
+  const activeFilterBackground = theme.mode === "dark" ? "#F7F7F8" : "#111318";
+  const activeFilterText = theme.mode === "dark" ? "#111318" : "#FFFFFF";
+  const productCardBorder = theme.mode === "dark" ? theme.colors.border : "#D9DEE7";
 
   const featuredPromotion = promotions[0] ?? null;
   const promotionDestination = featuredPromotion?.outletId
@@ -505,6 +503,8 @@ export default function HomeScreen() {
               onPress={() => setOpenOnly((current) => !current)}
               style={({ pressed }) => ({
                 backgroundColor: openOnly ? theme.colors.primary : theme.colors.surfaceAccent,
+                borderColor: openOnly ? "rgba(255,255,255,0.65)" : "transparent",
+                borderWidth: openOnly ? 1 : 0,
                 opacity: pressed ? 0.76 : 1,
               })}
             >
@@ -659,23 +659,28 @@ export default function HomeScreen() {
                 <Pressable
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
-                  className="min-h-[52px] flex-row items-center rounded-[18px] px-4"
+                  className="min-h-[54px] flex-row items-center rounded-[18px] px-4"
                   key={category.key}
                   onPress={() => setSelectedCategory(category.key)}
                   style={({ pressed }) => ({
-                    backgroundColor: selected ? theme.colors.primary : theme.colors.surfaceRaised,
-                    borderColor: selected ? theme.colors.primary : theme.colors.border,
+                    backgroundColor: selected ? activeFilterBackground : theme.colors.surfaceRaised,
+                    borderColor: selected ? activeFilterBackground : theme.colors.border,
                     borderWidth: 1,
+                    elevation: selected ? 5 : 1,
                     marginRight: index === categoryFilters.length - 1 ? 0 : 10,
-                    minWidth: 112,
+                    minWidth: 116,
                     opacity: pressed ? 0.72 : 1,
+                    shadowColor: theme.colors.shadow,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowOpacity: selected ? (theme.mode === "dark" ? 0.2 : 0.16) : 0.03,
+                    shadowRadius: selected ? 8 : 3,
                   })}
                 >
                   <View
                     className="h-8 w-8 items-center justify-center rounded-[11px]"
                     style={{
                       backgroundColor: selected
-                        ? "rgba(255,255,255,0.16)"
+                        ? theme.colors.primary
                         : theme.colors.surfaceAccent,
                     }}
                   >
@@ -688,7 +693,7 @@ export default function HomeScreen() {
                   <Text
                     className="ml-2.5 text-[12px] font-black"
                     numberOfLines={1}
-                    style={{ color: selected ? "#FFFFFF" : theme.colors.text }}
+                    style={{ color: selected ? activeFilterText : theme.colors.text }}
                   >
                     {category.label}
                   </Text>
@@ -734,7 +739,7 @@ export default function HomeScreen() {
             ) : (
               <ScrollView
                 contentContainerStyle={{
-                  paddingBottom: 12,
+                  paddingBottom: 16,
                   paddingHorizontal: 16,
                   paddingRight: 26,
                   paddingTop: 12,
@@ -742,76 +747,118 @@ export default function HomeScreen() {
                 horizontal
                 showsHorizontalScrollIndicator={false}
               >
-                {visibleProducts.slice(0, 12).map((item, index) => (
-                  <Pressable
-                    accessibilityRole="button"
-                    key={`${item.outlet.id}-${item.product.id}`}
-                    onPress={() => router.push(`/outlet/${item.outlet.id}`)}
-                    style={({ pressed }) => ({
-                      backgroundColor: theme.colors.surfaceRaised,
-                      borderRadius: 22,
-                      elevation: 4,
-                      marginRight: index === Math.min(visibleProducts.length, 12) - 1 ? 0 : 12,
-                      opacity: pressed ? 0.86 : item.product.isAvailable ? 1 : 0.62,
-                      overflow: "hidden",
-                      shadowColor: theme.colors.shadow,
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: theme.mode === "dark" ? 0.2 : 0.08,
-                      shadowRadius: 10,
-                      width: productCardWidth,
-                    })}
-                  >
-                    <View
-                      className="h-[116px] w-full overflow-hidden"
-                      style={{ backgroundColor: theme.colors.surfaceAccent }}
+                {visibleProducts.slice(0, 12).map((item, index) => {
+                  const hasRating =
+                    item.outlet.ratingCount > 0 && item.outlet.ratingAverage != null;
+
+                  return (
+                    <Pressable
+                      accessibilityRole="button"
+                      key={`${item.outlet.id}-${item.product.id}`}
+                      onPress={() => router.push(`/outlet/${item.outlet.id}`)}
+                      style={({ pressed }) => ({
+                        backgroundColor: theme.colors.surfaceRaised,
+                        borderColor: productCardBorder,
+                        borderRadius: 22,
+                        borderWidth: 1,
+                        elevation: 8,
+                        marginRight: index === Math.min(visibleProducts.length, 12) - 1 ? 0 : 12,
+                        opacity: pressed ? 0.86 : item.product.isAvailable ? 1 : 0.62,
+                        padding: 8,
+                        shadowColor: theme.colors.shadow,
+                        shadowOffset: { width: 0, height: 5 },
+                        shadowOpacity: theme.mode === "dark" ? 0.28 : 0.15,
+                        shadowRadius: 12,
+                        width: productCardWidth,
+                      })}
                     >
-                      {item.product.imageUrl ? (
-                        <Image
-                          className="h-full w-full"
-                          resizeMode="cover"
-                          source={{ uri: item.product.imageUrl }}
-                        />
-                      ) : (
-                        <View className="h-full w-full items-center justify-center">
+                      <View
+                        className="h-[118px] w-full overflow-hidden rounded-[16px]"
+                        style={{ backgroundColor: theme.colors.surfaceAccent }}
+                      >
+                        {item.product.imageUrl ? (
+                          <Image
+                            className="h-full w-full"
+                            resizeMode="cover"
+                            source={{ uri: item.product.imageUrl }}
+                          />
+                        ) : (
+                          <View className="h-full w-full items-center justify-center">
+                            <View
+                              className="h-14 w-14 items-center justify-center rounded-full"
+                              style={{ backgroundColor: theme.colors.surfaceRaised }}
+                            >
+                              <NitipIcon color={theme.colors.primary} name="food" size={23} />
+                            </View>
+                          </View>
+                        )}
+
+                        {hasRating ? (
                           <View
-                            className="h-14 w-14 items-center justify-center rounded-full"
-                            style={{ backgroundColor: theme.colors.surfaceRaised }}
+                            className="absolute left-2.5 top-2.5 flex-row items-center rounded-full px-2.5 py-1.5"
+                            style={{ backgroundColor: "rgba(17,19,24,0.82)" }}
                           >
-                            <NitipIcon color={theme.colors.primary} name="food" size={23} />
+                            <Text className="mr-1 text-[10px]" style={{ color: "#F4B400" }}>
+                              ★
+                            </Text>
+                            <Text className="text-[9px] font-black text-white">
+                              {item.outlet.ratingAverage?.toFixed(1)}
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
+
+                      <View className="px-1.5 pb-1.5 pt-3">
+                        <Text
+                          className="text-[13px] font-black leading-[17px]"
+                          numberOfLines={2}
+                          style={{ color: theme.colors.text }}
+                        >
+                          {item.product.name}
+                        </Text>
+                        <Text
+                          className="mt-1 text-[9px]"
+                          numberOfLines={1}
+                          style={{ color: theme.colors.textMuted }}
+                        >
+                          {item.outlet.businessName} · {item.categoryName}
+                        </Text>
+
+                        <View className="mt-2 flex-row items-center">
+                          <Text className="mr-1.5 text-[11px]" style={{ color: "#F4B400" }}>
+                            ★
+                          </Text>
+                          {hasRating ? (
+                            <>
+                              <Text className="text-[9px] font-black" style={{ color: theme.colors.text }}>
+                                {item.outlet.ratingAverage?.toFixed(1)}
+                              </Text>
+                              <Text className="ml-1 text-[8px]" style={{ color: theme.colors.textMuted }}>
+                                ({item.outlet.ratingCount})
+                              </Text>
+                            </>
+                          ) : (
+                            <Text className="text-[8px] font-bold" style={{ color: theme.colors.textMuted }}>
+                              {copy.unrated}
+                            </Text>
+                          )}
+                        </View>
+
+                        <View className="mt-3 flex-row items-center justify-between gap-2">
+                          <Text className="text-[11px] font-black" style={{ color: theme.colors.primary }}>
+                            {formatRupiah(item.product.price)}
+                          </Text>
+                          <View
+                            className="h-7 w-7 items-center justify-center rounded-full"
+                            style={{ backgroundColor: theme.colors.surface }}
+                          >
+                            <NitipIcon color={theme.colors.textMuted} name="next" size={10} />
                           </View>
                         </View>
-                      )}
-                    </View>
-
-                    <View className="px-3.5 pb-3.5 pt-3">
-                      <Text
-                        className="text-[12px] font-black leading-[16px]"
-                        numberOfLines={2}
-                        style={{ color: theme.colors.text }}
-                      >
-                        {item.product.name}
-                      </Text>
-                      <Text
-                        className="mt-1 text-[9px]"
-                        numberOfLines={1}
-                        style={{ color: theme.colors.textMuted }}
-                      >
-                        {item.outlet.businessName} · {item.categoryName}
-                      </Text>
-                      <View className="mt-2.5 flex-row items-center justify-between gap-2">
-                        <Text className="text-[10px] font-black" style={{ color: theme.colors.primary }}>
-                          {formatRupiah(item.product.price)}
-                        </Text>
-                        <View
-                          className="h-6 w-6 items-center justify-center rounded-full"
-                          style={{ backgroundColor: theme.colors.surface }}
-                        >
-                          <NitipIcon color={theme.colors.textMuted} name="next" size={9} />
-                        </View>
                       </View>
-                    </View>
-                  </Pressable>
-                ))}
+                    </Pressable>
+                  );
+                })}
               </ScrollView>
             )}
           </View>
@@ -874,120 +921,155 @@ export default function HomeScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
           >
-            {visibleCatalog.map((outlet, index) => (
-              <View
-                key={outlet.id}
-                style={{
-                  backgroundColor: theme.colors.surfaceRaised,
-                  borderRadius: 22,
-                  elevation: 5,
-                  marginRight: index === visibleCatalog.length - 1 ? 0 : 13,
-                  shadowColor: theme.colors.shadow,
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: theme.mode === "dark" ? 0.22 : 0.1,
-                  shadowRadius: 11,
-                  width: merchantCardWidth,
-                }}
-              >
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => router.push(`/outlet/${outlet.id}`)}
-                  style={({ pressed }) => ({
-                    borderRadius: 22,
-                    opacity: pressed ? 0.88 : 1,
-                    overflow: "hidden",
-                  })}
-                >
-                  <View
-                    className="h-[136px] w-full overflow-hidden rounded-t-[22px]"
-                    style={{ backgroundColor: theme.colors.surfaceAccent }}
-                  >
-                    {outlet.imageUrl ? (
-                      <Image
-                        className="h-full w-full"
-                        resizeMode="cover"
-                        source={{ uri: outlet.imageUrl }}
-                        style={{ backgroundColor: theme.colors.surfaceAccent }}
-                      />
-                    ) : (
-                      <View className="h-full w-full items-center justify-center">
-                        <View
-                          className="h-16 w-16 items-center justify-center rounded-full"
-                          style={{ backgroundColor: theme.colors.surfaceRaised }}
-                        >
-                          <Text className="text-[27px] font-black" style={{ color: theme.colors.primary }}>
-                            {outlet.businessName.slice(0, 1).toUpperCase()}
-                          </Text>
-                        </View>
-                      </View>
-                    )}
+            {visibleCatalog.map((outlet, index) => {
+              const hasRating = outlet.ratingCount > 0 && outlet.ratingAverage != null;
 
+              return (
+                <View
+                  key={outlet.id}
+                  style={{
+                    backgroundColor: theme.colors.surfaceRaised,
+                    borderColor: productCardBorder,
+                    borderRadius: 22,
+                    borderWidth: 1,
+                    elevation: 6,
+                    marginRight: index === visibleCatalog.length - 1 ? 0 : 13,
+                    shadowColor: theme.colors.shadow,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: theme.mode === "dark" ? 0.22 : 0.11,
+                    shadowRadius: 11,
+                    width: merchantCardWidth,
+                  }}
+                >
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => router.push(`/outlet/${outlet.id}`)}
+                    style={({ pressed }) => ({
+                      borderRadius: 22,
+                      opacity: pressed ? 0.88 : 1,
+                      overflow: "hidden",
+                    })}
+                  >
                     <View
-                      className="absolute left-2.5 top-2.5 flex-row items-center rounded-full px-2.5 py-1.5"
-                      style={{
-                        backgroundColor: outlet.acceptingOrders
-                          ? "rgba(255,255,255,0.94)"
-                          : "rgba(17,19,24,0.78)",
-                      }}
+                      className="h-[136px] w-full overflow-hidden rounded-t-[22px]"
+                      style={{ backgroundColor: theme.colors.surfaceAccent }}
                     >
+                      {outlet.imageUrl ? (
+                        <Image
+                          className="h-full w-full"
+                          resizeMode="cover"
+                          source={{ uri: outlet.imageUrl }}
+                          style={{ backgroundColor: theme.colors.surfaceAccent }}
+                        />
+                      ) : (
+                        <View className="h-full w-full items-center justify-center">
+                          <View
+                            className="h-16 w-16 items-center justify-center rounded-full"
+                            style={{ backgroundColor: theme.colors.surfaceRaised }}
+                          >
+                            <Text className="text-[27px] font-black" style={{ color: theme.colors.primary }}>
+                              {outlet.businessName.slice(0, 1).toUpperCase()}
+                            </Text>
+                          </View>
+                        </View>
+                      )}
+
                       <View
-                        className="mr-1.5 h-1.5 w-1.5 rounded-full"
+                        className="absolute left-2.5 top-2.5 flex-row items-center rounded-full px-2.5 py-1.5"
                         style={{
                           backgroundColor: outlet.acceptingOrders
-                            ? theme.colors.success
-                            : "#FFFFFF",
-                        }}
-                      />
-                      <Text
-                        className="text-[7px] font-black uppercase tracking-[0.4px]"
-                        style={{
-                          color: outlet.acceptingOrders ? theme.colors.success : "#FFFFFF",
+                            ? "rgba(255,255,255,0.94)"
+                            : "rgba(17,19,24,0.78)",
                         }}
                       >
-                        {outlet.acceptingOrders ? t("common.open") : t("common.closed")}
-                      </Text>
+                        <View
+                          className="mr-1.5 h-1.5 w-1.5 rounded-full"
+                          style={{
+                            backgroundColor: outlet.acceptingOrders
+                              ? theme.colors.success
+                              : "#FFFFFF",
+                          }}
+                        />
+                        <Text
+                          className="text-[7px] font-black uppercase tracking-[0.4px]"
+                          style={{
+                            color: outlet.acceptingOrders ? theme.colors.success : "#FFFFFF",
+                          }}
+                        >
+                          {outlet.acceptingOrders ? t("common.open") : t("common.closed")}
+                        </Text>
+                      </View>
+
+                      {hasRating ? (
+                        <View
+                          className="absolute right-2.5 top-2.5 flex-row items-center rounded-full px-2.5 py-1.5"
+                          style={{ backgroundColor: "rgba(17,19,24,0.82)" }}
+                        >
+                          <Text className="mr-1 text-[10px]" style={{ color: "#F4B400" }}>
+                            ★
+                          </Text>
+                          <Text className="text-[8px] font-black text-white">
+                            {outlet.ratingAverage?.toFixed(1)} ({outlet.ratingCount})
+                          </Text>
+                        </View>
+                      ) : null}
                     </View>
-                  </View>
 
-                  <View className="px-3.5 pb-3.5 pt-3">
-                    <Text
-                      className="text-[13px] font-black leading-[17px] tracking-[-0.2px]"
-                      numberOfLines={2}
-                      style={{ color: theme.colors.text }}
-                    >
-                      {outlet.businessName}
-                    </Text>
-
-                    <Text
-                      className="mt-1 text-[9px]"
-                      numberOfLines={1}
-                      style={{ color: theme.colors.textMuted }}
-                    >
-                      {outlet.name} · {t("home.productCount", { count: outlet.productCount })}
-                    </Text>
-
-                    <View className="mt-3 flex-row items-center justify-between gap-2">
+                    <View className="px-3.5 pb-3.5 pt-3">
                       <Text
-                        className="flex-1 text-[9px] font-black"
-                        numberOfLines={1}
-                        style={{ color: theme.colors.primary }}
+                        className="text-[13px] font-black leading-[17px] tracking-[-0.2px]"
+                        numberOfLines={2}
+                        style={{ color: theme.colors.text }}
                       >
-                        {outlet.minPrice == null
-                          ? t("home.menuSoon")
-                          : t("home.fromPrice", { price: formatRupiah(outlet.minPrice) })}
+                        {outlet.businessName}
                       </Text>
 
-                      <View
-                        className="h-7 w-7 items-center justify-center rounded-full"
-                        style={{ backgroundColor: theme.colors.surface }}
+                      <Text
+                        className="mt-1 text-[9px]"
+                        numberOfLines={1}
+                        style={{ color: theme.colors.textMuted }}
                       >
-                        <NitipIcon color={theme.colors.textMuted} name="next" size={10} />
+                        {outlet.name} · {t("home.productCount", { count: outlet.productCount })}
+                      </Text>
+
+                      <View className="mt-2 flex-row items-center">
+                        <Text className="mr-1.5 text-[11px]" style={{ color: "#F4B400" }}>
+                          ★
+                        </Text>
+                        {hasRating ? (
+                          <Text className="text-[9px] font-black" style={{ color: theme.colors.text }}>
+                            {outlet.ratingAverage?.toFixed(1)} · {outlet.ratingCount}
+                          </Text>
+                        ) : (
+                          <Text className="text-[8px] font-bold" style={{ color: theme.colors.textMuted }}>
+                            {copy.unrated}
+                          </Text>
+                        )}
+                      </View>
+
+                      <View className="mt-3 flex-row items-center justify-between gap-2">
+                        <Text
+                          className="flex-1 text-[9px] font-black"
+                          numberOfLines={1}
+                          style={{ color: theme.colors.primary }}
+                        >
+                          {outlet.minPrice == null
+                            ? t("home.menuSoon")
+                            : t("home.fromPrice", { price: formatRupiah(outlet.minPrice) })}
+                        </Text>
+
+                        <View
+                          className="h-7 w-7 items-center justify-center rounded-full"
+                          style={{ backgroundColor: theme.colors.surface }}
+                        >
+                          <NitipIcon color={theme.colors.textMuted} name="next" size={10} />
+                        </View>
                       </View>
                     </View>
-                  </View>
-                </Pressable>
-              </View>
-            ))}
+                  </Pressable>
+                </View>
+              );
+            })}
           </ScrollView>
         )}
       </ScrollView>

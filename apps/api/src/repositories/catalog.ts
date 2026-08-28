@@ -10,6 +10,7 @@ import type { WithId } from "mongodb";
 import { ObjectId } from "mongodb";
 
 import { getMongoDb } from "../lib/mongodb.js";
+import { getOutletRatingSummaries } from "./ratings.js";
 
 interface MerchantDocument {
   businessName: string;
@@ -104,7 +105,9 @@ export async function listPublicCatalogOutlets(): Promise<NitipCatalogOutletSumm
     .toArray();
 
   if (merchants.length === 0) return [];
-  const merchantMap = new Map(merchants.map((merchant) => [merchant._id.toHexString(), merchant.businessName]));
+  const merchantMap = new Map(
+    merchants.map((merchant) => [merchant._id.toHexString(), merchant.businessName]),
+  );
   const outlets = await db
     .collection<OutletDocument>("outlets")
     .find({ merchantId: { $in: merchants.map((merchant) => merchant._id) }, isActive: true })
@@ -113,11 +116,14 @@ export async function listPublicCatalogOutlets(): Promise<NitipCatalogOutletSumm
   if (outlets.length === 0) return [];
 
   const outletIds = outlets.map((outlet) => outlet._id);
-  const products = await db
-    .collection<ProductDocument>("products")
-    .find({ outletId: { $in: outletIds }, isActive: true })
-    .sort({ sortOrder: 1, createdAt: 1 })
-    .toArray();
+  const [products, ratingsByOutlet] = await Promise.all([
+    db
+      .collection<ProductDocument>("products")
+      .find({ outletId: { $in: outletIds }, isActive: true })
+      .sort({ sortOrder: 1, createdAt: 1 })
+      .toArray(),
+    getOutletRatingSummaries(outletIds),
+  ]);
 
   const byOutlet = new Map<string, WithId<ProductDocument>[]>();
   for (const product of products) {
@@ -128,12 +134,14 @@ export async function listPublicCatalogOutlets(): Promise<NitipCatalogOutletSumm
   }
 
   return outlets.map((outlet) => {
-    const outletProducts = byOutlet.get(outlet._id.toHexString()) ?? [];
+    const outletKey = outlet._id.toHexString();
+    const outletProducts = byOutlet.get(outletKey) ?? [];
     const availableProducts = outletProducts.filter(productAvailable);
     const prices = availableProducts.map((product) => product.price);
     const image = outletProducts.find((product) => product.imageUrl)?.imageUrl ?? null;
+    const rating = ratingsByOutlet.get(outletKey) ?? { average: null, count: 0 };
     return {
-      id: outlet._id.toHexString(),
+      id: outletKey,
       merchantId: outlet.merchantId.toHexString(),
       businessName: merchantMap.get(outlet.merchantId.toHexString()) ?? "Merchant Nitip",
       name: outlet.name,
@@ -142,6 +150,8 @@ export async function listPublicCatalogOutlets(): Promise<NitipCatalogOutletSumm
       productCount: outletProducts.length,
       minPrice: prices.length > 0 ? Math.min(...prices) : null,
       imageUrl: image,
+      ratingAverage: rating.average,
+      ratingCount: rating.count,
     };
   });
 }
@@ -161,16 +171,19 @@ export async function getPublicCatalogOutlet(id: string): Promise<NitipCatalogOu
   });
   if (!merchant) return null;
 
-  const categories = await db
-    .collection<CategoryDocument>("categories")
-    .find({ outletId: outlet._id, isActive: true })
-    .sort({ sortOrder: 1, createdAt: 1 })
-    .toArray();
-  const products = await db
-    .collection<ProductDocument>("products")
-    .find({ outletId: outlet._id, isActive: true })
-    .sort({ sortOrder: 1, createdAt: 1 })
-    .toArray();
+  const [categories, products, ratingsByOutlet] = await Promise.all([
+    db
+      .collection<CategoryDocument>("categories")
+      .find({ outletId: outlet._id, isActive: true })
+      .sort({ sortOrder: 1, createdAt: 1 })
+      .toArray(),
+    db
+      .collection<ProductDocument>("products")
+      .find({ outletId: outlet._id, isActive: true })
+      .sort({ sortOrder: 1, createdAt: 1 })
+      .toArray(),
+    getOutletRatingSummaries([outlet._id]),
+  ]);
 
   const productsByCategory = new Map<string, WithId<ProductDocument>[]>();
   for (const product of products) {
@@ -185,6 +198,10 @@ export async function getPublicCatalogOutlet(id: string): Promise<NitipCatalogOu
     products: (productsByCategory.get(category._id.toHexString()) ?? []).map(serializeProduct),
   }));
   const coordinates = outlet.location?.coordinates;
+  const rating = ratingsByOutlet.get(outlet._id.toHexString()) ?? {
+    average: null,
+    count: 0,
+  };
 
   return {
     id: outlet._id.toHexString(),
@@ -196,6 +213,8 @@ export async function getPublicCatalogOutlet(id: string): Promise<NitipCatalogOu
     latitude: coordinates?.[1] ?? null,
     longitude: coordinates?.[0] ?? null,
     acceptingOrders: outlet.acceptingOrders,
+    ratingAverage: rating.average,
+    ratingCount: rating.count,
     openingHours: outlet.openingHours,
     categories: catalogCategories,
   };

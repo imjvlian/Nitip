@@ -62,6 +62,8 @@ export interface NitipCatalogOutletSummary {
   productCount: number;
   minPrice: number | null;
   imageUrl: string | null;
+  ratingAverage: number | null;
+  ratingCount: number;
 }
 
 export interface NitipCatalogCategory extends NitipCategory {
@@ -78,6 +80,8 @@ export interface NitipCatalogOutlet {
   latitude: number | null;
   longitude: number | null;
   acceptingOrders: boolean;
+  ratingAverage: number | null;
+  ratingCount: number;
   openingHours: OutletOpeningHour[];
   categories: NitipCatalogCategory[];
 }
