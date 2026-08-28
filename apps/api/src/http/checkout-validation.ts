@@ -17,6 +17,32 @@ function requiredId(record: Record<string, unknown>, key: string) {
   return value.trim();
 }
 
+function parseAddonIds(record: Record<string, unknown>, index: number) {
+  const value = record.addonIds;
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) {
+    throw new ValidationError(`items[${index}].addonIds must be an array`);
+  }
+  if (value.length > 20) {
+    throw new ValidationError(`items[${index}].addonIds cannot contain more than 20 addons`);
+  }
+
+  const seen = new Set<string>();
+  return value.map((addonId, addonIndex) => {
+    if (typeof addonId !== "string" || !/^[a-f\d]{24}$/i.test(addonId.trim())) {
+      throw new ValidationError(
+        `items[${index}].addonIds[${addonIndex}] must be a valid id`,
+      );
+    }
+    const normalized = addonId.trim();
+    if (seen.has(normalized)) {
+      throw new ValidationError(`items[${index}].addonIds cannot contain duplicates`);
+    }
+    seen.add(normalized);
+    return normalized;
+  });
+}
+
 export function parseCheckoutRequest(body: unknown): NitipCheckoutRequest {
   const record = asRecord(body);
   const outletId = requiredId(record, "outletId");
@@ -51,6 +77,7 @@ export function parseCheckoutRequest(body: unknown): NitipCheckoutRequest {
     return {
       productId,
       quantity,
+      addonIds: parseAddonIds(item, index),
     };
   });
 
