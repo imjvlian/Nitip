@@ -15,6 +15,8 @@ import { AuthProvider } from "../context/AuthContext";
 import { CartProvider } from "../context/CartContext";
 import { UserThemeProvider, useUserTheme } from "../context/ThemeContext";
 
+const ROOT_NAV_HEIGHT = 74;
+
 function AppStack() {
   const { resolvedMode, theme } = useUserTheme();
   const pathname = usePathname();
@@ -39,19 +41,33 @@ function AppStack() {
     : resolvedMode === "dark"
       ? "#121318"
       : "#F3F3F0";
+  const navigationBackdrop =
+    activeTab === "home"
+      ? resolvedMode === "dark"
+        ? "#22242B"
+        : "#FFFFFF"
+      : screenBackground;
 
   return (
     <View
       style={{
         alignSelf: "stretch",
-        backgroundColor: screenBackground,
+        backgroundColor: navigationBackdrop,
         flex: 1,
         width: "100%",
       }}
     >
       <StatusBar animated style={statusBarStyle} />
 
-      <View style={{ alignSelf: "stretch", flex: 1, width: "100%" }}>
+      <View
+        style={{
+          alignSelf: "stretch",
+          backgroundColor: navigationBackdrop,
+          flex: 1,
+          paddingBottom: activeTab ? ROOT_NAV_HEIGHT : 0,
+          width: "100%",
+        }}
+      >
         <BottomNavigationSuppressionProvider>
           <Stack
             screenOptions={{
