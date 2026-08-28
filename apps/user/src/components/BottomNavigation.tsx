@@ -83,29 +83,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     height: 30,
     justifyContent: "center",
-    overflow: "hidden",
     position: "relative",
-    width: 46,
-  },
-  fadeTop: {
-    height: 10,
-    left: 0,
-    position: "absolute",
-    top: 0,
-    width: 46,
-  },
-  fadeMiddle: {
-    height: 10,
-    left: 0,
-    position: "absolute",
-    top: 10,
-    width: 46,
-  },
-  fadeBottom: {
-    height: 10,
-    left: 0,
-    position: "absolute",
-    top: 20,
     width: 46,
   },
   label: {
@@ -177,32 +155,6 @@ export function BottomNavigation({
             ) : null}
 
             <View style={styles.iconStage}>
-              {selected ? (
-                <>
-                  <View
-                    pointerEvents="none"
-                    style={[
-                      styles.fadeTop,
-                      { backgroundColor: theme.colors.primary, opacity: 0.15 },
-                    ]}
-                  />
-                  <View
-                    pointerEvents="none"
-                    style={[
-                      styles.fadeMiddle,
-                      { backgroundColor: theme.colors.primary, opacity: 0.08 },
-                    ]}
-                  />
-                  <View
-                    pointerEvents="none"
-                    style={[
-                      styles.fadeBottom,
-                      { backgroundColor: theme.colors.primary, opacity: 0.025 },
-                    ]}
-                  />
-                </>
-              ) : null}
-
               <Ionicons
                 color={iconColor}
                 name={selected ? tab.iconFilled : tab.iconOutline}
