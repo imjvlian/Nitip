@@ -5,12 +5,26 @@ import { ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppHeader } from "../components/AppHeader";
-import { NitipIcon } from "../components/NitipIcon";
+import { NitipIcon, type NitipIconName } from "../components/NitipIcon";
 import { SettingsRow } from "../components/SettingsRow";
 import { getMerchantCopy } from "../constants/merchantCopy";
 import { useAuth } from "../context/AuthContext";
 import { useMerchantTheme } from "../context/ThemeContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
+
+type SettingsItem = {
+  icon: NitipIconName;
+  title: string;
+  description?: string;
+  value?: string;
+  onPress: () => void;
+};
+
+type SettingsSection = {
+  key: string;
+  title: string;
+  rows: SettingsItem[];
+};
 
 export default function SettingsScreen() {
   const { language } = useNitipLanguage();
@@ -60,19 +74,19 @@ export default function SettingsScreen() {
   const normalized = query.trim().toLowerCase();
   const matches = (values: string[]) => !normalized || values.join(" ").toLowerCase().includes(normalized);
 
-  const sections = useMemo(() => [
+  const sections = useMemo<SettingsSection[]>(() => [
     {
       key: "business",
       title: labels.business,
       rows: [
         {
-          icon: "store" as const,
+          icon: "store",
           title: c.home.businessProfile,
           description: c.home.subtitle,
           onPress: () => router.push("/settings/business"),
         },
         {
-          icon: "menu" as const,
+          icon: "menu",
           title: labels.menu,
           description: labels.menuDescription,
           onPress: () => router.push("/menu"),
@@ -84,19 +98,19 @@ export default function SettingsScreen() {
       title: labels.insights,
       rows: [
         {
-          icon: "earnings" as const,
+          icon: "earnings",
           title: labels.earnings,
           description: labels.earningsDescription,
           onPress: () => router.push("/earnings"),
         },
         {
-          icon: "analytics" as const,
+          icon: "analytics",
           title: labels.analytics,
           description: labels.analyticsDescription,
           onPress: () => router.push("/analytics"),
         },
         {
-          icon: "notification" as const,
+          icon: "notification",
           title: labels.notifications,
           description: labels.notificationsDescription,
           onPress: () => router.push("/notifications"),
@@ -108,14 +122,14 @@ export default function SettingsScreen() {
       title: labels.preferences,
       rows: [
         {
-          icon: "language" as const,
+          icon: "language",
           title: c.settings.language,
           description: c.settings.languageDescription,
           value: languageLabel,
           onPress: () => router.push("/settings/language"),
         },
         {
-          icon: "theme" as const,
+          icon: "theme",
           title: c.settings.appearance,
           description: c.settings.appearanceDescription,
           value: themeLabel,
