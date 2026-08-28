@@ -378,7 +378,7 @@ export default function HomeScreen() {
   return (
     <View className="flex-1" style={{ backgroundColor: pageBackground }}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 30 }}
+        contentContainerStyle={{ paddingBottom: 112 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
