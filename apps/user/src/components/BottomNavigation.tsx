@@ -58,6 +58,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     justifyContent: "space-around",
     minHeight: 74,
+    overflow: "hidden",
     paddingBottom: 14,
     paddingHorizontal: 8,
     paddingTop: 8,
@@ -98,7 +99,178 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.55,
   },
+  filledFrame: {
+    height: 22,
+    position: "relative",
+    width: 22,
+  },
+  homeRoof: {
+    borderRadius: 2,
+    height: 12,
+    left: 5,
+    position: "absolute",
+    top: 2,
+    transform: [{ rotate: "45deg" }],
+    width: 12,
+  },
+  homeBody: {
+    borderBottomLeftRadius: 3,
+    borderBottomRightRadius: 3,
+    height: 11,
+    left: 4,
+    position: "absolute",
+    top: 9,
+    width: 14,
+  },
+  receiptBody: {
+    borderRadius: 2,
+    height: 19,
+    left: 4,
+    position: "absolute",
+    top: 1,
+    width: 14,
+  },
+  receiptNotchOne: {
+    bottom: 0,
+    height: 4,
+    left: 5,
+    position: "absolute",
+    transform: [{ rotate: "45deg" }],
+    width: 4,
+  },
+  receiptNotchTwo: {
+    bottom: 0,
+    height: 4,
+    left: 13,
+    position: "absolute",
+    transform: [{ rotate: "45deg" }],
+    width: 4,
+  },
+  promoBody: {
+    borderRadius: 3,
+    height: 13,
+    left: 3,
+    position: "absolute",
+    top: 5,
+    transform: [{ rotate: "-38deg" }],
+    width: 17,
+  },
+  promoHole: {
+    borderRadius: 999,
+    height: 4,
+    left: 5,
+    position: "absolute",
+    top: 5,
+    width: 4,
+  },
+  cartBasket: {
+    borderBottomLeftRadius: 4,
+    borderBottomRightRadius: 4,
+    height: 10,
+    left: 3,
+    position: "absolute",
+    top: 6,
+    width: 16,
+  },
+  cartHandle: {
+    borderRadius: 999,
+    height: 3,
+    left: 1,
+    position: "absolute",
+    top: 3,
+    transform: [{ rotate: "18deg" }],
+    width: 7,
+  },
+  cartWheelLeft: {
+    borderRadius: 999,
+    bottom: 1,
+    height: 5,
+    left: 5,
+    position: "absolute",
+    width: 5,
+  },
+  cartWheelRight: {
+    borderRadius: 999,
+    bottom: 1,
+    height: 5,
+    position: "absolute",
+    right: 3,
+    width: 5,
+  },
+  profileHead: {
+    borderRadius: 999,
+    height: 8,
+    left: 7,
+    position: "absolute",
+    top: 1,
+    width: 8,
+  },
+  profileBody: {
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    bottom: 1,
+    height: 11,
+    left: 3,
+    position: "absolute",
+    width: 16,
+  },
 });
+
+function FilledTabIcon({
+  color,
+  cutoutColor,
+  tab,
+}: {
+  color: string;
+  cutoutColor: string;
+  tab: RootTab;
+}) {
+  if (tab === "home") {
+    return (
+      <View style={styles.filledFrame}>
+        <View style={[styles.homeRoof, { backgroundColor: color }]} />
+        <View style={[styles.homeBody, { backgroundColor: color }]} />
+      </View>
+    );
+  }
+
+  if (tab === "orders") {
+    return (
+      <View style={styles.filledFrame}>
+        <View style={[styles.receiptBody, { backgroundColor: color }]} />
+        <View style={[styles.receiptNotchOne, { backgroundColor: cutoutColor }]} />
+        <View style={[styles.receiptNotchTwo, { backgroundColor: cutoutColor }]} />
+      </View>
+    );
+  }
+
+  if (tab === "promos") {
+    return (
+      <View style={styles.filledFrame}>
+        <View style={[styles.promoBody, { backgroundColor: color }]} />
+        <View style={[styles.promoHole, { backgroundColor: cutoutColor }]} />
+      </View>
+    );
+  }
+
+  if (tab === "cart") {
+    return (
+      <View style={styles.filledFrame}>
+        <View style={[styles.cartHandle, { backgroundColor: color }]} />
+        <View style={[styles.cartBasket, { backgroundColor: color }]} />
+        <View style={[styles.cartWheelLeft, { backgroundColor: color }]} />
+        <View style={[styles.cartWheelRight, { backgroundColor: color }]} />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.filledFrame}>
+      <View style={[styles.profileHead, { backgroundColor: color }]} />
+      <View style={[styles.profileBody, { backgroundColor: color }]} />
+    </View>
+  );
+}
 
 export function BottomNavigation({
   active,
@@ -115,7 +287,6 @@ export function BottomNavigation({
 
   const navigationSurface = resolvedMode === "dark" ? "#22242B" : "#FFFFFF";
   const navigationBorder = resolvedMode === "dark" ? "#2D3037" : "#E7E7E2";
-  const navigationShadow = resolvedMode === "dark" ? theme.colors.shadow : "#111318";
 
   return (
     <View
@@ -124,18 +295,12 @@ export function BottomNavigation({
         {
           backgroundColor: navigationSurface,
           borderTopColor: navigationBorder,
-          elevation: 12,
-          shadowColor: navigationShadow,
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: resolvedMode === "dark" ? 0.24 : 0.08,
-          shadowRadius: 14,
         },
       ]}
     >
       {tabs.map((tab) => {
         const selected = tab.key === active;
         const label = labels[language][tab.key];
-        const iconColor = selected ? "#111318" : theme.colors.textMuted;
         const labelColor = selected ? theme.colors.text : theme.colors.textMuted;
 
         return (
@@ -158,12 +323,16 @@ export function BottomNavigation({
             ) : null}
 
             <View style={styles.iconStage}>
-              <NitipIcon
-                color={iconColor}
-                name={tab.icon}
-                size={selected ? 20 : 18}
-                variant={selected ? "filled" : "outline"}
-              />
+              {selected ? (
+                <FilledTabIcon color="#111318" cutoutColor={navigationSurface} tab={tab.key} />
+              ) : (
+                <NitipIcon
+                  color={theme.colors.textMuted}
+                  name={tab.icon}
+                  size={18}
+                  variant="outline"
+                />
+              )}
             </View>
 
             <Text
