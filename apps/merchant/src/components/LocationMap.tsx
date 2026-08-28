@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { WebView } from "react-native-webview";
 
+import { tomTomApiKey, tomTomConfigured } from "../lib/tomtom";
+
 const FALLBACK = { latitude: -8.1335, longitude: 113.2248 };
 
 function buildMapHtml(latitude: number | null, longitude: number | null) {
@@ -9,6 +11,7 @@ function buildMapHtml(latitude: number | null, longitude: number | null) {
   const initialLatitude = latitude ?? FALLBACK.latitude;
   const initialLongitude = longitude ?? FALLBACK.longitude;
   const initialZoom = hasPoint ? 16 : 13;
+  const tileUrl = `https://api.tomtom.com/maps/orbis/display/raster/tile/{z}/{x}/{y}?apiVersion=2&style=street-light&tileSize=256&key=${encodeURIComponent(tomTomApiKey)}`;
 
   return `<!doctype html>
 <html>
@@ -34,12 +37,7 @@ function buildMapHtml(latitude: number | null, longitude: number | null) {
       align-items: center;
       justify-content: center;
     }
-    .nitip-marker-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: #fff;
-    }
+    .nitip-marker-dot { width: 8px; height: 8px; border-radius: 999px; background: #fff; }
     .leaflet-control-attribution { font-size: 9px !important; }
   </style>
 </head>
@@ -64,9 +62,9 @@ function buildMapHtml(latitude: number | null, longitude: number | null) {
         zoomControl: true
       }).setView([${initialLatitude}, ${initialLongitude}], ${initialZoom});
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 19
+      L.tileLayer(${JSON.stringify(tileUrl)}, {
+        attribution: '&copy; TomTom, &copy; OpenStreetMap',
+        maxZoom: 22
       }).addTo(map);
 
       var marker = null;
@@ -118,16 +116,26 @@ export default function LocationMap({
   longitude,
   onLocationChange,
   loadErrorLabel = "Peta tidak dapat dimuat",
+  missingKeyLabel = "TomTom API key belum dikonfigurasi.",
 }: {
   latitude: number | null;
   longitude: number | null;
-  onLocationChange: (latitude: number, longitude: number) => Promise<void>;
+  onLocationChange: (latitude: number, longitude: number) => void | Promise<void>;
   loadErrorLabel?: string;
+  missingKeyLabel?: string;
   dom?: unknown;
 }) {
   const [failed, setFailed] = useState(false);
   const html = useMemo(() => buildMapHtml(latitude, longitude), [latitude, longitude]);
   const mapKey = `${latitude ?? "none"}:${longitude ?? "none"}`;
+
+  if (!tomTomConfigured) {
+    return (
+      <View style={styles.stateContainer}>
+        <Text style={styles.errorText}>{missingKeyLabel}</Text>
+      </View>
+    );
+  }
 
   if (failed) {
     return (
@@ -157,6 +165,7 @@ export default function LocationMap({
         </View>
       )}
       onError={() => setFailed(true)}
+      onHttpError={() => setFailed(true)}
       onMessage={(event) => {
         try {
           const message = JSON.parse(event.nativeEvent.data) as {
@@ -186,14 +195,8 @@ export default function LocationMap({
 }
 
 const styles = StyleSheet.create({
-  webViewContainer: {
-    flex: 1,
-    backgroundColor: "#EEF0F3",
-  },
-  webView: {
-    flex: 1,
-    backgroundColor: "#EEF0F3",
-  },
+  webViewContainer: { flex: 1, backgroundColor: "#EEF0F3" },
+  webView: { flex: 1, backgroundColor: "#EEF0F3" },
   stateContainer: {
     flex: 1,
     alignItems: "center",

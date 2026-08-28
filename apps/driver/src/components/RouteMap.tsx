@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { WebView } from "react-native-webview";
 
+const tomTomApiKey = (process.env.EXPO_PUBLIC_TOMTOM_API_KEY ?? "").trim();
+const tomTomConfigured = tomTomApiKey.length > 0;
 const FALLBACK = { latitude: -8.1335, longitude: 113.2248 };
 
 type RoutePoint = {
@@ -32,6 +34,7 @@ function buildMapHtml(pickup: RoutePoint, destination: RoutePoint) {
     : hasDestination
       ? (destination.longitude as number)
       : FALLBACK.longitude;
+  const tileUrl = `https://api.tomtom.com/maps/orbis/display/raster/tile/{z}/{x}/{y}?apiVersion=2&style=street-light&tileSize=256&key=${encodeURIComponent(tomTomApiKey)}`;
 
   return `<!doctype html>
 <html>
@@ -81,9 +84,9 @@ function buildMapHtml(pickup: RoutePoint, destination: RoutePoint) {
         zoomControl: true
       }).setView([${initialLatitude}, ${initialLongitude}], 14);
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors',
-        maxZoom: 19
+      L.tileLayer(${JSON.stringify(tileUrl)}, {
+        attribution: '&copy; TomTom, &copy; OpenStreetMap',
+        maxZoom: 22
       }).addTo(map);
 
       var bounds = [];
@@ -140,6 +143,14 @@ export default function RouteMap({
     ],
   );
 
+  if (!tomTomConfigured) {
+    return (
+      <View style={styles.stateContainer}>
+        <Text style={styles.errorText}>TomTom API key belum dikonfigurasi.</Text>
+      </View>
+    );
+  }
+
   if (failed) {
     return (
       <View style={styles.stateContainer}>
@@ -167,6 +178,7 @@ export default function RouteMap({
         </View>
       )}
       onError={() => setFailed(true)}
+      onHttpError={() => setFailed(true)}
       onMessage={(event) => {
         try {
           const message = JSON.parse(event.nativeEvent.data) as { type?: string };
@@ -180,14 +192,8 @@ export default function RouteMap({
 }
 
 const styles = StyleSheet.create({
-  webViewContainer: {
-    flex: 1,
-    backgroundColor: "#EEF0F3",
-  },
-  webView: {
-    flex: 1,
-    backgroundColor: "#EEF0F3",
-  },
+  webViewContainer: { flex: 1, backgroundColor: "#EEF0F3" },
+  webView: { flex: 1, backgroundColor: "#EEF0F3" },
   stateContainer: {
     flex: 1,
     alignItems: "center",
