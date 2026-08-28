@@ -359,7 +359,7 @@ export default function HomeScreen() {
   const cardWidth = Math.max(194, Math.min(220, Math.floor((width - 44) / 1.65)));
   const cardBorder = theme.mode === "dark" ? theme.colors.border : "#D9DEE7";
   const activeFilterBackground = theme.colors.primary;
-  const activeFilterText = theme.mode === "dark" ? theme.colors.background : "#111318";
+  const activeFilterText = "#FFFFFF";
 
   const featuredPromotion = promotions[0] ?? null;
   const promotionDestination = featuredPromotion?.outletId
@@ -663,7 +663,7 @@ export default function HomeScreen() {
                     alignItems: "center",
                     backgroundColor: selected ? activeFilterBackground : theme.colors.surfaceRaised,
                     borderColor: selected ? theme.colors.primaryStrong : theme.colors.border,
-                    borderRadius: 14,
+                    borderRadius: 999,
                     borderWidth: selected ? 2 : 1,
                     elevation: selected ? 8 : 2,
                     flexDirection: "row",
