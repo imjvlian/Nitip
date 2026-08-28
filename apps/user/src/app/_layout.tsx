@@ -24,9 +24,13 @@ function AppStack() {
       ? "home"
       : pathname === "/orders"
         ? "orders"
-        : pathname === "/profile"
-          ? "profile"
-          : null;
+        : pathname === "/promos"
+          ? "promos"
+          : pathname === "/cart"
+            ? "cart"
+            : pathname === "/profile"
+              ? "profile"
+              : null;
   const statusBarStyle =
     pathname === "/home" || resolvedMode === "dark" ? "light" : "dark";
 
@@ -50,6 +54,8 @@ function AppStack() {
             <Stack.Screen name="login" options={{ animation: "fade" }} />
             <Stack.Screen name="home" options={{ animation: "fade" }} />
             <Stack.Screen name="orders" options={{ animation: "fade" }} />
+            <Stack.Screen name="promos" options={{ animation: "fade" }} />
+            <Stack.Screen name="cart" options={{ animation: "fade" }} />
             <Stack.Screen name="profile" options={{ animation: "fade" }} />
           </Stack>
         </BottomNavigationSuppressionProvider>

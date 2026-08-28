@@ -1,5 +1,8 @@
 import { formatRupiah, type NitipAddress, type NitipUserProfile } from "@nitip/domain";
-import type { NitipCatalogOutletSummary } from "@nitip/domain/catalog";
+import type {
+  NitipCatalogOutletSummary,
+  NitipPromotion,
+} from "@nitip/domain/catalog";
 import { useNitipLanguage, useNitipTranslation } from "@nitip/i18n";
 import { Redirect, router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
@@ -24,20 +27,27 @@ import {
   getMe,
   listAddresses,
   listCatalogOutlets,
+  listCatalogPromotions,
 } from "../lib/api";
 
 const HOME_COPY = {
   id: {
     deliveryLocation: "Lokasi pengantaran",
+    offerSection: "Promo hari ini",
+    seeAll: "Lihat semua",
     offerEyebrow: "PILIHAN HARI INI",
     offerTitle: "Apa pun yang kamu butuhkan, tinggal nitip.",
     offerBody: "Cari makanan, minuman, dan toko yang siap menerima pesanan.",
+    viewMerchant: "Pesan sekarang",
   },
   en: {
     deliveryLocation: "Delivery location",
+    offerSection: "Today's Offer",
+    seeAll: "See all",
     offerEyebrow: "TODAY'S PICKS",
     offerTitle: "Whatever you need, just nitip.",
     offerBody: "Find food, drinks, and stores that are ready to take orders.",
+    viewMerchant: "Order now",
   },
 } as const;
 
@@ -57,6 +67,7 @@ export default function HomeScreen() {
   const [catalog, setCatalog] = useState<NitipCatalogOutletSummary[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [promotions, setPromotions] = useState<NitipPromotion[]>([]);
   const [query, setQuery] = useState("");
 
   useEffect(() => {
@@ -124,6 +135,21 @@ export default function HomeScreen() {
     };
   }, [t]);
 
+  useEffect(() => {
+    if (!apiConfigured) return;
+    let active = true;
+    listCatalogPromotions()
+      .then((items) => {
+        if (active) setPromotions(items);
+      })
+      .catch(() => {
+        if (active) setPromotions([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const visibleCatalog = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     if (!normalizedQuery) return catalog;
@@ -151,6 +177,7 @@ export default function HomeScreen() {
   const heroSearchText = theme.mode === "dark" ? theme.colors.text : "#111318";
   const heroSearchMuted = theme.mode === "dark" ? theme.colors.textMuted : "#7C8190";
   const merchantCardWidth = Math.max(154, Math.min(188, Math.floor((width - 52) / 2)));
+  const featuredPromotion = promotions[0] ?? null;
 
   const categories: { icon: NitipIconName; label: string }[] = [
     { icon: "food", label: t("home.food") },
@@ -172,7 +199,7 @@ export default function HomeScreen() {
             paddingTop: insets.top + 10,
           }}
         >
-          <View className="flex-row items-center gap-3">
+          <View className="flex-row items-center gap-2.5">
             <Pressable
               accessibilityRole="button"
               className="min-w-0 flex-1 flex-row items-center"
@@ -203,6 +230,16 @@ export default function HomeScreen() {
             </Pressable>
 
             <Pressable
+              accessibilityLabel={copy.offerSection}
+              accessibilityRole="button"
+              className="h-10 w-10 items-center justify-center rounded-full"
+              onPress={() => router.push("/promos")}
+              style={{ backgroundColor: "rgba(255,255,255,0.10)" }}
+            >
+              <NitipIcon color="#FFFFFF" name="promo" size={17} />
+            </Pressable>
+
+            <Pressable
               accessibilityLabel={t("common.cart")}
               accessibilityRole="button"
               className="h-10 w-10 items-center justify-center rounded-full"
@@ -223,10 +260,13 @@ export default function HomeScreen() {
 
           <View className="mt-5">
             <View className="flex-row items-center gap-2">
-              <Text className="text-[10px] font-extrabold" style={{ color: theme.colors.primary }}>
+              <Text
+                className="text-[10px] font-extrabold"
+                style={{ color: "rgba(255,255,255,0.68)" }}
+              >
                 {t("home.greeting", { name: firstName })}
               </Text>
-              {profileLoading ? <ActivityIndicator color={theme.colors.primary} size="small" /> : null}
+              {profileLoading ? <ActivityIndicator color="#FFFFFF" size="small" /> : null}
             </View>
             <Text
               className="mt-1.5 max-w-[300px] text-[29px] font-black leading-[33px] tracking-tighter"
@@ -253,52 +293,86 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <View
-          className="mx-4 mt-4 flex-row items-center overflow-hidden rounded-[22px] p-4"
-          style={{ backgroundColor: theme.colors.surfaceAccent }}
-        >
-          <View className="min-w-0 flex-1 pr-3">
-            <Text className="text-[8px] font-black tracking-[1.1px]" style={{ color: theme.colors.primary }}>
-              {copy.offerEyebrow}
+        <View className="px-4 pt-4">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-[13px] font-black" style={{ color: theme.colors.text }}>
+              {copy.offerSection}
             </Text>
-            <Text className="mt-1.5 text-[16px] font-black leading-5" style={{ color: theme.colors.text }}>
-              {copy.offerTitle}
-            </Text>
-            <Text className="mt-1.5 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
-              {copy.offerBody}
-            </Text>
+            <Pressable onPress={() => router.push("/promos")}>
+              <Text className="text-[9px] font-bold" style={{ color: theme.colors.textMuted }}>
+                {copy.seeAll}
+              </Text>
+            </Pressable>
           </View>
-          <View className="h-[82px] w-[92px] items-center justify-center">
-            <View
-              className="absolute left-0 top-3 h-11 w-11 items-center justify-center rounded-full"
-              style={{ backgroundColor: theme.colors.surfaceRaised }}
-            >
-              <NitipIcon color={theme.colors.primary} name="food" size={19} />
+
+          <View
+            className="mt-2.5 flex-row items-center overflow-hidden rounded-[20px]"
+            style={{ backgroundColor: theme.colors.surfaceAccent }}
+          >
+            <View className="min-w-0 flex-1 px-4 py-4">
+              <Text className="text-[8px] font-black tracking-[1.1px]" style={{ color: theme.colors.primary }}>
+                {copy.offerEyebrow}
+              </Text>
+              <Text className="mt-1.5 text-[16px] font-black leading-5" numberOfLines={2} style={{ color: theme.colors.text }}>
+                {featuredPromotion?.title ?? copy.offerTitle}
+              </Text>
+              <Text className="mt-1.5 text-[10px] leading-4" numberOfLines={2} style={{ color: theme.colors.textMuted }}>
+                {featuredPromotion?.description ?? copy.offerBody}
+              </Text>
+              {featuredPromotion?.outletId ? (
+                <Pressable
+                  className="mt-3 self-start rounded-full px-3.5 py-2"
+                  onPress={() => router.push(`/outlet/${featuredPromotion.outletId}`)}
+                  style={{ backgroundColor: theme.colors.primary }}
+                >
+                  <Text className="text-[9px] font-black text-white">
+                    {featuredPromotion.ctaLabel ?? copy.viewMerchant}
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
-            <View
-              className="absolute right-0 top-0 h-12 w-12 items-center justify-center rounded-full"
-              style={{ backgroundColor: theme.colors.primary }}
-            >
-              <NitipIcon color="#FFFFFF" name="store" size={20} />
-            </View>
-            <View
-              className="absolute bottom-0 right-4 h-10 w-10 items-center justify-center rounded-full"
-              style={{ backgroundColor: theme.colors.surfaceRaised }}
-            >
-              <NitipIcon color={theme.colors.primary} name="drink" size={17} />
-            </View>
+
+            {featuredPromotion?.imageUrl ? (
+              <Image
+                className="h-[118px] w-[118px] self-stretch"
+                resizeMode="cover"
+                source={{ uri: featuredPromotion.imageUrl }}
+                style={{ backgroundColor: theme.colors.surfaceAccent }}
+              />
+            ) : (
+              <View className="h-[112px] w-[104px] items-center justify-center">
+                <View
+                  className="absolute left-1 top-5 h-10 w-10 items-center justify-center rounded-full"
+                  style={{ backgroundColor: theme.colors.surfaceRaised }}
+                >
+                  <NitipIcon color={theme.colors.primary} name="food" size={18} />
+                </View>
+                <View
+                  className="absolute right-2 top-2 h-12 w-12 items-center justify-center rounded-full"
+                  style={{ backgroundColor: theme.colors.primary }}
+                >
+                  <NitipIcon color="#FFFFFF" name="promo" size={20} />
+                </View>
+                <View
+                  className="absolute bottom-3 right-5 h-9 w-9 items-center justify-center rounded-full"
+                  style={{ backgroundColor: theme.colors.surfaceRaised }}
+                >
+                  <NitipIcon color={theme.colors.primary} name="drink" size={16} />
+                </View>
+              </View>
+            )}
           </View>
         </View>
 
-        <View className="px-4 pt-5">
-          <Text className="text-[16px] font-black tracking-tight" style={{ color: theme.colors.text }}>
+        <View className="px-4 pt-4">
+          <Text className="text-[14px] font-black tracking-tight" style={{ color: theme.colors.text }}>
             {t("home.explore")}
           </Text>
           <View className="mt-3 flex-row justify-between">
             {categories.map((category) => (
               <View className="w-[30%] items-center" key={category.label}>
                 <View
-                  className="h-[54px] w-[54px] items-center justify-center rounded-full"
+                  className="h-[52px] w-[52px] items-center justify-center rounded-full"
                   style={{ backgroundColor: theme.colors.surface }}
                 >
                   <View
@@ -341,13 +415,15 @@ export default function HomeScreen() {
             </View>
           ) : null}
 
-          <View className="mt-6">
-            <Text className="text-[17px] font-black tracking-tight" style={{ color: theme.colors.text }}>
-              {t("home.merchants")}
-            </Text>
-            <Text className="mt-1 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
-              {t("home.merchantsSubtitle")}
-            </Text>
+          <View className="mt-5 flex-row items-end justify-between">
+            <View>
+              <Text className="text-[15px] font-black tracking-tight" style={{ color: theme.colors.text }}>
+                {t("home.merchants")}
+              </Text>
+              <Text className="mt-0.5 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>
+                {t("home.merchantsSubtitle")}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -378,7 +454,7 @@ export default function HomeScreen() {
           </View>
         ) : (
           <ScrollView
-            contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingRight: 24 }}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 10, paddingRight: 24 }}
             horizontal
             showsHorizontalScrollIndicator={false}
           >
@@ -389,14 +465,14 @@ export default function HomeScreen() {
                 onPress={() => router.push(`/outlet/${outlet.id}`)}
                 style={({ pressed }) => ({
                   backgroundColor: theme.colors.surfaceRaised,
-                  borderRadius: 18,
-                  marginRight: index === visibleCatalog.length - 1 ? 0 : 12,
+                  borderRadius: 16,
+                  marginRight: index === visibleCatalog.length - 1 ? 0 : 10,
                   opacity: pressed ? 0.86 : 1,
                   overflow: "hidden",
                   width: merchantCardWidth,
                 })}
               >
-                <View className="h-[104px] w-full" style={{ backgroundColor: theme.colors.surfaceAccent }}>
+                <View className="h-[100px] w-full" style={{ backgroundColor: theme.colors.surfaceAccent }}>
                   {outlet.imageUrl ? (
                     <Image className="h-full w-full" resizeMode="cover" source={{ uri: outlet.imageUrl }} />
                   ) : (
@@ -407,7 +483,7 @@ export default function HomeScreen() {
                     </View>
                   )}
                   <View
-                    className="absolute left-2.5 top-2.5 flex-row items-center rounded-full px-2 py-1"
+                    className="absolute left-2 top-2 flex-row items-center rounded-full px-2 py-1"
                     style={{
                       backgroundColor: outlet.acceptingOrders
                         ? theme.colors.successSurface

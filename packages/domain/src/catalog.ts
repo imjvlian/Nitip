@@ -82,6 +82,33 @@ export interface NitipCatalogOutlet {
   categories: NitipCatalogCategory[];
 }
 
+export interface NitipPromotion {
+  id: string;
+  title: string;
+  description: string | null;
+  ctaLabel: string | null;
+  imageUrl: string | null;
+  outletId: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  priority: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateNitipPromotionInput {
+  title: string;
+  description?: string | null;
+  ctaLabel?: string | null;
+  imageUrl?: string | null;
+  outletId?: string | null;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  priority?: number;
+  isActive?: boolean;
+}
+
 export interface CloudinaryUploadSignature {
   cloudName: string;
   apiKey: string;

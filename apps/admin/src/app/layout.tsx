@@ -38,6 +38,9 @@ export default function RootLayout({
           <a href="/drivers" style={{ color: "#08349C", fontWeight: 900, textDecoration: "none" }}>
             Driver Review
           </a>
+          <a href="/promos" style={{ color: "#2448F5", fontWeight: 900, textDecoration: "none" }}>
+            Promo
+          </a>
         </nav>
         {children}
       </body>

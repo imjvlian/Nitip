@@ -10,6 +10,7 @@ import type {
 import type {
   NitipCatalogOutlet,
   NitipCatalogOutletSummary,
+  NitipPromotion,
 } from "@nitip/domain/catalog";
 import type {
   NitipCheckoutQuote,
@@ -250,6 +251,10 @@ export function deleteAddress(user: User | null, id: string) {
   return apiRequest<{ ok: boolean }>(user, `/me/addresses/${id}`, {
     method: "DELETE",
   });
+}
+
+export function listCatalogPromotions() {
+  return publicApiRequest<NitipPromotion[]>("/catalog/promotions");
 }
 
 export function listCatalogOutlets() {

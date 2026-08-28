@@ -21,6 +21,7 @@ import {
   listOutletProducts,
   updateOutletProduct,
 } from "../repositories/products.js";
+import { listActivePromotions } from "../repositories/promotions.js";
 import {
   parseCreateCategory,
   parseCreateProduct,
@@ -58,6 +59,14 @@ async function getOwnedOutlet(ownerFirebaseUid: string, outletId: string) {
 }
 
 export function registerCatalogRoutes(app: FastifyInstance) {
+  app.get("/catalog/promotions", async (request, reply) => {
+    try {
+      return { data: await listActivePromotions() };
+    } catch (error) {
+      return routeError(request, reply, error);
+    }
+  });
+
   app.get("/catalog/outlets", async (request, reply) => {
     try {
       return { data: await listPublicCatalogOutlets() };

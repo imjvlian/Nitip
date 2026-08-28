@@ -10,7 +10,16 @@ import {
   listMerchantProfiles,
   reviewMerchantProfile,
 } from "../repositories/merchants.js";
-import { parseMerchantReview } from "./admin-validation.js";
+import {
+  createPromotion,
+  listPromotions,
+  setPromotionActive,
+} from "../repositories/promotions.js";
+import {
+  parseCreatePromotion,
+  parseMerchantReview,
+  parsePromotionActivePatch,
+} from "./admin-validation.js";
 import { parseDriverReview } from "./driver-validation.js";
 import { ValidationError } from "./validation.js";
 
@@ -130,6 +139,45 @@ export function registerAdminRoutes(app: FastifyInstance) {
         }
 
         return { data: driver };
+      } catch (error) {
+        return routeError(request, reply, error);
+      }
+    },
+  );
+
+  app.get("/admin/promotions", async (request, reply) => {
+    try {
+      const admin = await authorizeAdmin(request, reply);
+      if (!admin) return;
+      return { data: await listPromotions() };
+    } catch (error) {
+      return routeError(request, reply, error);
+    }
+  });
+
+  app.post("/admin/promotions", async (request, reply) => {
+    try {
+      const admin = await authorizeAdmin(request, reply);
+      if (!admin) return;
+      const promotion = await createPromotion(parseCreatePromotion(request.body));
+      return reply.code(201).send({ data: promotion });
+    } catch (error) {
+      return routeError(request, reply, error);
+    }
+  });
+
+  app.patch<{ Params: { id: string } }>(
+    "/admin/promotions/:id/active",
+    async (request, reply) => {
+      try {
+        const admin = await authorizeAdmin(request, reply);
+        if (!admin) return;
+        const { isActive } = parsePromotionActivePatch(request.body);
+        const promotion = await setPromotionActive(request.params.id, isActive);
+        if (!promotion) {
+          return reply.code(404).send({ error: "promotion_not_found" });
+        }
+        return { data: promotion };
       } catch (error) {
         return routeError(request, reply, error);
       }
