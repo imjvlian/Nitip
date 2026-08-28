@@ -3,9 +3,10 @@ import type { MerchantOrderAction, NitipMerchantOrder, NitipOrderOperations } fr
 import { useNitipLanguage } from "@nitip/i18n";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AnimatedPopup, type PopupNotice } from "../../components/AnimatedPopup";
 import { AppHeader } from "../../components/AppHeader";
 import { NitipIcon } from "../../components/NitipIcon";
 import { getMerchantCopy, merchantOrderStatusLabel } from "../../constants/merchantCopy";
@@ -35,29 +36,51 @@ export default function MerchantOrderDetailScreen() {
   const [prepMinutes, setPrepMinutes] = useState(15);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<PopupNotice | null>(null);
+  const [pendingAction, setPendingAction] = useState<{
+    action: MerchantOrderAction;
+    title: string;
+    message: string;
+  } | null>(null);
 
   const x = language === "id"
     ? {
         prep: "Estimasi waktu persiapan", prepDesc: "Pilih waktu realistis agar driver tidak datang terlalu cepat.", minutes: "menit",
         readyAt: "Estimasi siap", inventoryHint: "Stok produk akan otomatis dinonaktifkan ketika mencapai 0.",
+        accepted: "Pesanan diterima", acceptedBody: "Estimasi persiapan sudah disimpan dan customer akan melihatnya.",
+        rejected: "Pesanan ditolak", rejectedBody: "Pesanan dibatalkan dan stok yang dicadangkan dikembalikan.",
+        preparing: "Persiapan dimulai", preparingBody: "Status customer sudah diperbarui.",
+        ready: "Pesanan siap diambil", readyBody: "Order sekarang tersedia untuk driver.",
+        failed: "Aksi gagal",
       }
     : {
         prep: "Preparation estimate", prepDesc: "Choose a realistic time so the driver does not arrive too early.", minutes: "min",
         readyAt: "Estimated ready", inventoryHint: "Products are automatically marked unavailable when stock reaches 0.",
+        accepted: "Order accepted", acceptedBody: "Preparation estimate was saved and the customer can see it.",
+        rejected: "Order rejected", rejectedBody: "The order was cancelled and reserved stock was restored.",
+        preparing: "Preparation started", preparingBody: "The customer status has been updated.",
+        ready: "Order ready for pickup", readyBody: "The order is now available to drivers.",
+        failed: "Action failed",
       };
+
+  function showNotice(tone: PopupNotice["tone"], title: string, message?: string | null) {
+    setNotice({ id: Date.now(), tone, title, message, durationMs: tone === "error" ? 3200 : 2400 });
+  }
 
   useEffect(() => {
     if (!user || !id) return;
     let active = true;
-    setLoading(true); setError(null);
+    setLoading(true);
+    setLoadError(null);
     Promise.all([getMerchantOrder(user, id), getMerchantOrderOperations(user, id).catch(() => null)])
       .then(([nextOrder, nextOperations]) => {
         if (!active) return;
-        setOrder(nextOrder); setOperations(nextOperations);
+        setOrder(nextOrder);
+        setOperations(nextOperations);
         if (nextOperations?.preparationMinutes) setPrepMinutes(nextOperations.preparationMinutes);
       })
-      .catch((nextError: unknown) => { if (active) setError(nextError instanceof Error ? nextError.message : c.orderDetail.loadError); })
+      .catch((nextError: unknown) => { if (active) setLoadError(nextError instanceof Error ? nextError.message : c.orderDetail.loadError); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [c.orderDetail.loadError, id, user]);
@@ -70,7 +93,7 @@ export default function MerchantOrderDetailScreen() {
 
   async function runAction(action: MerchantOrderAction) {
     if (!order) return;
-    setUpdating(true); setError(null);
+    setUpdating(true);
     try {
       const next = await actOnMerchantOrder(user, order.id, {
         action,
@@ -79,76 +102,103 @@ export default function MerchantOrderDetailScreen() {
       });
       setOrder(next);
       await refreshOperations(next.id);
+      if (action === "confirm") showNotice("success", x.accepted, x.acceptedBody);
+      else if (action === "reject") showNotice("warning", x.rejected, x.rejectedBody);
+      else if (action === "start_preparing") showNotice("success", x.preparing, x.preparingBody);
+      else showNotice("success", x.ready, x.readyBody);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : c.orderDetail.updateError);
-    } finally { setUpdating(false); }
+      showNotice("error", x.failed, nextError instanceof Error ? nextError.message : c.orderDetail.updateError);
+    } finally {
+      setUpdating(false);
+    }
   }
 
   function confirmAction(action: MerchantOrderAction, title: string, message: string) {
-    Alert.alert(title, message, [
-      { text: c.common.cancel, style: "cancel" },
-      { text: c.common.continue, onPress: () => void runAction(action) },
-    ]);
+    setPendingAction({ action, title, message });
   }
 
   const readyAt = timeLabel(operations?.estimatedReadyAt ?? null, language);
 
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingTop: insets.top + 10, paddingBottom: Math.max(insets.bottom + 30, 42) }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} style={{ backgroundColor: theme.colors.background }}>
-      <AppHeader title={c.orderDetail.title} onBack={() => router.back()} />
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <AnimatedPopup
+        colors={theme.colors}
+        notice={notice}
+        confirmation={pendingAction ? {
+          visible: true,
+          tone: pendingAction.action === "reject" ? "warning" : "info",
+          title: pendingAction.title,
+          message: pendingAction.message,
+          confirmLabel: c.common.continue,
+          cancelLabel: c.common.cancel,
+          destructive: pendingAction.action === "reject",
+          busy: updating,
+        } : null}
+        top={insets.top + 8}
+        onNoticeDismiss={() => setNotice(null)}
+        onCancel={() => setPendingAction(null)}
+        onConfirm={() => {
+          const action = pendingAction?.action;
+          if (!action) return;
+          setPendingAction(null);
+          void runAction(action);
+        }}
+      />
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingTop: insets.top + 10, paddingBottom: Math.max(insets.bottom + 30, 42) }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <AppHeader title={c.orderDetail.title} onBack={() => router.back()} />
 
-      {loading ? (
-        <View className="mt-6 items-center rounded-[22px] p-7" style={{ backgroundColor: theme.colors.surface }}><ActivityIndicator color={theme.colors.primary} /><Text className="mt-3 text-[10px]" style={{ color: theme.colors.textMuted }}>{c.orderDetail.loading}</Text></View>
-      ) : error && !order ? (
-        <View className="mt-6 rounded-[18px] p-4" style={{ backgroundColor: theme.colors.dangerSurface }}><Text className="text-[10px] leading-4" style={{ color: theme.colors.danger }}>{error}</Text></View>
-      ) : order ? <>
-        <View className="mt-7">
-          <View className="self-start rounded-full px-3 py-2" style={{ backgroundColor: theme.colors.surfaceAccent }}><Text className="text-[8px] font-black" style={{ color: theme.colors.primary }}>{merchantOrderStatusLabel(order.status, language)}</Text></View>
-          <Text className="mt-4 text-[28px] font-black tracking-tighter" style={{ color: theme.colors.text }}>{order.orderCode}</Text>
-          <Text className="mt-1 text-[10px]" style={{ color: theme.colors.textMuted }}>{order.businessName} · {order.outletName}</Text>
-        </View>
+        {loading ? (
+          <View className="mt-6 items-center rounded-[22px] p-7" style={{ backgroundColor: theme.colors.surface }}><ActivityIndicator color={theme.colors.primary} /><Text className="mt-3 text-[10px]" style={{ color: theme.colors.textMuted }}>{c.orderDetail.loading}</Text></View>
+        ) : loadError && !order ? (
+          <View className="mt-6 rounded-[18px] p-4" style={{ backgroundColor: theme.colors.dangerSurface }}><Text className="text-[10px] leading-4" style={{ color: theme.colors.danger }}>{loadError}</Text></View>
+        ) : order ? <>
+          <View className="mt-7">
+            <View className="self-start rounded-full px-3 py-2" style={{ backgroundColor: theme.colors.surfaceAccent }}><Text className="text-[8px] font-black" style={{ color: theme.colors.primary }}>{merchantOrderStatusLabel(order.status, language)}</Text></View>
+            <Text className="mt-4 text-[28px] font-black tracking-tighter" style={{ color: theme.colors.text }}>{order.orderCode}</Text>
+            <Text className="mt-1 text-[10px]" style={{ color: theme.colors.textMuted }}>{order.businessName} · {order.outletName}</Text>
+          </View>
 
-        {order.status === "paid" ? (
-          <ActionCard title={c.orderDetail.paidTitle} description={c.orderDetail.paidDescription}>
-            <Text className="mt-4 text-[10px] font-black" style={{ color: theme.colors.text }}>{x.prep}</Text>
-            <Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{x.prepDesc}</Text>
-            <View className="mt-3 flex-row gap-2">
-              {PREP_OPTIONS.map((minutes) => {
-                const active = prepMinutes === minutes;
-                return <Pressable key={minutes} onPress={() => setPrepMinutes(minutes)} className="flex-1 items-center rounded-[14px] py-3" style={{ backgroundColor: active ? theme.colors.primary : theme.colors.surface }}><Text className="text-[10px] font-black" style={{ color: active ? "#FFFFFF" : theme.colors.text }}>{minutes}</Text><Text className="mt-0.5 text-[7px] font-bold" style={{ color: active ? "#FFFFFF" : theme.colors.textMuted }}>{x.minutes}</Text></Pressable>;
-              })}
+          {order.status === "paid" ? (
+            <ActionCard title={c.orderDetail.paidTitle} description={c.orderDetail.paidDescription}>
+              <Text className="mt-4 text-[10px] font-black" style={{ color: theme.colors.text }}>{x.prep}</Text>
+              <Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{x.prepDesc}</Text>
+              <View className="mt-3 flex-row gap-2">
+                {PREP_OPTIONS.map((minutes) => {
+                  const active = prepMinutes === minutes;
+                  return <Pressable key={minutes} onPress={() => setPrepMinutes(minutes)} className="flex-1 items-center rounded-[14px] py-3" style={{ backgroundColor: active ? theme.colors.primary : theme.colors.surface }}><Text className="text-[10px] font-black" style={{ color: active ? "#FFFFFF" : theme.colors.text }}>{minutes}</Text><Text className="mt-0.5 text-[7px] font-bold" style={{ color: active ? "#FFFFFF" : theme.colors.textMuted }}>{x.minutes}</Text></Pressable>;
+                })}
+              </View>
+              <Pressable className="mt-4 min-h-[48px] items-center justify-center rounded-[16px]" disabled={updating} onPress={() => confirmAction("confirm", c.orderDetail.acceptTitle, c.orderDetail.acceptMessage)} style={{ backgroundColor: theme.colors.primary, opacity: updating ? 0.5 : 1 }}><Text className="text-[11px] font-black text-white">{updating ? c.common.processing : c.orderDetail.accept}</Text></Pressable>
+              <TextInput value={rejectionReason} onChangeText={setRejectionReason} placeholder={c.orderDetail.rejectionPlaceholder} placeholderTextColor={theme.colors.textMuted} maxLength={300} className="mt-3 min-h-[46px] rounded-[16px] px-4 text-[10px]" style={{ backgroundColor: theme.colors.surface, color: theme.colors.text }} />
+              <Pressable className="mt-2 min-h-[46px] items-center justify-center rounded-[16px]" disabled={updating} onPress={() => confirmAction("reject", c.orderDetail.rejectTitle, c.orderDetail.rejectMessage)} style={{ backgroundColor: theme.colors.dangerSurface, opacity: updating ? 0.5 : 1 }}><Text className="text-[10px] font-black" style={{ color: theme.colors.danger }}>{c.orderDetail.reject}</Text></Pressable>
+            </ActionCard>
+          ) : null}
+
+          {operations?.preparationMinutes && ["merchant_confirmed", "preparing", "ready_for_pickup", "driver_assigned"].includes(order.status) ? (
+            <View className="mt-4 flex-row items-center rounded-[20px] p-4" style={{ backgroundColor: theme.colors.surfaceAccent }}>
+              <View className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surface }}><NitipIcon color={theme.colors.primary} name="clock" size={17} /></View>
+              <View className="ml-3 flex-1"><Text className="text-[9px] font-black" style={{ color: theme.colors.primary }}>{x.readyAt}</Text><Text className="mt-1 text-[13px] font-black" style={{ color: theme.colors.text }}>{readyAt ?? `${operations.preparationMinutes} ${x.minutes}`}</Text><Text className="mt-0.5 text-[8px]" style={{ color: theme.colors.textMuted }}>{operations.preparationMinutes} {x.minutes}</Text></View>
             </View>
-            <Pressable className="mt-4 min-h-[48px] items-center justify-center rounded-[16px]" disabled={updating} onPress={() => confirmAction("confirm", c.orderDetail.acceptTitle, c.orderDetail.acceptMessage)} style={{ backgroundColor: theme.colors.primary, opacity: updating ? 0.5 : 1 }}><Text className="text-[11px] font-black text-white">{updating ? c.common.processing : c.orderDetail.accept}</Text></Pressable>
-            <TextInput value={rejectionReason} onChangeText={setRejectionReason} placeholder={c.orderDetail.rejectionPlaceholder} placeholderTextColor={theme.colors.textMuted} maxLength={300} className="mt-3 min-h-[46px] rounded-[16px] px-4 text-[10px]" style={{ backgroundColor: theme.colors.surface, color: theme.colors.text }} />
-            <Pressable className="mt-2 min-h-[46px] items-center justify-center rounded-[16px]" disabled={updating} onPress={() => confirmAction("reject", c.orderDetail.rejectTitle, c.orderDetail.rejectMessage)} style={{ backgroundColor: theme.colors.dangerSurface, opacity: updating ? 0.5 : 1 }}><Text className="text-[10px] font-black" style={{ color: theme.colors.danger }}>{c.orderDetail.reject}</Text></Pressable>
-          </ActionCard>
-        ) : null}
+          ) : null}
 
-        {operations?.preparationMinutes && ["merchant_confirmed", "preparing", "ready_for_pickup", "driver_assigned"].includes(order.status) ? (
-          <View className="mt-4 flex-row items-center rounded-[20px] p-4" style={{ backgroundColor: theme.colors.surfaceAccent }}>
-            <View className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surface }}><NitipIcon color={theme.colors.primary} name="clock" size={17} /></View>
-            <View className="ml-3 flex-1"><Text className="text-[9px] font-black" style={{ color: theme.colors.primary }}>{x.readyAt}</Text><Text className="mt-1 text-[13px] font-black" style={{ color: theme.colors.text }}>{readyAt ?? `${operations.preparationMinutes} ${x.minutes}`}</Text><Text className="mt-0.5 text-[8px]" style={{ color: theme.colors.textMuted }}>{operations.preparationMinutes} {x.minutes}</Text></View>
-          </View>
-        ) : null}
+          {order.status === "merchant_confirmed" ? <ActionCard title={c.orderDetail.confirmedTitle} description={c.orderDetail.confirmedDescription}><PrimaryAction label={c.orderDetail.startPreparing} onPress={() => void runAction("start_preparing")} /></ActionCard> : null}
+          {order.status === "preparing" ? <ActionCard title={c.orderDetail.preparingTitle} description={c.orderDetail.preparingDescription}><PrimaryAction label={c.orderDetail.ready} onPress={() => void runAction("ready_for_pickup")} /></ActionCard> : null}
+          {order.status === "ready_for_pickup" ? <ActionCard title={c.orderDetail.waitingDriver} description={c.orderDetail.waitingDriverDescription}><View className="mt-3 flex-row items-center gap-2"><NitipIcon color={theme.colors.primary} name="clock" size={15} /><Text className="text-[9px] font-extrabold" style={{ color: theme.colors.primary }}>{merchantOrderStatusLabel(order.status, language)}</Text></View></ActionCard> : null}
+          {order.status === "cancelled" && order.cancellationReason ? <View className="mt-4 rounded-[18px] p-4" style={{ backgroundColor: theme.colors.dangerSurface }}><Text className="text-[10px] leading-4" style={{ color: theme.colors.danger }}>{c.orderDetail.cancellationReason.replace("{{reason}}", order.cancellationReason)}</Text></View> : null}
 
-        {order.status === "merchant_confirmed" ? <ActionCard title={c.orderDetail.confirmedTitle} description={c.orderDetail.confirmedDescription}><PrimaryAction label={c.orderDetail.startPreparing} onPress={() => void runAction("start_preparing")} /></ActionCard> : null}
-        {order.status === "preparing" ? <ActionCard title={c.orderDetail.preparingTitle} description={c.orderDetail.preparingDescription}><PrimaryAction label={c.orderDetail.ready} onPress={() => void runAction("ready_for_pickup")} /></ActionCard> : null}
-        {order.status === "ready_for_pickup" ? <ActionCard title={c.orderDetail.waitingDriver} description={c.orderDetail.waitingDriverDescription}><View className="mt-3 flex-row items-center gap-2"><NitipIcon color={theme.colors.primary} name="clock" size={15} /><Text className="text-[9px] font-extrabold" style={{ color: theme.colors.primary }}>{merchantOrderStatusLabel(order.status, language)}</Text></View></ActionCard> : null}
-        {order.status === "cancelled" && order.cancellationReason ? <View className="mt-4 rounded-[18px] p-4" style={{ backgroundColor: theme.colors.dangerSurface }}><Text className="text-[10px] leading-4" style={{ color: theme.colors.danger }}>{c.orderDetail.cancellationReason.replace("{{reason}}", order.cancellationReason)}</Text></View> : null}
+          <Section title={c.orderDetail.items}>
+            <View className="rounded-[22px] p-4" style={{ backgroundColor: theme.colors.surface }}>
+              {order.items.map((item) => <View className="border-b py-3 last:border-b-0" key={item.productId} style={{ borderBottomColor: theme.colors.border }}><View className="flex-row justify-between gap-4"><View className="flex-1"><Text className="text-[10px] font-black" style={{ color: theme.colors.text }}>{item.quantity}× {item.name}</Text>{(item.addons ?? []).map((addon) => <Text key={addon.id} className="mt-1 text-[9px]" style={{ color: theme.colors.primary }}>+ {addon.name}{addon.price > 0 ? ` · ${formatRupiah(addon.price)}` : ""}</Text>)}</View><Text className="text-[10px] font-black" style={{ color: theme.colors.text }}>{formatRupiah(item.lineTotal)}</Text></View></View>)}
+              <Text className="mt-3 text-[8px] leading-4" style={{ color: theme.colors.textMuted }}>{x.inventoryHint}</Text>
+            </View>
+          </Section>
 
-        <Section title={c.orderDetail.items}>
-          <View className="rounded-[22px] p-4" style={{ backgroundColor: theme.colors.surface }}>
-            {order.items.map((item) => <View className="border-b py-3 last:border-b-0" key={item.productId} style={{ borderBottomColor: theme.colors.border }}><View className="flex-row justify-between gap-4"><View className="flex-1"><Text className="text-[10px] font-black" style={{ color: theme.colors.text }}>{item.quantity}× {item.name}</Text>{(item.addons ?? []).map((addon) => <Text key={addon.id} className="mt-1 text-[9px]" style={{ color: theme.colors.primary }}>+ {addon.name}{addon.price > 0 ? ` · ${formatRupiah(addon.price)}` : ""}</Text>)}</View><Text className="text-[10px] font-black" style={{ color: theme.colors.text }}>{formatRupiah(item.lineTotal)}</Text></View></View>)}
-            <Text className="mt-3 text-[8px] leading-4" style={{ color: theme.colors.textMuted }}>{x.inventoryHint}</Text>
-          </View>
-        </Section>
+          <Section title={c.orderDetail.customerDelivery}><View className="rounded-[22px] p-4" style={{ backgroundColor: theme.colors.surface }}><View className="flex-row items-start"><View className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surfaceRaised }}><NitipIcon color={theme.colors.primary} name="profile" size={17} /></View><View className="ml-3 flex-1"><Text className="text-[12px] font-black" style={{ color: theme.colors.text }}>{order.address.recipientName}</Text><Text className="mt-1 text-[9px] font-extrabold" style={{ color: theme.colors.primary }}>{order.address.phoneNumber}</Text><Text className="mt-2 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>{order.address.addressLine}</Text>{order.address.notes ? <Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{c.orderDetail.notes.replace("{{notes}}", order.address.notes)}</Text> : null}</View></View></View></Section>
 
-        <Section title={c.orderDetail.customerDelivery}><View className="rounded-[22px] p-4" style={{ backgroundColor: theme.colors.surface }}><View className="flex-row items-start"><View className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surfaceRaised }}><NitipIcon color={theme.colors.primary} name="profile" size={17} /></View><View className="ml-3 flex-1"><Text className="text-[12px] font-black" style={{ color: theme.colors.text }}>{order.address.recipientName}</Text><Text className="mt-1 text-[9px] font-extrabold" style={{ color: theme.colors.primary }}>{order.address.phoneNumber}</Text><Text className="mt-2 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>{order.address.addressLine}</Text>{order.address.notes ? <Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{c.orderDetail.notes.replace("{{notes}}", order.address.notes)}</Text> : null}</View></View></View></Section>
-
-        <Section title={c.orderDetail.orderValue}><View className="rounded-[22px] p-4" style={{ backgroundColor: theme.colors.surface }}><AmountRow label={c.orderDetail.subtotal} value={order.subtotal} /><AmountRow label={c.orderDetail.commission} value={-order.merchantCommission} /><View className="mt-3 flex-row justify-between border-t pt-4" style={{ borderTopColor: theme.colors.border }}><Text className="text-[12px] font-black" style={{ color: theme.colors.text }}>{c.orderDetail.merchantIncome}</Text><Text className="text-[16px] font-black" style={{ color: theme.colors.primary }}>{formatRupiah(order.merchantNet)}</Text></View></View></Section>
-        {error ? <View className="mt-4 rounded-[18px] p-4" style={{ backgroundColor: theme.colors.dangerSurface }}><Text className="text-[10px] leading-4" style={{ color: theme.colors.danger }}>{error}</Text></View> : null}
-      </> : null}
-    </ScrollView>
+          <Section title={c.orderDetail.orderValue}><View className="rounded-[22px] p-4" style={{ backgroundColor: theme.colors.surface }}><AmountRow label={c.orderDetail.subtotal} value={order.subtotal} /><AmountRow label={c.orderDetail.commission} value={-order.merchantCommission} /><View className="mt-3 flex-row justify-between border-t pt-4" style={{ borderTopColor: theme.colors.border }}><Text className="text-[12px] font-black" style={{ color: theme.colors.text }}>{c.orderDetail.merchantIncome}</Text><Text className="text-[16px] font-black" style={{ color: theme.colors.primary }}>{formatRupiah(order.merchantNet)}</Text></View></View></Section>
+        </> : null}
+      </ScrollView>
+    </View>
   );
 
   function ActionCard({ title, description, children }: { title: string; description: string; children?: React.ReactNode }) { return <View className="mt-5 rounded-[22px] p-4" style={{ backgroundColor: theme.colors.surfaceAccent }}><Text className="text-[13px] font-black" style={{ color: theme.colors.text }}>{title}</Text><Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{description}</Text>{children}</View>; }
