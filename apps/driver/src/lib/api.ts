@@ -1,6 +1,7 @@
+import type { CloudinaryUploadSignature } from "@nitip/domain/catalog";
 import type {
   CreateNitipDriverInput,
-  DriverDeliveryAction,
+  DriverDeliveryActionInput,
   NitipDriverOffer,
   NitipDriverOrder,
   NitipDriverProfile,
@@ -14,10 +15,7 @@ const apiBaseUrl = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
 export const apiConfigured = apiBaseUrl.length > 0;
 
 export class ApiError extends Error {
-  constructor(message: string, public readonly status: number) {
-    super(message);
-    this.name = "ApiError";
-  }
+  constructor(message: string, public readonly status: number) { super(message); this.name = "ApiError"; }
 }
 
 async function apiRequest<T>(user: User | null, path: string, init?: RequestInit): Promise<T> {
@@ -26,92 +24,56 @@ async function apiRequest<T>(user: User | null, path: string, init?: RequestInit
   const idToken = await user.getIdToken();
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${idToken}`,
-      ...(init?.body ? { "Content-Type": "application/json" } : {}),
-    },
+    headers: { Accept: "application/json", Authorization: `Bearer ${idToken}`, ...(init?.body ? { "Content-Type": "application/json" } : {}) },
   });
   const body = (await response.json()) as { data?: T; message?: string; error?: string };
   if (!response.ok) throw new ApiError(body.message ?? body.error ?? "Nitip API request failed", response.status);
   return body.data as T;
 }
 
-export function getDriverMe(user: User | null) {
-  return apiRequest<NitipDriverProfile | null>(user, "/driver/me");
-}
-
-export function createDriver(user: User | null, input: CreateNitipDriverInput) {
-  return apiRequest<NitipDriverProfile>(user, "/driver/onboarding", { method: "POST", body: JSON.stringify(input) });
-}
-
-export function updateDriver(user: User | null, input: UpdateNitipDriverInput) {
-  return apiRequest<NitipDriverProfile>(user, "/driver/me", { method: "PATCH", body: JSON.stringify(input) });
-}
-
-export function submitDriver(user: User | null) {
-  return apiRequest<NitipDriverProfile>(user, "/driver/me/submit", { method: "POST" });
-}
-
-export function updateDriverLocation(user: User | null, input: UpdateDriverLocationInput) {
-  return apiRequest<NitipDriverProfile>(user, "/driver/me/location", { method: "PATCH", body: JSON.stringify(input) });
-}
+export const getDriverMe = (user: User | null) => apiRequest<NitipDriverProfile | null>(user, "/driver/me");
+export const createDriver = (user: User | null, input: CreateNitipDriverInput) => apiRequest<NitipDriverProfile>(user, "/driver/onboarding", { method: "POST", body: JSON.stringify(input) });
+export const updateDriver = (user: User | null, input: UpdateNitipDriverInput) => apiRequest<NitipDriverProfile>(user, "/driver/me", { method: "PATCH", body: JSON.stringify(input) });
+export const submitDriver = (user: User | null) => apiRequest<NitipDriverProfile>(user, "/driver/me/submit", { method: "POST" });
+export const updateDriverLocation = (user: User | null, input: UpdateDriverLocationInput) => apiRequest<NitipDriverProfile>(user, "/driver/me/location", { method: "PATCH", body: JSON.stringify(input) });
 
 export async function refreshDriverLocation(user: User | null): Promise<NitipDriverProfile | null> {
   const permission = await Location.requestForegroundPermissionsAsync();
   if (permission.status !== "granted") return null;
   const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-  return updateDriverLocation(user, {
-    latitude: position.coords.latitude,
-    longitude: position.coords.longitude,
-    accuracyMeters: position.coords.accuracy ?? null,
-  });
+  return updateDriverLocation(user, { latitude: position.coords.latitude, longitude: position.coords.longitude, accuracyMeters: position.coords.accuracy ?? null });
 }
 
 export async function setDriverOnline(user: User | null, isOnline: boolean) {
   let capturedLocation: NitipDriverProfile | null = null;
-  if (isOnline) {
-    try {
-      capturedLocation = await refreshDriverLocation(user);
-    } catch {
-      capturedLocation = null;
-    }
-  }
-  const profile = await apiRequest<NitipDriverProfile>(user, "/driver/me/availability", {
-    method: "PATCH",
-    body: JSON.stringify({ isOnline }),
-  });
+  if (isOnline) { try { capturedLocation = await refreshDriverLocation(user); } catch { capturedLocation = null; } }
+  const profile = await apiRequest<NitipDriverProfile>(user, "/driver/me/availability", { method: "PATCH", body: JSON.stringify({ isOnline }) });
   return capturedLocation ? { ...capturedLocation, isOnline: profile.isOnline } : profile;
 }
 
 export async function listDriverOffers(user: User | null) {
-  try {
-    await refreshDriverLocation(user);
-  } catch {
-    // Dispatch still works without a fresh coordinate; unranked offers stay available.
-  }
+  try { await refreshDriverLocation(user); } catch { /* unranked offers remain available */ }
   return apiRequest<NitipDriverOffer[]>(user, "/driver/orders/available");
 }
 
-export function getCurrentDriverOrder(user: User | null) {
-  return apiRequest<NitipDriverOrder | null>(user, "/driver/orders/current");
-}
+export const getCurrentDriverOrder = (user: User | null) => apiRequest<NitipDriverOrder | null>(user, "/driver/orders/current");
+export const listDriverOrderHistory = (user: User | null) => apiRequest<NitipDriverOrder[]>(user, "/driver/orders/history");
+export const getDriverOrder = (user: User | null, id: string) => apiRequest<NitipDriverOrder>(user, `/driver/orders/${id}`);
+export const acceptDriverOffer = (user: User | null, id: string) => apiRequest<NitipDriverOrder>(user, `/driver/orders/${id}/accept`, { method: "POST" });
+export const actOnDriverOrder = (user: User | null, id: string, input: DriverDeliveryActionInput) => apiRequest<NitipDriverOrder>(user, `/driver/orders/${id}/action`, { method: "POST", body: JSON.stringify(input) });
+export const getDeliveryProofSignature = (user: User | null, id: string) => apiRequest<CloudinaryUploadSignature>(user, `/driver/orders/${id}/proof/signature`, { method: "POST" });
+export const createDriverSupportTicket = (user: User | null, input: { category: "order" | "driver" | "other"; subject: string; message: string; orderCode?: string | null }) => apiRequest<{ id: string }>(user, "/me/support-tickets", { method: "POST", body: JSON.stringify(input) });
 
-export function listDriverOrderHistory(user: User | null) {
-  return apiRequest<NitipDriverOrder[]>(user, "/driver/orders/history");
-}
-
-export function getDriverOrder(user: User | null, id: string) {
-  return apiRequest<NitipDriverOrder>(user, `/driver/orders/${id}`);
-}
-
-export function acceptDriverOffer(user: User | null, id: string) {
-  return apiRequest<NitipDriverOrder>(user, `/driver/orders/${id}/accept`, { method: "POST" });
-}
-
-export function actOnDriverOrder(user: User | null, id: string, action: DriverDeliveryAction) {
-  return apiRequest<NitipDriverOrder>(user, `/driver/orders/${id}/action`, {
-    method: "POST",
-    body: JSON.stringify({ action }),
-  });
+export async function uploadDeliveryProof(user: User | null, id: string, asset: { uri: string; mimeType?: string | null; fileName?: string | null }) {
+  const signed = await getDeliveryProofSignature(user, id);
+  const form = new FormData();
+  form.append("file", { uri: asset.uri, type: asset.mimeType ?? "image/jpeg", name: asset.fileName ?? `delivery-${Date.now()}.jpg` } as unknown as Blob);
+  form.append("api_key", signed.apiKey);
+  form.append("timestamp", String(signed.timestamp));
+  form.append("folder", signed.folder);
+  form.append("signature", signed.signature);
+  const response = await fetch(signed.uploadUrl, { method: "POST", body: form });
+  const body = await response.json() as { secure_url?: string; error?: { message?: string } };
+  if (!response.ok || !body.secure_url) throw new Error(body.error?.message ?? "Gagal mengunggah bukti pengantaran");
+  return body.secure_url;
 }
