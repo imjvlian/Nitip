@@ -356,11 +356,12 @@ export default function HomeScreen() {
   const heroSearchText = theme.mode === "dark" ? theme.colors.text : "#111318";
   const heroSearchMuted = theme.mode === "dark" ? theme.colors.textMuted : "#8A8F9D";
   const pageBackground = theme.mode === "dark" ? theme.colors.background : "#F2F3F5";
-  const merchantCardWidth = Math.max(194, Math.min(220, Math.floor((width - 44) / 1.65)));
-  const productCardWidth = Math.max(182, Math.min(202, Math.floor((width - 46) / 1.72)));
-  const activeFilterBackground = theme.mode === "dark" ? "#F7F7F8" : "#111318";
-  const activeFilterText = theme.mode === "dark" ? "#111318" : "#FFFFFF";
-  const productCardBorder = theme.mode === "dark" ? theme.colors.border : "#D9DEE7";
+  const cardWidth = Math.max(194, Math.min(220, Math.floor((width - 44) / 1.65)));
+  const cardBorder = theme.mode === "dark" ? theme.colors.border : "#D9DEE7";
+  const activeFilterBackground = theme.mode === "dark" ? "#B8C2FF" : "#DDE4FF";
+  const activeFilterBorder = theme.mode === "dark" ? "#8092FF" : "#2448F5";
+  const activeFilterText = theme.mode === "dark" ? "#111318" : "#1836C9";
+  const activeFilterIcon = "#2448F5";
 
   const featuredPromotion = promotions[0] ?? null;
   const promotionDestination = featuredPromotion?.outletId
@@ -503,8 +504,6 @@ export default function HomeScreen() {
               onPress={() => setOpenOnly((current) => !current)}
               style={({ pressed }) => ({
                 backgroundColor: openOnly ? theme.colors.primary : theme.colors.surfaceAccent,
-                borderColor: openOnly ? "rgba(255,255,255,0.65)" : "transparent",
-                borderWidth: openOnly ? 1 : 0,
                 opacity: pressed ? 0.76 : 1,
               })}
             >
@@ -664,28 +663,26 @@ export default function HomeScreen() {
                   onPress={() => setSelectedCategory(category.key)}
                   style={({ pressed }) => ({
                     backgroundColor: selected ? activeFilterBackground : theme.colors.surfaceRaised,
-                    borderColor: selected ? activeFilterBackground : theme.colors.border,
-                    borderWidth: 1,
-                    elevation: selected ? 5 : 1,
+                    borderColor: selected ? activeFilterBorder : theme.colors.border,
+                    borderWidth: selected ? 1.5 : 1,
+                    elevation: selected ? 7 : 1,
                     marginRight: index === categoryFilters.length - 1 ? 0 : 10,
                     minWidth: 116,
-                    opacity: pressed ? 0.72 : 1,
-                    shadowColor: theme.colors.shadow,
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowOpacity: selected ? (theme.mode === "dark" ? 0.2 : 0.16) : 0.03,
-                    shadowRadius: selected ? 8 : 3,
+                    opacity: pressed ? 0.74 : 1,
+                    shadowColor: selected ? activeFilterBorder : theme.colors.shadow,
+                    shadowOffset: { width: 0, height: selected ? 4 : 1 },
+                    shadowOpacity: selected ? (theme.mode === "dark" ? 0.32 : 0.2) : 0.03,
+                    shadowRadius: selected ? 10 : 3,
                   })}
                 >
                   <View
                     className="h-8 w-8 items-center justify-center rounded-[11px]"
                     style={{
-                      backgroundColor: selected
-                        ? theme.colors.primary
-                        : theme.colors.surfaceAccent,
+                      backgroundColor: selected ? "#FFFFFF" : theme.colors.surfaceAccent,
                     }}
                   >
                     <NitipIcon
-                      color={selected ? "#FFFFFF" : theme.colors.primary}
+                      color={selected ? activeFilterIcon : theme.colors.primary}
                       name={category.icon}
                       size={15}
                     />
@@ -748,115 +745,114 @@ export default function HomeScreen() {
                 showsHorizontalScrollIndicator={false}
               >
                 {visibleProducts.slice(0, 12).map((item, index) => {
-                  const hasRating =
-                    item.outlet.ratingCount > 0 && item.outlet.ratingAverage != null;
+                  const hasRating = item.outlet.ratingCount > 0 && item.outlet.ratingAverage != null;
 
                   return (
-                    <Pressable
-                      accessibilityRole="button"
+                    <View
                       key={`${item.outlet.id}-${item.product.id}`}
-                      onPress={() => router.push(`/outlet/${item.outlet.id}`)}
-                      style={({ pressed }) => ({
+                      style={{
                         backgroundColor: theme.colors.surfaceRaised,
-                        borderColor: productCardBorder,
+                        borderColor: cardBorder,
                         borderRadius: 22,
                         borderWidth: 1,
-                        elevation: 8,
-                        marginRight: index === Math.min(visibleProducts.length, 12) - 1 ? 0 : 12,
-                        opacity: pressed ? 0.86 : item.product.isAvailable ? 1 : 0.62,
-                        padding: 8,
+                        elevation: 6,
+                        marginRight: index === Math.min(visibleProducts.length, 12) - 1 ? 0 : 13,
                         shadowColor: theme.colors.shadow,
-                        shadowOffset: { width: 0, height: 5 },
-                        shadowOpacity: theme.mode === "dark" ? 0.28 : 0.15,
-                        shadowRadius: 12,
-                        width: productCardWidth,
-                      })}
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: theme.mode === "dark" ? 0.22 : 0.11,
+                        shadowRadius: 11,
+                        width: cardWidth,
+                      }}
                     >
-                      <View
-                        className="h-[118px] w-full overflow-hidden rounded-[16px]"
-                        style={{ backgroundColor: theme.colors.surfaceAccent }}
+                      <Pressable
+                        accessibilityRole="button"
+                        onPress={() => router.push(`/outlet/${item.outlet.id}`)}
+                        style={({ pressed }) => ({
+                          borderRadius: 22,
+                          opacity: pressed ? 0.88 : item.product.isAvailable ? 1 : 0.62,
+                          overflow: "hidden",
+                        })}
                       >
-                        {item.product.imageUrl ? (
-                          <Image
-                            className="h-full w-full"
-                            resizeMode="cover"
-                            source={{ uri: item.product.imageUrl }}
-                          />
-                        ) : (
-                          <View className="h-full w-full items-center justify-center">
-                            <View
-                              className="h-14 w-14 items-center justify-center rounded-full"
-                              style={{ backgroundColor: theme.colors.surfaceRaised }}
-                            >
-                              <NitipIcon color={theme.colors.primary} name="food" size={23} />
+                        <View
+                          className="h-[136px] w-full overflow-hidden rounded-t-[22px]"
+                          style={{ backgroundColor: theme.colors.surfaceAccent }}
+                        >
+                          {item.product.imageUrl ? (
+                            <Image
+                              className="h-full w-full"
+                              resizeMode="cover"
+                              source={{ uri: item.product.imageUrl }}
+                              style={{ backgroundColor: theme.colors.surfaceAccent }}
+                            />
+                          ) : (
+                            <View className="h-full w-full items-center justify-center">
+                              <View
+                                className="h-16 w-16 items-center justify-center rounded-full"
+                                style={{ backgroundColor: theme.colors.surfaceRaised }}
+                              >
+                                <NitipIcon color={theme.colors.primary} name="food" size={25} />
+                              </View>
                             </View>
-                          </View>
-                        )}
+                          )}
 
-                        {hasRating ? (
                           <View
                             className="absolute left-2.5 top-2.5 flex-row items-center rounded-full px-2.5 py-1.5"
-                            style={{ backgroundColor: "rgba(17,19,24,0.82)" }}
+                            style={{
+                              backgroundColor: hasRating
+                                ? "rgba(17,19,24,0.80)"
+                                : "rgba(255,255,255,0.94)",
+                            }}
                           >
                             <Text className="mr-1 text-[10px]" style={{ color: "#F4B400" }}>
                               ★
                             </Text>
-                            <Text className="text-[9px] font-black text-white">
-                              {item.outlet.ratingAverage?.toFixed(1)}
+                            <Text
+                              className="text-[8px] font-black"
+                              style={{ color: hasRating ? "#FFFFFF" : theme.colors.textMuted }}
+                            >
+                              {hasRating
+                                ? `${item.outlet.ratingAverage?.toFixed(1)} (${item.outlet.ratingCount})`
+                                : copy.unrated}
                             </Text>
                           </View>
-                        ) : null}
-                      </View>
-
-                      <View className="px-1.5 pb-1.5 pt-3">
-                        <Text
-                          className="text-[13px] font-black leading-[17px]"
-                          numberOfLines={2}
-                          style={{ color: theme.colors.text }}
-                        >
-                          {item.product.name}
-                        </Text>
-                        <Text
-                          className="mt-1 text-[9px]"
-                          numberOfLines={1}
-                          style={{ color: theme.colors.textMuted }}
-                        >
-                          {item.outlet.businessName} · {item.categoryName}
-                        </Text>
-
-                        <View className="mt-2 flex-row items-center">
-                          <Text className="mr-1.5 text-[11px]" style={{ color: "#F4B400" }}>
-                            ★
-                          </Text>
-                          {hasRating ? (
-                            <>
-                              <Text className="text-[9px] font-black" style={{ color: theme.colors.text }}>
-                                {item.outlet.ratingAverage?.toFixed(1)}
-                              </Text>
-                              <Text className="ml-1 text-[8px]" style={{ color: theme.colors.textMuted }}>
-                                ({item.outlet.ratingCount})
-                              </Text>
-                            </>
-                          ) : (
-                            <Text className="text-[8px] font-bold" style={{ color: theme.colors.textMuted }}>
-                              {copy.unrated}
-                            </Text>
-                          )}
                         </View>
 
-                        <View className="mt-3 flex-row items-center justify-between gap-2">
-                          <Text className="text-[11px] font-black" style={{ color: theme.colors.primary }}>
-                            {formatRupiah(item.product.price)}
-                          </Text>
-                          <View
-                            className="h-7 w-7 items-center justify-center rounded-full"
-                            style={{ backgroundColor: theme.colors.surface }}
+                        <View className="px-3.5 pb-3.5 pt-3">
+                          <Text
+                            className="text-[13px] font-black leading-[17px] tracking-[-0.2px]"
+                            numberOfLines={2}
+                            style={{ color: theme.colors.text }}
                           >
-                            <NitipIcon color={theme.colors.textMuted} name="next" size={10} />
+                            {item.product.name}
+                          </Text>
+
+                          <Text
+                            className="mt-1 text-[9px]"
+                            numberOfLines={1}
+                            style={{ color: theme.colors.textMuted }}
+                          >
+                            {item.outlet.businessName} · {item.categoryName}
+                          </Text>
+
+                          <View className="mt-3 flex-row items-center justify-between gap-2">
+                            <Text
+                              className="flex-1 text-[10px] font-black"
+                              numberOfLines={1}
+                              style={{ color: theme.colors.primary }}
+                            >
+                              {formatRupiah(item.product.price)}
+                            </Text>
+
+                            <View
+                              className="h-7 w-7 items-center justify-center rounded-full"
+                              style={{ backgroundColor: theme.colors.surface }}
+                            >
+                              <NitipIcon color={theme.colors.textMuted} name="next" size={10} />
+                            </View>
                           </View>
                         </View>
-                      </View>
-                    </Pressable>
+                      </Pressable>
+                    </View>
                   );
                 })}
               </ScrollView>
@@ -929,7 +925,7 @@ export default function HomeScreen() {
                   key={outlet.id}
                   style={{
                     backgroundColor: theme.colors.surfaceRaised,
-                    borderColor: productCardBorder,
+                    borderColor: cardBorder,
                     borderRadius: 22,
                     borderWidth: 1,
                     elevation: 6,
@@ -938,7 +934,7 @@ export default function HomeScreen() {
                     shadowOffset: { width: 0, height: 4 },
                     shadowOpacity: theme.mode === "dark" ? 0.22 : 0.11,
                     shadowRadius: 11,
-                    width: merchantCardWidth,
+                    width: cardWidth,
                   }}
                 >
                   <Pressable
@@ -985,34 +981,16 @@ export default function HomeScreen() {
                         <View
                           className="mr-1.5 h-1.5 w-1.5 rounded-full"
                           style={{
-                            backgroundColor: outlet.acceptingOrders
-                              ? theme.colors.success
-                              : "#FFFFFF",
+                            backgroundColor: outlet.acceptingOrders ? theme.colors.success : "#FFFFFF",
                           }}
                         />
                         <Text
                           className="text-[7px] font-black uppercase tracking-[0.4px]"
-                          style={{
-                            color: outlet.acceptingOrders ? theme.colors.success : "#FFFFFF",
-                          }}
+                          style={{ color: outlet.acceptingOrders ? theme.colors.success : "#FFFFFF" }}
                         >
                           {outlet.acceptingOrders ? t("common.open") : t("common.closed")}
                         </Text>
                       </View>
-
-                      {hasRating ? (
-                        <View
-                          className="absolute right-2.5 top-2.5 flex-row items-center rounded-full px-2.5 py-1.5"
-                          style={{ backgroundColor: "rgba(17,19,24,0.82)" }}
-                        >
-                          <Text className="mr-1 text-[10px]" style={{ color: "#F4B400" }}>
-                            ★
-                          </Text>
-                          <Text className="text-[8px] font-black text-white">
-                            {outlet.ratingAverage?.toFixed(1)} ({outlet.ratingCount})
-                          </Text>
-                        </View>
-                      ) : null}
                     </View>
 
                     <View className="px-3.5 pb-3.5 pt-3">
@@ -1033,18 +1011,14 @@ export default function HomeScreen() {
                       </Text>
 
                       <View className="mt-2 flex-row items-center">
-                        <Text className="mr-1.5 text-[11px]" style={{ color: "#F4B400" }}>
+                        <Text className="mr-1 text-[10px]" style={{ color: "#F4B400" }}>
                           ★
                         </Text>
-                        {hasRating ? (
-                          <Text className="text-[9px] font-black" style={{ color: theme.colors.text }}>
-                            {outlet.ratingAverage?.toFixed(1)} · {outlet.ratingCount}
-                          </Text>
-                        ) : (
-                          <Text className="text-[8px] font-bold" style={{ color: theme.colors.textMuted }}>
-                            {copy.unrated}
-                          </Text>
-                        )}
+                        <Text className="text-[8px] font-bold" style={{ color: theme.colors.textMuted }}>
+                          {hasRating
+                            ? `${outlet.ratingAverage?.toFixed(1)} (${outlet.ratingCount})`
+                            : copy.unrated}
+                        </Text>
                       </View>
 
                       <View className="mt-3 flex-row items-center justify-between gap-2">
