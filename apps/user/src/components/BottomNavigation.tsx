@@ -51,20 +51,22 @@ const tabs: {
 const styles = StyleSheet.create({
   bar: {
     alignItems: "center",
+    alignSelf: "stretch",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
-    paddingHorizontal: 8,
+    flexShrink: 0,
+    justifyContent: "space-around",
+    paddingHorizontal: 4,
     paddingTop: 8,
     width: "100%",
   },
   tab: {
     alignItems: "center",
-    flex: 1,
     justifyContent: "center",
-    minWidth: 0,
-    paddingVertical: 2,
+    minHeight: 52,
+    width: 64,
   },
   iconSlot: {
     alignItems: "center",
@@ -102,12 +104,12 @@ export function BottomNavigation({ active }: { active: RootTab }) {
         {
           backgroundColor: theme.colors.surfaceRaised,
           borderTopColor: theme.colors.border,
-          elevation: 10,
+          elevation: 12,
           paddingBottom: Math.max(insets.bottom, 8),
           shadowColor: theme.colors.shadow,
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: theme.mode === "dark" ? 0.22 : 0.08,
-          shadowRadius: 10,
+          shadowOffset: { width: 0, height: -3 },
+          shadowOpacity: theme.mode === "dark" ? 0.24 : 0.09,
+          shadowRadius: 12,
         },
       ]}
     >

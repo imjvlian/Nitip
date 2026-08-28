@@ -35,9 +35,17 @@ function AppStack() {
     pathname === "/home" || resolvedMode === "dark" ? "light" : "dark";
 
   return (
-    <View className="flex-1" style={{ backgroundColor: theme.colors.background }}>
+    <View
+      style={{
+        alignSelf: "stretch",
+        backgroundColor: theme.colors.background,
+        flex: 1,
+        width: "100%",
+      }}
+    >
       <StatusBar animated style={statusBarStyle} />
-      <View className="flex-1">
+
+      <View style={{ alignSelf: "stretch", flex: 1, width: "100%" }}>
         <BottomNavigationSuppressionProvider>
           <Stack
             screenOptions={{
@@ -60,7 +68,12 @@ function AppStack() {
           </Stack>
         </BottomNavigationSuppressionProvider>
       </View>
-      {activeTab ? <BottomNavigation active={activeTab} /> : null}
+
+      {activeTab ? (
+        <View style={{ alignSelf: "stretch", flexShrink: 0, width: "100%" }}>
+          <BottomNavigation active={activeTab} />
+        </View>
+      ) : null}
     </View>
   );
 }
