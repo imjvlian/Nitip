@@ -1,11 +1,11 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useNitipLanguage } from "@nitip/i18n";
 import { router } from "expo-router";
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, type ComponentProps, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useNitipTheme } from "../hooks/useNitipTheme";
-import { NitipIcon, type NitipIconName } from "./NitipIcon";
 
 export type RootTab = "home" | "orders" | "promos" | "cart" | "profile";
 
@@ -36,17 +36,43 @@ const labels = {
   },
 } as const;
 
-const tabs: {
+const tabs = [
+  {
+    key: "home",
+    href: "/home",
+    iconOutline: "home-outline",
+    iconFilled: "home",
+  },
+  {
+    key: "orders",
+    href: "/orders",
+    iconOutline: "receipt-outline",
+    iconFilled: "receipt",
+  },
+  {
+    key: "promos",
+    href: "/promos",
+    iconOutline: "pricetag-outline",
+    iconFilled: "pricetag",
+  },
+  {
+    key: "cart",
+    href: "/cart",
+    iconOutline: "cart-outline",
+    iconFilled: "cart",
+  },
+  {
+    key: "profile",
+    href: "/profile",
+    iconOutline: "person-outline",
+    iconFilled: "person",
+  },
+] as const satisfies readonly {
   key: RootTab;
   href: "/home" | "/orders" | "/promos" | "/cart" | "/profile";
-  icon: NitipIconName;
-}[] = [
-  { key: "home", href: "/home", icon: "home" },
-  { key: "orders", href: "/orders", icon: "orders" },
-  { key: "promos", href: "/promos", icon: "promo" },
-  { key: "cart", href: "/cart", icon: "cart" },
-  { key: "profile", href: "/profile", icon: "profile" },
-];
+  iconOutline: ComponentProps<typeof Ionicons>["name"];
+  iconFilled: ComponentProps<typeof Ionicons>["name"];
+}[];
 
 const styles = StyleSheet.create({
   bar: {
@@ -68,22 +94,23 @@ const styles = StyleSheet.create({
     minHeight: 66,
     paddingBottom: 4,
     paddingTop: 10,
-    position: "relative",
     width: 66,
+  },
+  iconArea: {
+    alignItems: "center",
+    height: 31,
+    justifyContent: "center",
+    position: "relative",
+    width: 44,
   },
   activeLine: {
     borderBottomLeftRadius: 3,
     borderBottomRightRadius: 3,
     height: 3,
+    left: 8,
     position: "absolute",
-    top: 0,
+    top: -10,
     width: 28,
-  },
-  iconSlot: {
-    alignItems: "center",
-    height: 30,
-    justifyContent: "center",
-    width: 38,
   },
   label: {
     fontSize: 9,
@@ -142,21 +169,20 @@ export function BottomNavigation({ active }: { active: RootTab }) {
             }}
             style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
           >
-            {selected ? (
-              <View
-                style={[
-                  styles.activeLine,
-                  { backgroundColor: theme.colors.primary },
-                ]}
-              />
-            ) : null}
+            <View style={styles.iconArea}>
+              {selected ? (
+                <View
+                  style={[
+                    styles.activeLine,
+                    { backgroundColor: theme.colors.primary },
+                  ]}
+                />
+              ) : null}
 
-            <View style={styles.iconSlot}>
-              <NitipIcon
+              <Ionicons
                 color={iconColor}
-                name={tab.icon}
-                size={selected ? 20 : 19}
-                variant={selected ? "filled" : "outline"}
+                name={selected ? tab.iconFilled : tab.iconOutline}
+                size={selected ? 22 : 21}
               />
             </View>
 
