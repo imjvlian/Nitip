@@ -20,12 +20,26 @@ export interface CreateNitipCategoryInput {
 
 export type UpdateNitipCategoryInput = Partial<CreateNitipCategoryInput>;
 
+export interface NitipProductAddon {
+  id: string;
+  name: string;
+  price: number;
+  isAvailable: boolean;
+}
+
+export interface CreateNitipProductAddonInput {
+  id?: string;
+  name: string;
+  price: number;
+  isAvailable?: boolean;
+}
+
 export interface NitipProduct {
   id: string;
   outletId: string;
   categoryId: string;
   name: string;
-  description: string | null;
+  description: string;
   price: number;
   imageUrl: string | null;
   imagePublicId: string | null;
@@ -33,6 +47,7 @@ export interface NitipProduct {
   isAvailable: boolean;
   isActive: boolean;
   sortOrder: number;
+  addons: NitipProductAddon[];
   createdAt: string;
   updatedAt: string;
 }
@@ -40,7 +55,7 @@ export interface NitipProduct {
 export interface CreateNitipProductInput {
   categoryId: string;
   name: string;
-  description?: string | null;
+  description: string;
   price: number;
   imageUrl?: string | null;
   imagePublicId?: string | null;
@@ -48,6 +63,7 @@ export interface CreateNitipProductInput {
   isAvailable?: boolean;
   isActive?: boolean;
   sortOrder?: number;
+  addons?: CreateNitipProductAddonInput[];
 }
 
 export type UpdateNitipProductInput = Partial<CreateNitipProductInput>;
