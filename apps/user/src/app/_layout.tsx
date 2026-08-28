@@ -27,10 +27,12 @@ function AppStack() {
         : pathname === "/profile"
           ? "profile"
           : null;
+  const statusBarStyle =
+    pathname === "/home" || resolvedMode === "dark" ? "light" : "dark";
 
   return (
     <View className="flex-1" style={{ backgroundColor: theme.colors.background }}>
-      <StatusBar animated style={resolvedMode === "dark" ? "light" : "dark"} />
+      <StatusBar animated style={statusBarStyle} />
       <View className="flex-1">
         <BottomNavigationSuppressionProvider>
           <Stack

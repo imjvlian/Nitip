@@ -1,5 +1,5 @@
 import { useNitipTranslation } from "@nitip/i18n";
-import { nitipLayout, nitipRadius, nitipSpacing } from "@nitip/theme";
+import { nitipRadius, nitipSpacing } from "@nitip/theme";
 import { router } from "expo-router";
 import {
   createContext,
@@ -37,35 +37,41 @@ const tabs: {
 
 const styles = StyleSheet.create({
   shell: {
-    paddingHorizontal: nitipSpacing.sm,
+    paddingHorizontal: nitipSpacing.md,
     paddingTop: nitipSpacing.xs,
   },
   dock: {
     alignItems: "stretch",
     borderRadius: nitipRadius.xl,
     flexDirection: "row",
-    minHeight: nitipLayout.bottomNavigationHeight,
+    minHeight: 64,
     padding: nitipSpacing.xxs,
+    width: "100%",
   },
   tab: {
     alignItems: "center",
     borderRadius: nitipRadius.lg,
-    flex: 1,
+    flexBasis: 0,
+    flexGrow: 1,
+    flexShrink: 1,
     justifyContent: "center",
-    minHeight: 56,
-    paddingHorizontal: nitipSpacing.xs,
+    minHeight: 54,
+    minWidth: 0,
+    paddingHorizontal: 2,
   },
   iconSlot: {
     alignItems: "center",
-    height: 24,
+    height: 22,
     justifyContent: "center",
-    width: 32,
+    width: 30,
   },
   label: {
     fontSize: 10,
     fontWeight: "800",
     lineHeight: 14,
     marginTop: 3,
+    textAlign: "center",
+    width: "100%",
   },
   pressed: {
     opacity: 0.68,
@@ -97,11 +103,11 @@ export function BottomNavigation({ active }: { active: RootTab }) {
             backgroundColor: theme.colors.surfaceRaised,
             borderColor: theme.colors.border,
             borderWidth: StyleSheet.hairlineWidth,
-            elevation: 8,
+            elevation: 7,
             shadowColor: theme.colors.shadow,
             shadowOffset: { width: 0, height: 5 },
-            shadowOpacity: theme.mode === "dark" ? 0.3 : 0.08,
-            shadowRadius: 16,
+            shadowOpacity: theme.mode === "dark" ? 0.28 : 0.07,
+            shadowRadius: 14,
           },
         ]}
       >
@@ -128,7 +134,7 @@ export function BottomNavigation({ active }: { active: RootTab }) {
                 <NitipIcon
                   color={selected ? theme.colors.primary : theme.colors.textMuted}
                   name={tab.icon}
-                  size={20}
+                  size={19}
                 />
               </View>
               <Text
