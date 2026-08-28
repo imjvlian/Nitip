@@ -78,33 +78,33 @@ const styles = StyleSheet.create({
   bar: {
     alignItems: "center",
     alignSelf: "stretch",
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
     borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
     flexShrink: 0,
     justifyContent: "space-around",
-    paddingHorizontal: 4,
-    paddingTop: 7,
+    paddingHorizontal: 6,
+    paddingTop: 10,
     width: "100%",
   },
   tab: {
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 52,
+    minHeight: 62,
     width: 66,
   },
   iconArea: {
     alignItems: "center",
-    height: 24,
+    height: 28,
     justifyContent: "center",
-    width: 32,
+    width: 36,
   },
   label: {
     fontSize: 8,
     fontWeight: "600",
     lineHeight: 10,
-    marginTop: 2,
+    marginTop: 3,
     textAlign: "center",
   },
   selectedLabel: {
@@ -130,12 +130,12 @@ export function BottomNavigation({ active }: { active: RootTab }) {
         {
           backgroundColor: theme.colors.surfaceRaised,
           borderTopColor: theme.colors.border,
-          elevation: 7,
-          paddingBottom: Math.max(insets.bottom, 7),
+          elevation: 16,
+          paddingBottom: Math.max(insets.bottom, 10),
           shadowColor: theme.colors.shadow,
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: theme.mode === "dark" ? 0.16 : 0.06,
-          shadowRadius: 8,
+          shadowOffset: { width: 0, height: -5 },
+          shadowOpacity: theme.mode === "dark" ? 0.3 : 0.14,
+          shadowRadius: 18,
         },
       ]}
     >
@@ -160,7 +160,7 @@ export function BottomNavigation({ active }: { active: RootTab }) {
               <Ionicons
                 color={color}
                 name={selected ? tab.iconFilled : tab.iconOutline}
-                size={selected ? 20 : 19}
+                size={selected ? 21 : 20}
               />
             </View>
 
