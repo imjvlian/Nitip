@@ -72,9 +72,9 @@ const styles = StyleSheet.create({
     width: 64,
   },
   activeLine: {
-    borderBottomLeftRadius: 999,
-    borderBottomRightRadius: 999,
     height: 3,
+    left: "50%",
+    marginLeft: -17,
     position: "absolute",
     top: -8,
     width: 34,
@@ -83,32 +83,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     height: 30,
     justifyContent: "center",
+    overflow: "hidden",
     position: "relative",
     width: 46,
   },
-  glowWide: {
-    borderBottomLeftRadius: 22,
-    borderBottomRightRadius: 22,
-    height: 27,
+  fadeTop: {
+    height: 10,
+    left: 0,
     position: "absolute",
-    top: -5,
+    top: 0,
     width: 46,
   },
-  glowMedium: {
-    borderBottomLeftRadius: 18,
-    borderBottomRightRadius: 18,
-    height: 22,
+  fadeMiddle: {
+    height: 10,
+    left: 0,
     position: "absolute",
-    top: -4,
-    width: 36,
+    top: 10,
+    width: 46,
   },
-  glowCore: {
-    borderBottomLeftRadius: 14,
-    borderBottomRightRadius: 14,
-    height: 16,
+  fadeBottom: {
+    height: 10,
+    left: 0,
     position: "absolute",
-    top: -3,
-    width: 27,
+    top: 20,
+    width: 46,
   },
   label: {
     fontSize: 8,
@@ -184,22 +182,22 @@ export function BottomNavigation({
                   <View
                     pointerEvents="none"
                     style={[
-                      styles.glowWide,
-                      { backgroundColor: theme.colors.primary, opacity: 0.05 },
+                      styles.fadeTop,
+                      { backgroundColor: theme.colors.primary, opacity: 0.15 },
                     ]}
                   />
                   <View
                     pointerEvents="none"
                     style={[
-                      styles.glowMedium,
-                      { backgroundColor: theme.colors.primary, opacity: 0.09 },
+                      styles.fadeMiddle,
+                      { backgroundColor: theme.colors.primary, opacity: 0.08 },
                     ]}
                   />
                   <View
                     pointerEvents="none"
                     style={[
-                      styles.glowCore,
-                      { backgroundColor: theme.colors.primary, opacity: 0.16 },
+                      styles.fadeBottom,
+                      { backgroundColor: theme.colors.primary, opacity: 0.025 },
                     ]}
                   />
                 </>
