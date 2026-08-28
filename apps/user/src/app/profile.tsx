@@ -31,6 +31,16 @@ function ProfileRow({
 }) {
   const theme = useNitipTheme();
   const foreground = danger ? theme.colors.danger : theme.colors.text;
+  const rowBackground = danger
+    ? theme.colors.dangerSurface
+    : theme.mode === "dark"
+      ? "#252834"
+      : "#FFFFFF";
+  const rowBorder = danger
+    ? theme.colors.dangerSurface
+    : theme.mode === "dark"
+      ? "#363B4A"
+      : "#DDE1E9";
 
   return (
     <Pressable
@@ -38,8 +48,8 @@ function ProfileRow({
       className="mb-2 flex-row items-center rounded-[20px] px-4 py-3.5"
       onPress={onPress}
       style={({ pressed }) => ({
-        backgroundColor: danger ? theme.colors.dangerSurface : theme.colors.surfaceRaised,
-        borderColor: danger ? theme.colors.dangerSurface : theme.colors.border,
+        backgroundColor: rowBackground,
+        borderColor: rowBorder,
         borderWidth: 1,
         elevation: 2,
         opacity: pressed ? 0.72 : 1,

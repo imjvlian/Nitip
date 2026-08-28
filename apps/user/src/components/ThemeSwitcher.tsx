@@ -32,7 +32,7 @@ export function ThemeSwitcher() {
         </Text>
       </View>
       <View
-        className="flex-row rounded-2xl p-1"
+        className="flex-row gap-1 rounded-2xl p-1"
         style={{
           backgroundColor: theme.colors.surfaceRaised,
           borderColor: theme.colors.border,
@@ -49,7 +49,10 @@ export function ThemeSwitcher() {
               className="flex-1 items-center rounded-xl px-2 py-2.5"
               key={option.value}
               onPress={() => void setPreference(option.value)}
-              style={{ backgroundColor: active ? theme.colors.primary : "transparent" }}
+              style={({ pressed }) => ({
+                backgroundColor: active ? theme.colors.primary : theme.colors.surface,
+                opacity: pressed ? 0.72 : 1,
+              })}
             >
               <NitipIcon color={color} name={option.icon} size={15} />
               <Text className="mt-1 text-center text-[9px] font-extrabold" style={{ color }}>

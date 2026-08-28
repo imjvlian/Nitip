@@ -29,7 +29,7 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
         </View>
       ) : null}
       <View
-        className="flex-row rounded-2xl p-1"
+        className="flex-row gap-1 rounded-2xl p-1"
         style={{
           backgroundColor: theme.colors.surfaceRaised,
           borderColor: theme.colors.border,
@@ -45,7 +45,10 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
               className="flex-1 rounded-xl px-3 py-2.5"
               key={option}
               onPress={() => void setLanguage(option)}
-              style={{ backgroundColor: active ? theme.colors.primary : "transparent" }}
+              style={({ pressed }) => ({
+                backgroundColor: active ? theme.colors.primary : theme.colors.surface,
+                opacity: pressed ? 0.72 : 1,
+              })}
             >
               <Text
                 className="text-center text-[10px] font-extrabold"
