@@ -78,52 +78,40 @@ const styles = StyleSheet.create({
   bar: {
     alignItems: "center",
     alignSelf: "stretch",
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
     borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
     flexShrink: 0,
     justifyContent: "space-around",
-    paddingHorizontal: 8,
-    paddingTop: 0,
+    paddingHorizontal: 4,
+    paddingTop: 7,
     width: "100%",
   },
   tab: {
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 66,
-    paddingBottom: 4,
-    paddingTop: 10,
+    minHeight: 52,
     width: 66,
   },
   iconArea: {
     alignItems: "center",
-    height: 31,
+    height: 24,
     justifyContent: "center",
-    position: "relative",
-    width: 44,
-  },
-  activeLine: {
-    borderBottomLeftRadius: 3,
-    borderBottomRightRadius: 3,
-    height: 3,
-    left: 8,
-    position: "absolute",
-    top: -10,
-    width: 28,
+    width: 32,
   },
   label: {
-    fontSize: 9,
-    fontWeight: "700",
-    lineHeight: 12,
-    marginTop: 3,
+    fontSize: 8,
+    fontWeight: "600",
+    lineHeight: 10,
+    marginTop: 2,
     textAlign: "center",
   },
   selectedLabel: {
-    fontWeight: "900",
+    fontWeight: "800",
   },
   pressed: {
-    opacity: 0.62,
+    opacity: 0.55,
   },
 });
 
@@ -142,20 +130,19 @@ export function BottomNavigation({ active }: { active: RootTab }) {
         {
           backgroundColor: theme.colors.surfaceRaised,
           borderTopColor: theme.colors.border,
-          elevation: 10,
-          paddingBottom: Math.max(insets.bottom, 8),
+          elevation: 7,
+          paddingBottom: Math.max(insets.bottom, 7),
           shadowColor: theme.colors.shadow,
-          shadowOffset: { width: 0, height: -3 },
-          shadowOpacity: theme.mode === "dark" ? 0.2 : 0.08,
-          shadowRadius: 12,
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: theme.mode === "dark" ? 0.16 : 0.06,
+          shadowRadius: 8,
         },
       ]}
     >
       {tabs.map((tab) => {
         const selected = tab.key === active;
         const label = labels[language][tab.key];
-        const iconColor = selected ? theme.colors.primary : theme.colors.textMuted;
-        const labelColor = selected ? theme.colors.primary : theme.colors.textMuted;
+        const color = selected ? theme.colors.text : theme.colors.textMuted;
 
         return (
           <Pressable
@@ -170,19 +157,10 @@ export function BottomNavigation({ active }: { active: RootTab }) {
             style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
           >
             <View style={styles.iconArea}>
-              {selected ? (
-                <View
-                  style={[
-                    styles.activeLine,
-                    { backgroundColor: theme.colors.primary },
-                  ]}
-                />
-              ) : null}
-
               <Ionicons
-                color={iconColor}
+                color={color}
                 name={selected ? tab.iconFilled : tab.iconOutline}
-                size={selected ? 22 : 21}
+                size={selected ? 20 : 19}
               />
             </View>
 
@@ -191,7 +169,7 @@ export function BottomNavigation({ active }: { active: RootTab }) {
               style={[
                 styles.label,
                 selected && styles.selectedLabel,
-                { color: labelColor },
+                { color },
               ]}
             >
               {label}
