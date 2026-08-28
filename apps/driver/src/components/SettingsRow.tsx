@@ -16,7 +16,7 @@ export function SettingsRow({
   title: string;
   description?: string;
   value?: string;
-  onPress: () => void;
+  onPress?: () => void;
   danger?: boolean;
   showChevron?: boolean;
 }) {
@@ -25,11 +25,13 @@ export function SettingsRow({
   const card = danger ? theme.colors.dangerSurface : isDark ? theme.colors.surfaceRaised : "#FFFFFF";
   const badge = danger ? theme.colors.dangerSurface : isDark ? theme.colors.surfaceAccent : "#EEF1FF";
   const titleColor = danger ? theme.colors.danger : theme.colors.text;
+  const interactive = Boolean(onPress && (showChevron || danger));
 
   return (
     <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
+      accessibilityRole={interactive ? "button" : undefined}
+      disabled={!interactive}
+      onPress={interactive ? onPress : undefined}
       style={[
         styles.card,
         {
@@ -47,7 +49,7 @@ export function SettingsRow({
         {description ? <Text numberOfLines={2} style={[styles.description, { color: theme.colors.textMuted }]}>{description}</Text> : null}
       </View>
       {value ? <Text numberOfLines={1} style={[styles.value, { color: theme.colors.textMuted }]}>{value}</Text> : null}
-      {!danger && showChevron ? <NitipIcon color={theme.colors.textMuted} name="next" size={14} /> : null}
+      {!danger && showChevron && interactive ? <NitipIcon color={theme.colors.textMuted} name="next" size={14} /> : null}
     </Pressable>
   );
 }

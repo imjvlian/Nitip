@@ -47,6 +47,10 @@ function AppStack() {
           <Stack.Screen name="home" options={{ animation: "fade" }} />
           <Stack.Screen name="orders" options={{ animation: "fade" }} />
           <Stack.Screen name="settings" options={{ animation: "fade" }} />
+          <Stack.Screen name="profile" options={{ animation: "slide_from_right" }} />
+          <Stack.Screen name="vehicle" options={{ animation: "slide_from_right" }} />
+          <Stack.Screen name="location" options={{ animation: "slide_from_right" }} />
+          <Stack.Screen name="support" options={{ animation: "slide_from_right" }} />
           <Stack.Screen name="tracking" options={{ animation: "slide_from_right" }} />
         </Stack>
       </View>
