@@ -115,13 +115,19 @@ const styles = StyleSheet.create({
   },
 });
 
-export function BottomNavigation({ active }: { active: RootTab }) {
+export function BottomNavigation({
+  active,
+  root = false,
+}: {
+  active: RootTab;
+  root?: boolean;
+}) {
   const suppressed = useContext(SuppressBottomNavigationContext);
   const { language } = useNitipLanguage();
   const theme = useNitipTheme();
   const insets = useSafeAreaInsets();
 
-  if (suppressed) return null;
+  if (!root || suppressed) return null;
 
   return (
     <View

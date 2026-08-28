@@ -65,13 +65,14 @@ function AppStack() {
             <Stack.Screen name="promos" options={{ animation: "fade" }} />
             <Stack.Screen name="cart" options={{ animation: "fade" }} />
             <Stack.Screen name="profile" options={{ animation: "fade" }} />
+            <Stack.Screen name="notifications" options={{ animation: "slide_from_right" }} />
           </Stack>
         </BottomNavigationSuppressionProvider>
       </View>
 
       {activeTab ? (
         <View style={{ alignSelf: "stretch", flexShrink: 0, width: "100%" }}>
-          <BottomNavigation active={activeTab} />
+          <BottomNavigation active={activeTab} root />
         </View>
       ) : null}
     </View>

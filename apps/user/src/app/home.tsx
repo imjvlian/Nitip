@@ -35,6 +35,7 @@ const HOME_COPY = {
   id: {
     deliveryLocation: "Lokasi pengantaran",
     offerSection: "Promo hari ini",
+    notifications: "Notifikasi",
     seeAll: "Lihat semua",
     offerEyebrow: "PILIHAN HARI INI",
     offerTitle: "Apa pun yang kamu butuhkan, tinggal nitip.",
@@ -46,6 +47,7 @@ const HOME_COPY = {
   en: {
     deliveryLocation: "Delivery location",
     offerSection: "Today's Offer",
+    notifications: "Notifications",
     seeAll: "See all",
     offerEyebrow: "TODAY'S PICKS",
     offerTitle: "Whatever you need, just nitip.",
@@ -244,16 +246,16 @@ export default function HomeScreen() {
             </Pressable>
 
             <Pressable
-              accessibilityLabel={copy.offerSection}
+              accessibilityLabel={copy.notifications}
               accessibilityRole="button"
               className="h-10 w-10 items-center justify-center rounded-full"
-              onPress={() => router.push("/promos")}
+              onPress={() => router.push("/notifications")}
               style={({ pressed }) => ({
                 backgroundColor: "rgba(255,255,255,0.10)",
                 opacity: pressed ? 0.7 : 1,
               })}
             >
-              <NitipIcon color="#FFFFFF" name="promo" size={17} />
+              <NitipIcon color="#FFFFFF" name="notification" size={17} />
             </Pressable>
 
             <Pressable
