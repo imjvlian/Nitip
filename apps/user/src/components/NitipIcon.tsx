@@ -1,4 +1,6 @@
 import { SymbolView } from "expo-symbols";
+import bold from "expo-symbols/androidWeights/bold";
+import regular from "expo-symbols/androidWeights/regular";
 import type { ColorValue } from "react-native";
 
 export type NitipIconName =
@@ -36,10 +38,11 @@ export type NitipIconName =
   | "privacy"
   | "camera";
 
-const symbols: Record<
-  NitipIconName,
-  { ios: string; android: string; web: string }
-> = {
+export type NitipIconVariant = "default" | "outline" | "filled";
+
+type NitipSymbol = { ios: string; android: string; web: string };
+
+const symbols: Record<NitipIconName, NitipSymbol> = {
   home: { ios: "house.fill", android: "home", web: "home" },
   office: { ios: "building.2.fill", android: "business", web: "business" },
   orders: { ios: "receipt.fill", android: "receipt_long", web: "receipt_long" },
@@ -79,21 +82,40 @@ const symbols: Record<
   camera: { ios: "camera.fill", android: "photo_camera", web: "photo_camera" },
 };
 
+const outlineSymbols: Partial<Record<NitipIconName, NitipSymbol>> = {
+  home: { ios: "house", android: "home", web: "home" },
+  orders: { ios: "receipt", android: "receipt_long", web: "receipt_long" },
+  promo: { ios: "tag", android: "local_offer", web: "local_offer" },
+  cart: { ios: "cart", android: "shopping_cart", web: "shopping_cart" },
+  profile: { ios: "person", android: "person", web: "person" },
+};
+
 export function NitipIcon({
   color,
   name,
   size = 20,
+  variant = "default",
 }: {
   color: ColorValue;
   name: NitipIconName;
   size?: number;
+  variant?: NitipIconVariant;
 }) {
+  const symbol = variant === "outline" ? outlineSymbols[name] ?? symbols[name] : symbols[name];
+  const weight =
+    variant === "filled"
+      ? ({ ios: "semibold", android: bold } as never)
+      : variant === "outline"
+        ? ({ ios: "regular", android: regular } as never)
+        : undefined;
+
   return (
     <SymbolView
-      name={symbols[name] as never}
+      name={symbol as never}
       size={size}
       style={{ height: size, width: size }}
       tintColor={color}
+      weight={weight}
     />
   );
 }

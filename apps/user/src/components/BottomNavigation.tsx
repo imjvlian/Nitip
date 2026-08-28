@@ -59,22 +59,25 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     justifyContent: "space-around",
     paddingHorizontal: 8,
-    paddingTop: 7,
+    paddingTop: 0,
     width: "100%",
   },
   tab: {
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 58,
+    minHeight: 66,
+    paddingBottom: 4,
+    paddingTop: 10,
     position: "relative",
     width: 66,
   },
-  activeHalo: {
-    alignItems: "center",
-    borderRadius: 15,
-    height: 30,
-    justifyContent: "center",
-    width: 38,
+  activeLine: {
+    borderBottomLeftRadius: 3,
+    borderBottomRightRadius: 3,
+    height: 3,
+    position: "absolute",
+    top: 0,
+    width: 28,
   },
   iconSlot: {
     alignItems: "center",
@@ -86,7 +89,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "700",
     lineHeight: 12,
-    marginTop: 2,
+    marginTop: 3,
     textAlign: "center",
   },
   selectedLabel: {
@@ -94,12 +97,6 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.62,
-  },
-  activeDot: {
-    borderRadius: 999,
-    height: 3,
-    marginTop: 3,
-    width: 14,
   },
 });
 
@@ -119,7 +116,7 @@ export function BottomNavigation({ active }: { active: RootTab }) {
           backgroundColor: theme.colors.surfaceRaised,
           borderTopColor: theme.colors.border,
           elevation: 10,
-          paddingBottom: Math.max(insets.bottom, 7),
+          paddingBottom: Math.max(insets.bottom, 8),
           shadowColor: theme.colors.shadow,
           shadowOffset: { width: 0, height: -3 },
           shadowOpacity: theme.mode === "dark" ? 0.2 : 0.08,
@@ -145,17 +142,22 @@ export function BottomNavigation({ active }: { active: RootTab }) {
             }}
             style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
           >
-            <View
-              style={[
-                styles.iconSlot,
-                selected && styles.activeHalo,
-                selected && {
-                  backgroundColor: theme.colors.surfaceAccent,
-                  transform: [{ translateY: -2 }],
-                },
-              ]}
-            >
-              <NitipIcon color={iconColor} name={tab.icon} size={selected ? 19 : 18} />
+            {selected ? (
+              <View
+                style={[
+                  styles.activeLine,
+                  { backgroundColor: theme.colors.primary },
+                ]}
+              />
+            ) : null}
+
+            <View style={styles.iconSlot}>
+              <NitipIcon
+                color={iconColor}
+                name={tab.icon}
+                size={selected ? 20 : 19}
+                variant={selected ? "filled" : "outline"}
+              />
             </View>
 
             <Text
@@ -168,17 +170,6 @@ export function BottomNavigation({ active }: { active: RootTab }) {
             >
               {label}
             </Text>
-
-            {selected ? (
-              <View
-                style={[
-                  styles.activeDot,
-                  { backgroundColor: theme.colors.primary },
-                ]}
-              />
-            ) : (
-              <View style={{ height: 6 }} />
-            )}
           </Pressable>
         );
       })}
