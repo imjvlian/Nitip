@@ -1,6 +1,8 @@
 import { formatRupiah, type NitipAddress, type NitipUserProfile } from "@nitip/domain";
 import type {
+  NitipCatalogOutlet,
   NitipCatalogOutletSummary,
+  NitipProduct,
   NitipPromotion,
 } from "@nitip/domain/catalog";
 import { useNitipLanguage, useNitipTranslation } from "@nitip/i18n";
@@ -24,11 +26,15 @@ import { useCart } from "../context/CartContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
 import {
   apiConfigured,
+  getCatalogOutlet,
   getMe,
   listAddresses,
   listCatalogOutlets,
   listCatalogPromotions,
 } from "../lib/api";
+
+const ALL_CATEGORY = "__all__";
+const MERCHANT_CATEGORY = "__merchant__";
 
 const HOME_COPY = {
   id: {
@@ -41,6 +47,12 @@ const HOME_COPY = {
     offerCta: "Cek promo",
     seeAll: "Lihat semua",
     exploreSection: "Mau cari apa?",
+    allCategory: "Semua",
+    merchantFilter: "Merchant",
+    menuSection: "Menu di Nitip",
+    menuSubtitle: "Menu nyata dari merchant yang tersedia di Nitip.",
+    menuEmpty: "Belum ada menu yang cocok.",
+    menuEmptyDescription: "Coba kategori atau kata pencarian lain.",
     merchantSection: "Merchant di Nitip",
     merchantSubtitle: "Pilihan yang sedang tersedia untuk dipesan.",
     openOnly: "Buka saja",
@@ -56,6 +68,12 @@ const HOME_COPY = {
     offerCta: "View offer",
     seeAll: "See all",
     exploreSection: "What are you looking for?",
+    allCategory: "All",
+    merchantFilter: "Merchants",
+    menuSection: "Menus on Nitip",
+    menuSubtitle: "Real menu items currently available from Nitip merchants.",
+    menuEmpty: "No matching menu yet.",
+    menuEmptyDescription: "Try another category or search term.",
     merchantSection: "Merchants on Nitip",
     merchantSubtitle: "Places currently available to take your order.",
     openOnly: "Open only",
@@ -70,6 +88,23 @@ function isPlaceholderCopy(value: string | null | undefined) {
     ["test", "test promo", "promo", "dummy", "contoh", "contoh promo"].includes(normalized)
   );
 }
+
+function normalizeCategory(value: string) {
+  return value.trim().toLocaleLowerCase();
+}
+
+function categoryIcon(label: string): NitipIconName {
+  const value = normalizeCategory(label);
+  if (/minum|drink|beverage|kopi|coffee|teh|tea|jus|juice|soda/.test(value)) return "drink";
+  if (/toko|store|shop|market/.test(value)) return "store";
+  return "food";
+}
+
+type HomeMenuItem = {
+  outlet: NitipCatalogOutlet;
+  product: NitipProduct;
+  categoryName: string;
+};
 
 export default function HomeScreen() {
   const { t } = useNitipTranslation();
@@ -86,11 +121,14 @@ export default function HomeScreen() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [catalog, setCatalog] = useState<NitipCatalogOutletSummary[]>([]);
+  const [catalogDetails, setCatalogDetails] = useState<NitipCatalogOutlet[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(false);
+  const [menuLoading, setMenuLoading] = useState(false);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [promotions, setPromotions] = useState<NitipPromotion[]>([]);
   const [query, setQuery] = useState("");
   const [openOnly, setOpenOnly] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORY);
 
   useEffect(() => {
     if (!user || !apiConfigured) return;
@@ -161,6 +199,36 @@ export default function HomeScreen() {
   }, [t]);
 
   useEffect(() => {
+    if (!apiConfigured || catalog.length === 0) {
+      setCatalogDetails([]);
+      setMenuLoading(false);
+      return;
+    }
+
+    let active = true;
+    setMenuLoading(true);
+
+    Promise.all(
+      catalog.map((outlet) =>
+        getCatalogOutlet(outlet.id).catch(() => null),
+      ),
+    )
+      .then((items) => {
+        if (!active) return;
+        setCatalogDetails(
+          items.filter((item): item is NitipCatalogOutlet => item !== null),
+        );
+      })
+      .finally(() => {
+        if (active) setMenuLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [catalog]);
+
+  useEffect(() => {
     if (!apiConfigured) return;
 
     let active = true;
@@ -178,19 +246,104 @@ export default function HomeScreen() {
     };
   }, []);
 
-  const visibleCatalog = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+  const menuItems = useMemo<HomeMenuItem[]>(() => {
+    return catalogDetails.flatMap((outlet) =>
+      outlet.categories.flatMap((category) =>
+        category.isActive
+          ? category.products
+              .filter((product) => product.isActive)
+              .map((product) => ({ outlet, product, categoryName: category.name }))
+          : [],
+      ),
+    );
+  }, [catalogDetails]);
 
-    return catalog.filter((outlet) => {
-      if (openOnly && !outlet.acceptingOrders) return false;
+  const detailsByOutlet = useMemo(
+    () => new Map(catalogDetails.map((outlet) => [outlet.id, outlet])),
+    [catalogDetails],
+  );
+
+  const categoryFilters = useMemo(() => {
+    const unique = new Map<string, string>();
+
+    for (const item of menuItems) {
+      const key = normalizeCategory(item.categoryName);
+      if (key && !unique.has(key)) unique.set(key, item.categoryName.trim());
+    }
+
+    return [
+      { key: ALL_CATEGORY, label: copy.allCategory, icon: "search" as NitipIconName },
+      ...Array.from(unique.entries())
+        .slice(0, 8)
+        .map(([key, label]) => ({ key, label, icon: categoryIcon(label) })),
+      { key: MERCHANT_CATEGORY, label: copy.merchantFilter, icon: "store" as NitipIconName },
+    ];
+  }, [copy.allCategory, copy.merchantFilter, menuItems]);
+
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+
+  const visibleProducts = useMemo(() => {
+    if (selectedCategory === MERCHANT_CATEGORY) return [];
+
+    return menuItems.filter((item) => {
+      if (openOnly && !item.outlet.acceptingOrders) return false;
+      if (
+        selectedCategory !== ALL_CATEGORY &&
+        normalizeCategory(item.categoryName) !== selectedCategory
+      ) {
+        return false;
+      }
       if (!normalizedQuery) return true;
 
-      return [outlet.businessName, outlet.name, outlet.addressLine]
+      return [
+        item.product.name,
+        item.product.description ?? "",
+        item.categoryName,
+        item.outlet.businessName,
+        item.outlet.name,
+      ]
         .join(" ")
-        .toLowerCase()
+        .toLocaleLowerCase()
         .includes(normalizedQuery);
     });
-  }, [catalog, openOnly, query]);
+  }, [menuItems, normalizedQuery, openOnly, selectedCategory]);
+
+  const visibleCatalog = useMemo(() => {
+    return catalog.filter((outlet) => {
+      if (openOnly && !outlet.acceptingOrders) return false;
+
+      const detail = detailsByOutlet.get(outlet.id);
+      const outletProducts = detail?.categories.flatMap((category) =>
+        category.products.map((product) => ({ category, product })),
+      ) ?? [];
+
+      if (
+        selectedCategory !== ALL_CATEGORY &&
+        selectedCategory !== MERCHANT_CATEGORY &&
+        !outletProducts.some(
+          ({ category, product }) =>
+            product.isActive && normalizeCategory(category.name) === selectedCategory,
+        )
+      ) {
+        return false;
+      }
+
+      if (!normalizedQuery) return true;
+
+      const merchantMatch = [outlet.businessName, outlet.name, outlet.addressLine]
+        .join(" ")
+        .toLocaleLowerCase()
+        .includes(normalizedQuery);
+      const productMatch = outletProducts.some(({ category, product }) =>
+        [product.name, product.description ?? "", category.name]
+          .join(" ")
+          .toLocaleLowerCase()
+          .includes(normalizedQuery),
+      );
+
+      return merchantMatch || productMatch;
+    });
+  }, [catalog, detailsByOutlet, normalizedQuery, openOnly, selectedCategory]);
 
   if (!user) return <Redirect href="/login" />;
 
@@ -209,6 +362,7 @@ export default function HomeScreen() {
   const heroSearchMuted = theme.mode === "dark" ? theme.colors.textMuted : "#8A8F9D";
   const pageBackground = theme.mode === "dark" ? theme.colors.background : "#F2F3F5";
   const merchantCardWidth = Math.max(194, Math.min(220, Math.floor((width - 44) / 1.65)));
+  const productCardWidth = Math.max(176, Math.min(194, Math.floor((width - 48) / 1.8)));
 
   const featuredPromotion = promotions[0] ?? null;
   const promotionDestination = featuredPromotion?.outletId
@@ -223,12 +377,6 @@ export default function HomeScreen() {
       ? featuredPromotion.description.trim()
       : copy.offerBody;
   const promotionCta = featuredPromotion?.ctaLabel?.trim() || copy.offerCta;
-
-  const categories: { icon: NitipIconName; label: string }[] = [
-    { icon: "food", label: t("home.food") },
-    { icon: "drink", label: t("home.drinks") },
-    { icon: "store", label: t("home.stores") },
-  ];
 
   return (
     <View className="flex-1" style={{ backgroundColor: pageBackground }}>
@@ -484,18 +632,6 @@ export default function HomeScreen() {
                       <NitipIcon color="#FFFFFF" name="promo" size={22} />
                     </View>
                   </View>
-                  <View
-                    className="absolute bottom-4 left-3 h-8 w-8 items-center justify-center rounded-full"
-                    style={{ backgroundColor: theme.colors.surfaceRaised }}
-                  >
-                    <NitipIcon color={theme.colors.primary} name="food" size={14} />
-                  </View>
-                  <View
-                    className="absolute right-3 top-4 h-8 w-8 items-center justify-center rounded-full"
-                    style={{ backgroundColor: theme.colors.surfaceRaised }}
-                  >
-                    <NitipIcon color={theme.colors.primary} name="drink" size={13} />
-                  </View>
                 </View>
               )}
             </Pressable>
@@ -517,49 +653,180 @@ export default function HomeScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
           >
-            {categories.map((category, index) => (
-              <View
-                className="items-center"
-                key={category.label}
-                style={{ marginRight: index === categories.length - 1 ? 0 : 22 }}
-              >
-                <View
-                  className="h-12 w-12 items-center justify-center rounded-full"
-                  style={{ backgroundColor: theme.colors.surfaceAccent }}
+            {categoryFilters.map((category, index) => {
+              const selected = selectedCategory === category.key;
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  className="min-h-[52px] flex-row items-center rounded-[18px] px-4"
+                  key={category.key}
+                  onPress={() => setSelectedCategory(category.key)}
+                  style={({ pressed }) => ({
+                    backgroundColor: selected ? theme.colors.primary : theme.colors.surfaceRaised,
+                    borderColor: selected ? theme.colors.primary : theme.colors.border,
+                    borderWidth: 1,
+                    marginRight: index === categoryFilters.length - 1 ? 0 : 10,
+                    minWidth: 112,
+                    opacity: pressed ? 0.72 : 1,
+                  })}
                 >
                   <View
-                    className="h-9 w-9 items-center justify-center rounded-full"
-                    style={{ backgroundColor: theme.colors.surfaceRaised }}
+                    className="h-8 w-8 items-center justify-center rounded-[11px]"
+                    style={{
+                      backgroundColor: selected
+                        ? "rgba(255,255,255,0.16)"
+                        : theme.colors.surfaceAccent,
+                    }}
                   >
-                    <NitipIcon color={theme.colors.primary} name={category.icon} size={16} />
+                    <NitipIcon
+                      color={selected ? "#FFFFFF" : theme.colors.primary}
+                      name={category.icon}
+                      size={15}
+                    />
                   </View>
-                </View>
-                <Text
-                  className="mt-2 text-[10px] font-extrabold"
-                  numberOfLines={1}
-                  style={{ color: theme.colors.text }}
-                >
-                  {category.label}
-                </Text>
-              </View>
-            ))}
+                  <Text
+                    className="ml-2.5 text-[12px] font-black"
+                    numberOfLines={1}
+                    style={{ color: selected ? "#FFFFFF" : theme.colors.text }}
+                  >
+                    {category.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </ScrollView>
         </View>
 
-        <View className="mt-6 px-4">
-          <View className="flex-row items-end justify-between gap-3">
-            <View className="min-w-0 flex-1">
+        {selectedCategory !== MERCHANT_CATEGORY ? (
+          <View className="mt-6">
+            <View className="px-4">
               <Text
                 className="text-[16px] font-black tracking-[-0.35px]"
                 style={{ color: theme.colors.text }}
               >
-                {copy.merchantSection}
+                {copy.menuSection}
               </Text>
               <Text className="mt-1 text-[9px] leading-[14px]" style={{ color: theme.colors.textMuted }}>
-                {openOnly ? copy.openOnlyActive : copy.merchantSubtitle}
+                {copy.menuSubtitle}
               </Text>
             </View>
+
+            {menuLoading ? (
+              <View
+                className="mx-4 mt-3 items-center rounded-[22px] p-6"
+                style={{ backgroundColor: theme.colors.surfaceRaised }}
+              >
+                <ActivityIndicator color={theme.colors.primary} />
+              </View>
+            ) : visibleProducts.length === 0 ? (
+              <View
+                className="mx-4 mt-3 rounded-[22px] p-5"
+                style={{ backgroundColor: theme.colors.surfaceRaised }}
+              >
+                <Text className="text-[12px] font-black" style={{ color: theme.colors.text }}>
+                  {copy.menuEmpty}
+                </Text>
+                <Text className="mt-1 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
+                  {copy.menuEmptyDescription}
+                </Text>
+              </View>
+            ) : (
+              <ScrollView
+                contentContainerStyle={{
+                  paddingBottom: 12,
+                  paddingHorizontal: 16,
+                  paddingRight: 26,
+                  paddingTop: 12,
+                }}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+              >
+                {visibleProducts.slice(0, 12).map((item, index) => (
+                  <Pressable
+                    accessibilityRole="button"
+                    key={`${item.outlet.id}-${item.product.id}`}
+                    onPress={() => router.push(`/outlet/${item.outlet.id}`)}
+                    style={({ pressed }) => ({
+                      backgroundColor: theme.colors.surfaceRaised,
+                      borderRadius: 22,
+                      elevation: 4,
+                      marginRight: index === Math.min(visibleProducts.length, 12) - 1 ? 0 : 12,
+                      opacity: pressed ? 0.86 : item.product.isAvailable ? 1 : 0.62,
+                      overflow: "hidden",
+                      shadowColor: theme.colors.shadow,
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: theme.mode === "dark" ? 0.2 : 0.08,
+                      shadowRadius: 10,
+                      width: productCardWidth,
+                    })}
+                  >
+                    <View
+                      className="h-[116px] w-full overflow-hidden"
+                      style={{ backgroundColor: theme.colors.surfaceAccent }}
+                    >
+                      {item.product.imageUrl ? (
+                        <Image
+                          className="h-full w-full"
+                          resizeMode="cover"
+                          source={{ uri: item.product.imageUrl }}
+                        />
+                      ) : (
+                        <View className="h-full w-full items-center justify-center">
+                          <View
+                            className="h-14 w-14 items-center justify-center rounded-full"
+                            style={{ backgroundColor: theme.colors.surfaceRaised }}
+                          >
+                            <NitipIcon color={theme.colors.primary} name="food" size={23} />
+                          </View>
+                        </View>
+                      )}
+                    </View>
+
+                    <View className="px-3.5 pb-3.5 pt-3">
+                      <Text
+                        className="text-[12px] font-black leading-[16px]"
+                        numberOfLines={2}
+                        style={{ color: theme.colors.text }}
+                      >
+                        {item.product.name}
+                      </Text>
+                      <Text
+                        className="mt-1 text-[9px]"
+                        numberOfLines={1}
+                        style={{ color: theme.colors.textMuted }}
+                      >
+                        {item.outlet.businessName} · {item.categoryName}
+                      </Text>
+                      <View className="mt-2.5 flex-row items-center justify-between gap-2">
+                        <Text className="text-[10px] font-black" style={{ color: theme.colors.primary }}>
+                          {formatRupiah(item.product.price)}
+                        </Text>
+                        <View
+                          className="h-6 w-6 items-center justify-center rounded-full"
+                          style={{ backgroundColor: theme.colors.surface }}
+                        >
+                          <NitipIcon color={theme.colors.textMuted} name="next" size={9} />
+                        </View>
+                      </View>
+                    </View>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            )}
           </View>
+        ) : null}
+
+        <View className="mt-6 px-4">
+          <Text
+            className="text-[16px] font-black tracking-[-0.35px]"
+            style={{ color: theme.colors.text }}
+          >
+            {copy.merchantSection}
+          </Text>
+          <Text className="mt-1 text-[9px] leading-[14px]" style={{ color: theme.colors.textMuted }}>
+            {openOnly ? copy.openOnlyActive : copy.merchantSubtitle}
+          </Text>
         </View>
 
         {catalogLoading ? (

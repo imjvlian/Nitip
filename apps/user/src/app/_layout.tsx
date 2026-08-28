@@ -62,7 +62,7 @@ function AppStack() {
               gestureEnabled: true,
               fullScreenGestureEnabled: true,
               animationMatchesGesture: true,
-              navigationBarHidden: true,
+              navigationBarHidden: false,
             }}
           >
             <Stack.Screen name="index" options={{ animation: "fade" }} />

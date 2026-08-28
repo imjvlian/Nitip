@@ -3,6 +3,7 @@ import { useNitipLanguage } from "@nitip/i18n";
 import { router } from "expo-router";
 import { createContext, useContext, type ComponentProps, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useNitipTheme } from "../hooks/useNitipTheme";
 
@@ -82,15 +83,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexShrink: 0,
     justifyContent: "space-around",
-    paddingBottom: 14,
     paddingHorizontal: 6,
-    paddingTop: 12,
+    paddingTop: 10,
     width: "100%",
   },
   tab: {
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 60,
+    minHeight: 58,
     width: 66,
   },
   iconArea: {
@@ -124,6 +124,7 @@ export function BottomNavigation({
   const suppressed = useContext(SuppressBottomNavigationContext);
   const { language } = useNitipLanguage();
   const theme = useNitipTheme();
+  const insets = useSafeAreaInsets();
 
   if (!root || suppressed) return null;
 
@@ -134,6 +135,7 @@ export function BottomNavigation({
         {
           backgroundColor: theme.colors.surfaceRaised,
           elevation: 16,
+          paddingBottom: Math.max(insets.bottom, 18),
           shadowColor: theme.colors.shadow,
           shadowOffset: { width: 0, height: -5 },
           shadowOpacity: theme.mode === "dark" ? 0.3 : 0.14,
