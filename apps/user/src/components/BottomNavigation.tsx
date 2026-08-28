@@ -58,6 +58,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexShrink: 0,
     justifyContent: "space-around",
+    marginBottom: 6,
     minHeight: 68,
     paddingBottom: 8,
     paddingHorizontal: 8,

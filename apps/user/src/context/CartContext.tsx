@@ -33,8 +33,8 @@ interface CartContextValue extends CartState {
   ready: boolean;
   itemCount: number;
   subtotal: number;
-  addItem: (outlet: CartOutlet, product: NitipProduct) => AddItemResult;
-  replaceWithItem: (outlet: CartOutlet, product: NitipProduct) => void;
+  addItem: (outlet: CartOutlet, product: NitipProduct, quantity?: number) => AddItemResult;
+  replaceWithItem: (outlet: CartOutlet, product: NitipProduct, quantity?: number) => void;
   setQuantity: (productId: string, quantity: number) => void;
   removeItem: (productId: string) => void;
   clearCart: () => void;
@@ -69,6 +69,11 @@ function parseStoredCart(value: string | null): CartState {
 function clampQuantity(product: NitipProduct, quantity: number) {
   const stockLimit = product.stockQuantity ?? 99;
   return Math.max(1, Math.min(99, stockLimit, quantity));
+}
+
+function normalizeRequestedQuantity(product: NitipProduct, quantity: number | undefined) {
+  const requested = Number.isFinite(quantity) ? Math.trunc(quantity as number) : 1;
+  return clampQuantity(product, Math.max(1, requested));
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
@@ -121,10 +126,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       ready,
       itemCount,
       subtotal,
-      addItem(outlet, product) {
+      addItem(outlet, product, quantity = 1) {
         if (cart.outlet && cart.outlet.id !== outlet.id && cart.items.length > 0) {
           return "different_outlet";
         }
+
+        const requestedQuantity = normalizeRequestedQuantity(product, quantity);
 
         setCart((current) => {
           const existing = current.items.find((item) => item.product.id === product.id);
@@ -136,7 +143,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
                   ? {
                       ...item,
                       product,
-                      quantity: clampQuantity(product, item.quantity + 1),
+                      quantity: clampQuantity(product, item.quantity + requestedQuantity),
                     }
                   : item,
               ),
@@ -144,13 +151,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
           }
           return {
             outlet,
-            items: [...current.items, { product, quantity: 1 }],
+            items: [...current.items, { product, quantity: requestedQuantity }],
           };
         });
         return "added";
       },
-      replaceWithItem(outlet, product) {
-        setCart({ outlet, items: [{ product, quantity: 1 }] });
+      replaceWithItem(outlet, product, quantity = 1) {
+        setCart({
+          outlet,
+          items: [{ product, quantity: normalizeRequestedQuantity(product, quantity) }],
+        });
       },
       setQuantity(productId, quantity) {
         setCart((current) => {

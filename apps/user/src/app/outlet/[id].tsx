@@ -252,29 +252,43 @@ export default function CatalogOutletScreen() {
                                   width: "48.5%",
                                 }}
                               >
-                                {product.imageUrl ? (
-                                  <Image
-                                    className="h-[118px] w-full"
-                                    resizeMode="cover"
-                                    source={{ uri: product.imageUrl }}
-                                    style={{ backgroundColor: theme.colors.surfaceAccent }}
-                                  />
-                                ) : (
-                                  <View className="h-[118px] items-center justify-center" style={{ backgroundColor: theme.colors.surfaceAccent }}>
-                                    <NitipIcon color={theme.colors.primary} name="food" size={28} />
-                                  </View>
-                                )}
+                                <Pressable
+                                  accessibilityRole="button"
+                                  onPress={() =>
+                                    router.push({
+                                      pathname: "/product/[id]",
+                                      params: { id: product.id, outletId: catalog.id },
+                                    })
+                                  }
+                                  style={({ pressed }) => ({ opacity: pressed ? 0.86 : 1 })}
+                                >
+                                  {product.imageUrl ? (
+                                    <Image
+                                      className="h-[118px] w-full"
+                                      resizeMode="cover"
+                                      source={{ uri: product.imageUrl }}
+                                      style={{ backgroundColor: theme.colors.surfaceAccent }}
+                                    />
+                                  ) : (
+                                    <View className="h-[118px] items-center justify-center" style={{ backgroundColor: theme.colors.surfaceAccent }}>
+                                      <NitipIcon color={theme.colors.primary} name="food" size={28} />
+                                    </View>
+                                  )}
 
-                                <View className="p-3">
-                                  <Text className="text-[11px] font-black leading-4" numberOfLines={2} style={{ color: theme.colors.text }}>
-                                    {product.name}
-                                  </Text>
-                                  {product.description ? (
-                                    <Text className="mt-1 text-[8px] leading-3.5" numberOfLines={2} style={{ color: theme.colors.textMuted }}>
-                                      {product.description}
+                                  <View className="px-3 pt-3">
+                                    <Text className="text-[11px] font-black leading-4" numberOfLines={2} style={{ color: theme.colors.text }}>
+                                      {product.name}
                                     </Text>
-                                  ) : null}
-                                  <View className="mt-3 flex-row items-center justify-between gap-2">
+                                    {product.description ? (
+                                      <Text className="mt-1 text-[8px] leading-3.5" numberOfLines={2} style={{ color: theme.colors.textMuted }}>
+                                        {product.description}
+                                      </Text>
+                                    ) : null}
+                                  </View>
+                                </Pressable>
+
+                                <View className="px-3 pb-3 pt-3">
+                                  <View className="flex-row items-center justify-between gap-2">
                                     <Text className="flex-1 text-[10px] font-black" numberOfLines={1} style={{ color: theme.colors.text }}>
                                       {formatRupiah(product.price)}
                                     </Text>
