@@ -50,6 +50,13 @@ interface OutletDocument {
   acceptingOrders: boolean;
 }
 
+interface ProductAddonDocument {
+  id: string;
+  name: string;
+  price: number;
+  isAvailable: boolean;
+}
+
 interface ProductDocument {
   outletId: ObjectId;
   name: string;
@@ -58,6 +65,7 @@ interface ProductDocument {
   stockQuantity: number | null;
   isAvailable: boolean;
   isActive: boolean;
+  addons?: ProductAddonDocument[];
   updatedAt: Date;
 }
 
@@ -270,7 +278,11 @@ function checkoutRequestHash(input: NitipCheckoutRequest) {
     outletId: input.outletId,
     addressId: input.addressId,
     items: input.items
-      .map((item) => ({ productId: item.productId, quantity: item.quantity }))
+      .map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        addonIds: [...(item.addonIds ?? [])].sort(),
+      }))
       .sort((a, b) =>
         a.productId === b.productId
           ? a.quantity - b.quantity
@@ -706,13 +718,29 @@ async function buildCheckout(
       );
     }
 
+    const addonsById = new Map((product.addons ?? []).map((addon) => [addon.id, addon]));
+    const selectedAddons = (item.addonIds ?? []).map((addonId) => {
+      const addon = addonsById.get(addonId);
+      if (!addon || !addon.isAvailable) {
+        throw new CheckoutError(
+          "addon_unavailable",
+          409,
+          `Salah satu add-on untuk ${product.name} sudah tidak tersedia`,
+        );
+      }
+      return { id: addon.id, name: addon.name, price: addon.price };
+    });
+    const addonsTotal = selectedAddons.reduce((total, addon) => total + addon.price, 0);
+    const unitPrice = product.price + addonsTotal;
+
     return {
       productId: product._id.toHexString(),
       name: product.name,
       imageUrl: product.imageUrl ?? null,
-      unitPrice: product.price,
+      unitPrice,
       quantity: item.quantity,
-      lineTotal: product.price * item.quantity,
+      lineTotal: unitPrice * item.quantity,
+      addons: selectedAddons,
     };
   });
 

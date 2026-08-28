@@ -112,7 +112,10 @@ function canonicalCheckoutFingerprint(
   input: NitipCheckoutRequest,
 ) {
   const items = input.items
-    .map((item) => `${item.productId}:${item.quantity}`)
+    .map((item) => {
+      const addonIds = [...(item.addonIds ?? [])].sort().join("+");
+      return `${item.productId}:${item.quantity}:${addonIds}`;
+    })
     .sort()
     .join(",");
   return `${user.uid}:${input.outletId}:${input.addressId}:${items}`;

@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { NitipIcon } from "../components/NitipIcon";
 import { useAuth } from "../context/AuthContext";
-import { useCart } from "../context/CartContext";
+import { cartLineUnitPrice, useCart } from "../context/CartContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
 
 export default function CartScreen() {
@@ -78,6 +78,7 @@ export default function CartScreen() {
             <View className="mt-5 gap-2.5">
               {cart.items.map((item) => {
                 const maxQuantity = item.product.stockQuantity ?? 99;
+                const unitPrice = cartLineUnitPrice(item);
                 return (
                   <View className="flex-row rounded-[24px] p-3" key={item.product.id} style={{ backgroundColor: theme.colors.surface }}>
                     {item.product.imageUrl ? (
@@ -99,8 +100,18 @@ export default function CartScreen() {
                         {item.product.name}
                       </Text>
                       <Text className="mt-1 text-[11px] font-extrabold" style={{ color: theme.colors.primary }}>
-                        {formatRupiah(item.product.price)}
+                        {formatRupiah(unitPrice)}
                       </Text>
+
+                      {item.selectedAddons.length > 0 ? (
+                        <View className="mt-1.5">
+                          {item.selectedAddons.map((addon) => (
+                            <Text key={addon.id} className="text-[8px] leading-3.5" style={{ color: theme.colors.textMuted }}>
+                              + {addon.name}{addon.price > 0 ? ` · ${formatRupiah(addon.price)}` : ""}
+                            </Text>
+                          ))}
+                        </View>
+                      ) : null}
 
                       <View className="mt-3 flex-row items-center gap-2">
                         <Pressable
@@ -127,7 +138,7 @@ export default function CartScreen() {
                       </View>
 
                       <Text className="mt-2 text-[11px] font-black" style={{ color: theme.colors.text }}>
-                        {formatRupiah(item.product.price * item.quantity)}
+                        {formatRupiah(unitPrice * item.quantity)}
                       </Text>
                     </View>
                   </View>

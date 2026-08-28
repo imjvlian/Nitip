@@ -53,7 +53,11 @@ export default function CheckoutScreen() {
     return {
       outletId: cart.outlet.id,
       addressId,
-      items: cart.items.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
+      items: cart.items.map((item) => ({
+        productId: item.product.id,
+        quantity: item.quantity,
+        addonIds: item.selectedAddons.map((addon) => addon.id),
+      })),
     };
   }, [addressId, cart.items, cart.outlet]);
 
@@ -209,9 +213,20 @@ export default function CheckoutScreen() {
         ) : quote ? (
           <View className="mt-3 rounded-[24px] p-5" style={{ backgroundColor: theme.colors.surface }}>
             {quote.items.map((item) => (
-              <View className="flex-row justify-between gap-4 py-1.5" key={item.productId}>
-                <Text className="flex-1 text-[10px]" style={{ color: theme.colors.textMuted }}>{item.quantity}× {item.name}</Text>
-                <Text className="text-[10px] font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(item.lineTotal)}</Text>
+              <View className="py-1.5" key={item.productId}>
+                <View className="flex-row justify-between gap-4">
+                  <Text className="flex-1 text-[10px]" style={{ color: theme.colors.textMuted }}>{item.quantity}× {item.name}</Text>
+                  <Text className="text-[10px] font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(item.lineTotal)}</Text>
+                </View>
+                {(item.addons ?? []).length > 0 ? (
+                  <View className="mt-1 pl-3">
+                    {(item.addons ?? []).map((addon) => (
+                      <Text key={addon.id} className="text-[8px] leading-3.5" style={{ color: theme.colors.textMuted }}>
+                        + {addon.name}{addon.price > 0 ? ` · ${formatRupiah(addon.price)}` : ""}
+                      </Text>
+                    ))}
+                  </View>
+                ) : null}
               </View>
             ))}
             <View className="my-3 h-px" style={{ backgroundColor: theme.colors.border }} />

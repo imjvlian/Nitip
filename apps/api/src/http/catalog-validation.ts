@@ -1,5 +1,6 @@
 import type {
   CreateNitipCategoryInput,
+  CreateNitipProductAddonInput,
   CreateNitipProductInput,
   UpdateNitipCategoryInput,
   UpdateNitipProductInput,
@@ -90,6 +91,49 @@ function nullableHttpsUrl(record: Record<string, unknown>, key: string) {
   return value;
 }
 
+function parseAddons(
+  record: Record<string, unknown>,
+): CreateNitipProductAddonInput[] | undefined {
+  if (!has(record, "addons")) return undefined;
+  const value = record.addons;
+  if (!Array.isArray(value)) throw new ValidationError("addons must be an array");
+  if (value.length > 20) throw new ValidationError("addons cannot contain more than 20 options");
+
+  const seenIds = new Set<string>();
+  const seenNames = new Set<string>();
+
+  return value.map((item, index) => {
+    const addon = asRecord(item);
+    const idValue = addon.id;
+    let id: string | undefined;
+    if (idValue !== undefined) {
+      if (typeof idValue !== "string" || !/^[a-f\d]{24}$/i.test(idValue.trim())) {
+        throw new ValidationError(`addons[${index}].id must be a valid id`);
+      }
+      id = idValue.trim();
+      if (seenIds.has(id)) throw new ValidationError("Duplicate addon id is not allowed");
+      seenIds.add(id);
+    }
+
+    const name = requiredString(addon, "name", 80);
+    const normalizedName = name.toLocaleLowerCase();
+    if (seenNames.has(normalizedName)) {
+      throw new ValidationError("Addon names must be unique within a product");
+    }
+    seenNames.add(normalizedName);
+
+    const price = optionalInteger(addon, "price", 0, 100_000_000);
+    if (price === undefined) throw new ValidationError(`addons[${index}].price is required`);
+
+    return {
+      ...(id ? { id } : {}),
+      name,
+      price,
+      isAvailable: optionalBoolean(addon, "isAvailable") ?? true,
+    };
+  });
+}
+
 export function parseCreateCategory(body: unknown): CreateNitipCategoryInput {
   const record = asRecord(body);
   return {
@@ -125,7 +169,7 @@ export function parseCreateProduct(body: unknown): CreateNitipProductInput {
   return {
     categoryId: requiredString(record, "categoryId", 64),
     name: requiredString(record, "name", 120),
-    description: nullableString(record, "description", 500) ?? null,
+    description: requiredString(record, "description", 500),
     price,
     imageUrl: nullableHttpsUrl(record, "imageUrl") ?? null,
     imagePublicId: nullableString(record, "imagePublicId", 300) ?? null,
@@ -133,6 +177,7 @@ export function parseCreateProduct(body: unknown): CreateNitipProductInput {
     isAvailable: stockQuantity === 0 ? false : requestedAvailable,
     isActive: optionalBoolean(record, "isActive") ?? true,
     sortOrder: optionalInteger(record, "sortOrder", 0, 10_000) ?? 0,
+    addons: parseAddons(record) ?? [],
   };
 }
 
@@ -140,7 +185,7 @@ export function parseUpdateProduct(body: unknown): UpdateNitipProductInput {
   const record = asRecord(body);
   const categoryId = optionalRequiredString(record, "categoryId", 64);
   const name = optionalRequiredString(record, "name", 120);
-  const description = nullableString(record, "description", 500);
+  const description = optionalRequiredString(record, "description", 500);
   const price = optionalInteger(record, "price", 0, 100_000_000);
   const imageUrl = nullableHttpsUrl(record, "imageUrl");
   const imagePublicId = nullableString(record, "imagePublicId", 300);
@@ -148,6 +193,7 @@ export function parseUpdateProduct(body: unknown): UpdateNitipProductInput {
   const isAvailable = optionalBoolean(record, "isAvailable");
   const isActive = optionalBoolean(record, "isActive");
   const sortOrder = optionalInteger(record, "sortOrder", 0, 10_000);
+  const addons = parseAddons(record);
 
   const input: UpdateNitipProductInput = {
     ...(categoryId !== undefined ? { categoryId } : {}),
@@ -160,6 +206,7 @@ export function parseUpdateProduct(body: unknown): UpdateNitipProductInput {
     ...(isAvailable !== undefined ? { isAvailable } : {}),
     ...(isActive !== undefined ? { isActive } : {}),
     ...(sortOrder !== undefined ? { sortOrder } : {}),
+    ...(addons !== undefined ? { addons } : {}),
   };
 
   if (stockQuantity === 0) input.isAvailable = false;
