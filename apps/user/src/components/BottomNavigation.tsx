@@ -1,9 +1,9 @@
-import Ionicons from "@expo/vector-icons/Ionicons";
 import { useNitipLanguage } from "@nitip/i18n";
 import { router } from "expo-router";
-import { createContext, useContext, type ComponentProps, type ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { NitipIcon, type NitipIconName } from "./NitipIcon";
 import { useUserTheme } from "../context/ThemeContext";
 
 export type RootTab = "home" | "orders" | "promos" | "cart" | "profile";
@@ -36,16 +36,15 @@ const labels = {
 } as const;
 
 const tabs = [
-  { key: "home", href: "/home", iconOutline: "home-outline", iconFilled: "home" },
-  { key: "orders", href: "/orders", iconOutline: "receipt-outline", iconFilled: "receipt" },
-  { key: "promos", href: "/promos", iconOutline: "pricetag-outline", iconFilled: "pricetag" },
-  { key: "cart", href: "/cart", iconOutline: "cart-outline", iconFilled: "cart" },
-  { key: "profile", href: "/profile", iconOutline: "person-outline", iconFilled: "person" },
+  { key: "home", href: "/home", icon: "home" },
+  { key: "orders", href: "/orders", icon: "orders" },
+  { key: "promos", href: "/promos", icon: "promo" },
+  { key: "cart", href: "/cart", icon: "cart" },
+  { key: "profile", href: "/profile", icon: "profile" },
 ] as const satisfies readonly {
   key: RootTab;
   href: "/home" | "/orders" | "/promos" | "/cart" | "/profile";
-  iconOutline: ComponentProps<typeof Ionicons>["name"];
-  iconFilled: ComponentProps<typeof Ionicons>["name"];
+  icon: NitipIconName;
 }[];
 
 const styles = StyleSheet.create({
@@ -159,10 +158,11 @@ export function BottomNavigation({
             ) : null}
 
             <View style={styles.iconStage}>
-              <Ionicons
+              <NitipIcon
                 color={iconColor}
-                name={selected ? tab.iconFilled : tab.iconOutline}
+                name={tab.icon}
                 size={selected ? 20 : 18}
+                variant={selected ? "filled" : "outline"}
               />
             </View>
 
