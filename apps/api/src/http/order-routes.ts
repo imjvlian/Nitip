@@ -3,6 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import { env, IntegrationNotConfiguredError } from "../config/env.js";
 import { authenticateRequest } from "../lib/authenticate.js";
+import { cancelPendingCustomerOrder, CustomerCancellationError } from "../repositories/customer-cancellations.js";
 import { autoDisableSoldOutProducts } from "../repositories/inventory-guard.js";
 import { getCustomerOrderOperations } from "../repositories/order-operations.js";
 import { getCustomerOrderTracking } from "../repositories/order-tracking.js";
@@ -16,6 +17,7 @@ function handleOrderError(request: FastifyRequest, reply: FastifyReply, error: u
   if (error instanceof ValidationError) return reply.code(400).send({ error: "validation_error", message: error.message });
   if (error instanceof RatingError) return reply.code(error.statusCode).send({ error: error.code, message: error.message });
   if (error instanceof CheckoutError) return reply.code(error.statusCode).send({ error: error.code, message: error.message });
+  if (error instanceof CustomerCancellationError) return reply.code(error.statusCode).send({ error: error.code, message: error.message });
   request.log.error({ err: error }, "Nitip order route failed");
   return reply.code(500).send({ error: "internal_server_error", message: "Unable to complete order request" });
 }
@@ -42,6 +44,17 @@ function parseRatingInput(value: unknown): UpsertNitipOrderRatingInput {
   return { score, comment: comment || null };
 }
 
+function parseCancelReason(value: unknown) {
+  if (value == null) return null;
+  if (typeof value !== "object" || Array.isArray(value)) throw new ValidationError("Cancellation body must be an object");
+  const reason = (value as Record<string, unknown>).reason;
+  if (reason == null) return null;
+  if (typeof reason !== "string") throw new ValidationError("Cancellation reason must be a string");
+  const trimmed = reason.trim();
+  if (trimmed.length > 300) throw new ValidationError("Cancellation reason must not exceed 300 characters");
+  return trimmed || null;
+}
+
 export function registerOrderRoutes(app: FastifyInstance) {
   app.post("/checkout/quote", async (request, reply) => {
     const identity = await authenticateRequest(request, reply); if (!identity) return;
@@ -51,55 +64,47 @@ export function registerOrderRoutes(app: FastifyInstance) {
 
   app.post("/orders", async (request, reply) => {
     const identity = await authenticateRequest(request, reply); if (!identity) return;
-    try {
-      const order = await createCustomerOrder(identity.uid, parseCheckoutRequest(request.body), parseIdempotencyKey(request));
-      return reply.code(201).send({ data: order });
-    } catch (error) { return handleOrderError(request, reply, error); }
+    try { const order = await createCustomerOrder(identity.uid, parseCheckoutRequest(request.body), parseIdempotencyKey(request)); return reply.code(201).send({ data: order }); }
+    catch (error) { return handleOrderError(request, reply, error); }
   });
 
   app.get("/me/orders", async (request, reply) => {
     const identity = await authenticateRequest(request, reply); if (!identity) return;
-    try { return { data: await listCustomerOrders(identity.uid) }; }
-    catch (error) { return handleOrderError(request, reply, error); }
+    try { return { data: await listCustomerOrders(identity.uid) }; } catch (error) { return handleOrderError(request, reply, error); }
   });
 
   app.get<{ Params: { id: string } }>("/orders/:id", async (request, reply) => {
     const identity = await authenticateRequest(request, reply); if (!identity) return;
-    try {
-      const order = await getCustomerOrder(identity.uid, request.params.id);
-      if (!order) return reply.code(404).send({ error: "order_not_found" });
-      return { data: order };
-    } catch (error) { return handleOrderError(request, reply, error); }
+    try { const order = await getCustomerOrder(identity.uid, request.params.id); if (!order) return reply.code(404).send({ error: "order_not_found" }); return { data: order }; }
+    catch (error) { return handleOrderError(request, reply, error); }
+  });
+
+  app.post<{ Params: { id: string } }>("/orders/:id/cancel", async (request, reply) => {
+    const identity = await authenticateRequest(request, reply); if (!identity) return;
+    try { const order = await cancelPendingCustomerOrder(identity.uid, request.params.id, parseCancelReason(request.body)); if (!order) return reply.code(404).send({ error: "order_not_found" }); return { data: order }; }
+    catch (error) { return handleOrderError(request, reply, error); }
   });
 
   app.get<{ Params: { id: string } }>("/orders/:id/operations", async (request, reply) => {
     const identity = await authenticateRequest(request, reply); if (!identity) return;
-    try {
-      const data = await getCustomerOrderOperations(identity.uid, request.params.id);
-      if (!data) return reply.code(404).send({ error: "order_not_found" });
-      return { data };
-    } catch (error) { return handleOrderError(request, reply, error); }
+    try { const data = await getCustomerOrderOperations(identity.uid, request.params.id); if (!data) return reply.code(404).send({ error: "order_not_found" }); return { data }; }
+    catch (error) { return handleOrderError(request, reply, error); }
   });
 
   app.get<{ Params: { id: string } }>("/orders/:id/tracking", async (request, reply) => {
     const identity = await authenticateRequest(request, reply); if (!identity) return;
-    try {
-      const data = await getCustomerOrderTracking(identity.uid, request.params.id);
-      if (!data) return reply.code(404).send({ error: "order_not_found" });
-      return { data };
-    } catch (error) { return handleOrderError(request, reply, error); }
+    try { const data = await getCustomerOrderTracking(identity.uid, request.params.id); if (!data) return reply.code(404).send({ error: "order_not_found" }); return { data }; }
+    catch (error) { return handleOrderError(request, reply, error); }
   });
 
   app.get<{ Params: { id: string } }>("/orders/:id/rating", async (request, reply) => {
     const identity = await authenticateRequest(request, reply); if (!identity) return;
-    try { return { data: await getCustomerOrderRating(identity.uid, request.params.id) }; }
-    catch (error) { return handleOrderError(request, reply, error); }
+    try { return { data: await getCustomerOrderRating(identity.uid, request.params.id) }; } catch (error) { return handleOrderError(request, reply, error); }
   });
 
   app.put<{ Params: { id: string } }>("/orders/:id/rating", async (request, reply) => {
     const identity = await authenticateRequest(request, reply); if (!identity) return;
-    try { return { data: await upsertCustomerOrderRating(identity.uid, request.params.id, parseRatingInput(request.body)) }; }
-    catch (error) { return handleOrderError(request, reply, error); }
+    try { return { data: await upsertCustomerOrderRating(identity.uid, request.params.id, parseRatingInput(request.body)) }; } catch (error) { return handleOrderError(request, reply, error); }
   });
 
   app.post<{ Params: { id: string } }>("/orders/:id/simulate-payment", async (request, reply) => {
