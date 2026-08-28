@@ -28,7 +28,7 @@ const COPY = {
     unavailable: "Menu tidak tersedia",
     unavailableBody: "Menu ini mungkin sudah tidak aktif atau tidak lagi dijual merchant.",
     quantity: "Jumlah",
-    checkout: "Checkout",
+    cart: "Keranjang",
     addToCart: "Tambah ke keranjang",
     added: "Ditambahkan ke keranjang",
     soldOut: "Stok habis",
@@ -48,7 +48,7 @@ const COPY = {
     unavailable: "Menu unavailable",
     unavailableBody: "This item may no longer be active or sold by the merchant.",
     quantity: "Quantity",
-    checkout: "Checkout",
+    cart: "Cart",
     addToCart: "Add to cart",
     added: "Added to cart",
     soldOut: "Out of stock",
@@ -164,17 +164,14 @@ export default function ProductDetailScreen() {
     );
   }
 
-  function addSelectedQuantity(goToCheckout = false) {
+  function addSelectedQuantity() {
     if (!catalog || !product || !canAdd) return;
     const outlet = {
       id: catalog.id,
       name: catalog.name,
       businessName: catalog.businessName,
     };
-    const finish = () => {
-      setAdded(true);
-      if (goToCheckout) router.push("/checkout");
-    };
+    const finish = () => setAdded(true);
     const result = cart.addItem(outlet, product, selectedQuantity, selectedAddons);
     if (result === "different_outlet") {
       Alert.alert(t("outlet.changeCartTitle"), t("outlet.changeCartDescription"), [
@@ -321,33 +318,38 @@ export default function ProductDetailScreen() {
         <View className="absolute bottom-0 left-0 right-0 px-4 pt-3" style={{ backgroundColor: theme.colors.surfaceRaised, paddingBottom: Math.max(insets.bottom, 12), shadowColor: theme.colors.shadow, shadowOffset: { width: 0, height: -5 }, shadowOpacity: theme.mode === "dark" ? 0.22 : 0.06, shadowRadius: 14, elevation: 10 }}>
           <View className="flex-row gap-2">
             <Pressable
-              accessibilityLabel={copy.checkout}
+              accessibilityLabel={added ? copy.added : copy.addToCart}
               className="min-h-[56px] flex-[4] flex-row items-center rounded-full px-5"
               disabled={!canAdd}
-              onPress={() => addSelectedQuantity(true)}
+              onPress={addSelectedQuantity}
               style={{ backgroundColor: theme.colors.primary, opacity: canAdd ? 1 : 0.42 }}
             >
               <View className="flex-1">
-                <Text className="text-[11px] font-black text-white">{copy.checkout}</Text>
+                <Text className="text-[11px] font-black text-white">{added ? copy.added : copy.addToCart}</Text>
                 <Text className="mt-0.5 text-[9px] text-white/75">{selectedQuantity} × {formatRupiah(unitPrice)}</Text>
               </View>
               <Text className="text-[13px] font-black text-white">{formatRupiah(totalPrice)}</Text>
-              <View className="ml-2"><NitipIcon color="#FFFFFF" name="next" size={17} /></View>
+              <View className="ml-2"><NitipIcon color="#FFFFFF" name={added ? "check" : "plus"} size={17} /></View>
             </Pressable>
 
             <Pressable
-              accessibilityLabel={added ? copy.added : copy.addToCart}
+              accessibilityLabel={copy.cart}
               className="min-h-[56px] flex-1 items-center justify-center rounded-full"
-              disabled={!canAdd}
-              onPress={() => addSelectedQuantity(false)}
+              onPress={() => router.push("/cart")}
               style={{
-                backgroundColor: added ? theme.colors.successSurface : theme.colors.surfaceAccent,
-                borderColor: added ? theme.colors.success : theme.colors.primary,
+                backgroundColor: theme.colors.surfaceAccent,
+                borderColor: theme.colors.primary,
                 borderWidth: 1,
-                opacity: canAdd ? 1 : 0.42,
               }}
             >
-              <NitipIcon color={added ? theme.colors.success : theme.colors.primary} name={added ? "check" : "cart"} size={19} />
+              <View className="relative items-center justify-center">
+                <NitipIcon color={theme.colors.primary} name="cart" size={19} />
+                {cart.itemCount > 0 ? (
+                  <View className="absolute -right-3 -top-3 min-w-4 items-center justify-center rounded-full px-1" style={{ backgroundColor: theme.colors.primary }}>
+                    <Text className="text-[7px] font-black text-white">{cart.itemCount > 99 ? "99+" : cart.itemCount}</Text>
+                  </View>
+                ) : null}
+              </View>
             </Pressable>
           </View>
         </View>
