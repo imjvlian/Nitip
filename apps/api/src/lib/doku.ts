@@ -3,18 +3,12 @@ import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto
 import { env, IntegrationNotConfiguredError } from "../config/env.js";
 
 export const DOKU_CHECKOUT_PATH = "/checkout/v1/payment";
+export const DOKU_STATUS_PATH = "/orders/v1/status";
 
 export interface DokuCheckoutResponse {
   response?: {
-    order?: {
-      amount?: number;
-      invoice_number?: string;
-    };
-    payment?: {
-      token_id?: string;
-      url?: string;
-      expired_date?: string;
-    };
+    order?: { amount?: number; invoice_number?: string };
+    payment?: { token_id?: string; url?: string; expired_date?: string };
   };
   error_messages?: string[];
   message?: unknown;
@@ -25,15 +19,16 @@ export interface DokuNotificationBody {
     invoice_number?: string;
     amount?: number | string;
     status?: string;
+    date?: string;
   };
   transaction?: {
     status?: string;
     date?: string;
     original_request_id?: string;
   };
-  service?: { id?: string };
-  acquirer?: { id?: string };
-  channel?: { id?: string };
+  service?: { id?: string | null };
+  acquirer?: { id?: string | null };
+  channel?: { id?: string | null };
   [key: string]: unknown;
 }
 
@@ -105,6 +100,27 @@ function parseDokuExpiry(value: string | undefined) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+async function readDokuJson<T>(response: Response, operation: string): Promise<T> {
+  let parsed: unknown;
+  try {
+    parsed = await response.json();
+  } catch {
+    throw new Error(`DOKU ${operation} returned an invalid JSON response`);
+  }
+  if (!response.ok) {
+    const body = parsed as { error_messages?: string[]; message?: string | string[] };
+    const message = Array.isArray(body.error_messages)
+      ? body.error_messages.join("; ")
+      : Array.isArray(body.message)
+        ? body.message.join("; ")
+        : typeof body.message === "string"
+          ? body.message
+          : `DOKU ${operation} failed with HTTP ${response.status}`;
+    throw new Error(message);
+  }
+  return parsed as T;
+}
+
 export async function createDokuCheckout(input: {
   invoiceNumber: string;
   amount: number;
@@ -122,7 +138,6 @@ export async function createDokuCheckout(input: {
     },
     payment: {
       payment_due_date: Math.max(1, Math.floor(input.dueMinutes)),
-      type: "SALE",
     },
     ...(env.dokuNotificationUrl
       ? { additional_info: { override_notification_url: env.dokuNotificationUrl } }
@@ -154,18 +169,7 @@ export async function createDokuCheckout(input: {
       body: rawBody,
       signal: controller.signal,
     });
-
-    let parsed: DokuCheckoutResponse = {};
-    try {
-      parsed = (await response.json()) as DokuCheckoutResponse;
-    } catch {
-      throw new Error("DOKU returned an invalid JSON response");
-    }
-    if (!response.ok) {
-      const message = parsed.error_messages?.join("; ") || `DOKU Checkout failed with HTTP ${response.status}`;
-      throw new Error(message);
-    }
-
+    const parsed = await readDokuJson<DokuCheckoutResponse>(response, "Checkout");
     const checkoutUrl = parsed.response?.payment?.url;
     if (!checkoutUrl) throw new Error("DOKU Checkout did not return payment.url");
     return {
@@ -174,6 +178,39 @@ export async function createDokuCheckout(input: {
       expiresAt: parseDokuExpiry(parsed.response?.payment?.expired_date),
       tokenId: parsed.response?.payment?.token_id ?? null,
     };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function getDokuOrderStatus(invoiceNumber: string): Promise<DokuNotificationBody> {
+  const credentials = requireDokuCredentials();
+  const requestId = randomUUID();
+  const requestTimestamp = new Date().toISOString();
+  const requestTarget = `${DOKU_STATUS_PATH}/${encodeURIComponent(invoiceNumber)}`;
+  const signature = dokuSignature({
+    clientId: credentials.clientId,
+    requestId,
+    requestTimestamp,
+    requestTarget,
+    secretKey: credentials.secretKey,
+  });
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const response = await fetch(`${env.dokuBaseUrl}${requestTarget}`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "Client-Id": credentials.clientId,
+        "Request-Id": requestId,
+        "Request-Timestamp": requestTimestamp,
+        Signature: signature,
+      },
+      signal: controller.signal,
+    });
+    return await readDokuJson<DokuNotificationBody>(response, "Check Status");
   } finally {
     clearTimeout(timer);
   }

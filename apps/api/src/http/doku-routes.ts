@@ -3,13 +3,16 @@ import { Readable } from "node:stream";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import { env, IntegrationNotConfiguredError } from "../config/env.js";
-import { verifyDokuNotificationSignature, type DokuNotificationBody } from "../lib/doku.js";
 import { authenticateRequest } from "../lib/authenticate.js";
-import { DokuPaymentError, processDokuNotification, startCustomerDokuCheckout } from "../repositories/doku-payments.js";
+import { verifyDokuNotificationSignature, type DokuNotificationBody } from "../lib/doku.js";
+import {
+  DokuPaymentError,
+  processDokuNotification,
+  reconcileCustomerDokuPayment,
+  startCustomerDokuCheckout,
+} from "../repositories/doku-payments.js";
 
-interface RawBodyRequest extends FastifyRequest {
-  dokuRawBody?: string;
-}
+interface RawBodyRequest extends FastifyRequest { dokuRawBody?: string; }
 
 function headerValue(request: FastifyRequest, name: string) {
   const value = request.headers[name.toLowerCase()];
@@ -33,6 +36,18 @@ export function registerDokuRoutes(app: FastifyInstance) {
     if (!identity) return;
     try {
       const order = await startCustomerDokuCheckout(identity.uid, request.params.id);
+      if (!order) return reply.code(404).send({ error: "order_not_found" });
+      return { data: order };
+    } catch (error) {
+      return routeError(request, reply, error);
+    }
+  });
+
+  app.post<{ Params: { id: string } }>("/orders/:id/payment/doku/reconcile", async (request, reply) => {
+    const identity = await authenticateRequest(request, reply);
+    if (!identity) return;
+    try {
+      const order = await reconcileCustomerDokuPayment(identity.uid, request.params.id);
       if (!order) return reply.code(404).send({ error: "order_not_found" });
       return { data: order };
     } catch (error) {

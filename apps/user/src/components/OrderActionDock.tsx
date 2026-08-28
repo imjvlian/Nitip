@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "../context/AuthContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
-import { getOrder, startDokuOrderPayment } from "../lib/api";
+import { getOrder, reconcileDokuOrderPayment, startDokuOrderPayment } from "../lib/api";
 import { cancelPendingOrder } from "../lib/cancelOrder";
 import { NitipIcon } from "./NitipIcon";
 
@@ -28,37 +28,18 @@ export function OrderActionDock() {
   const [order, setOrder] = useState<NitipOrder | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
 
   const c = language === "id" ? {
-    chat: "Chat driver",
-    pay: "Bayar DOKU",
-    opening: "Membuka...",
-    paymentFailed: "DOKU belum dapat dibuka",
-    paymentOpened: "DOKU Checkout dibuka",
-    paymentOpenedBody: "Selesaikan pembayaran di halaman DOKU, lalu kembali ke Nitip. Status pesanan akan diperbarui otomatis.",
-    cancel: "Batalkan",
-    cancelTitle: "Batalkan pesanan?",
-    cancelBody: "Pesanan belum dibayar. Stok yang ditahan akan langsung dilepas.",
-    keep: "Kembali",
-    confirm: "Batalkan pesanan",
-    cancelled: "Pesanan dibatalkan",
-    cancelledBody: "Reservasi stok sudah dilepas dan pesanan tidak akan diproses.",
-    failed: "Tidak dapat membatalkan",
+    chat: "Chat driver", pay: "Bayar DOKU", reopen: "Buka DOKU", opening: "Membuka...", check: "Cek status", checking: "Mengecek...",
+    paymentFailed: "DOKU belum dapat dibuka", paymentOpened: "DOKU Checkout dibuka", paymentOpenedBody: "Selesaikan pembayaran di halaman DOKU, lalu kembali ke Nitip. Status pesanan akan diperbarui otomatis.",
+    checkFailed: "Status pembayaran belum dapat dicek", paid: "Pembayaran terkonfirmasi", paidBody: "DOKU mengonfirmasi pembayaran berhasil. Pesanan sekarang menunggu merchant.", pending: "Pembayaran masih diproses", pendingBody: "DOKU belum mengirim status final. Kamu dapat mencoba cek lagi setelah sekitar 60 detik.", expired: "Sesi pembayaran berakhir", expiredBody: "DOKU mengonfirmasi sesi sudah kedaluwarsa dan reservasi stok dilepas.",
+    cancel: "Batalkan", cancelTitle: "Batalkan pesanan?", cancelBody: "Pesanan belum memiliki sesi pembayaran DOKU. Stok yang ditahan akan langsung dilepas.", keep: "Kembali", confirm: "Batalkan pesanan", cancelled: "Pesanan dibatalkan", cancelledBody: "Reservasi stok sudah dilepas dan pesanan tidak akan diproses.", failed: "Tidak dapat membatalkan",
   } : {
-    chat: "Driver chat",
-    pay: "Pay with DOKU",
-    opening: "Opening...",
-    paymentFailed: "DOKU could not be opened",
-    paymentOpened: "DOKU Checkout opened",
-    paymentOpenedBody: "Complete payment on the DOKU page, then return to Nitip. The order status will refresh automatically.",
-    cancel: "Cancel",
-    cancelTitle: "Cancel this order?",
-    cancelBody: "The order has not been paid. Reserved stock will be released immediately.",
-    keep: "Keep order",
-    confirm: "Cancel order",
-    cancelled: "Order cancelled",
-    cancelledBody: "The stock reservation was released and the order will not be processed.",
-    failed: "Unable to cancel",
+    chat: "Driver chat", pay: "Pay with DOKU", reopen: "Open DOKU", opening: "Opening...", check: "Check status", checking: "Checking...",
+    paymentFailed: "DOKU could not be opened", paymentOpened: "DOKU Checkout opened", paymentOpenedBody: "Complete payment on the DOKU page, then return to Nitip. The order status will refresh automatically.",
+    checkFailed: "Payment status could not be checked", paid: "Payment confirmed", paidBody: "DOKU confirmed the payment. The order is now waiting for the merchant.", pending: "Payment is still processing", pendingBody: "DOKU has not returned a final status yet. Try checking again after about 60 seconds.", expired: "Payment session expired", expiredBody: "DOKU confirmed the checkout expired and reserved stock was released.",
+    cancel: "Cancel", cancelTitle: "Cancel this order?", cancelBody: "No DOKU payment session has been created yet. Reserved stock will be released immediately.", keep: "Keep order", confirm: "Cancel order", cancelled: "Order cancelled", cancelledBody: "The stock reservation was released and the order will not be processed.", failed: "Unable to cancel",
   };
 
   const load = useCallback(async () => {
@@ -77,7 +58,8 @@ export function OrderActionDock() {
 
   const canChat = CHAT_STATUSES.includes(order.status);
   const canPay = order.status === "pending_payment";
-  const canCancel = order.status === "pending_payment" && !order.payment?.checkoutUrl;
+  const hasDokuSession = canPay && order.payment?.provider === "doku" && Boolean(order.payment.checkoutUrl);
+  const canCancel = canPay && !hasDokuSession;
   if (!canChat && !canPay && !canCancel) return null;
 
   async function payWithDoku() {
@@ -96,6 +78,22 @@ export function OrderActionDock() {
       Alert.alert(c.paymentFailed, error instanceof Error ? error.message : c.paymentFailed);
     } finally {
       setPaying(false);
+    }
+  }
+
+  async function checkDokuStatus() {
+    if (!order || reconciling) return;
+    setReconciling(true);
+    try {
+      const next = await reconcileDokuOrderPayment(user, order.id);
+      setOrder(next);
+      if (next.status === "paid") Alert.alert(c.paid, c.paidBody);
+      else if (next.status === "cancelled" || next.payment?.status === "expired") Alert.alert(c.expired, c.expiredBody);
+      else Alert.alert(c.pending, c.pendingBody);
+    } catch (error) {
+      Alert.alert(c.checkFailed, error instanceof Error ? error.message : c.checkFailed);
+    } finally {
+      setReconciling(false);
     }
   }
 
@@ -124,7 +122,8 @@ export function OrderActionDock() {
     <View pointerEvents="box-none" style={[styles.wrap, { bottom: Math.max(insets.bottom + 14, 20) }]}>
       <View style={[styles.dock, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, shadowColor: theme.colors.shadow }]}>
         {canChat ? <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: "/chat/[orderId]", params: { orderId } })} style={[styles.action, { backgroundColor: theme.colors.primary }]}><NitipIcon color="#FFFFFF" name="chat" size={16} /><Text style={styles.primaryText}>{c.chat}</Text></Pressable> : null}
-        {canPay ? <Pressable accessibilityRole="button" disabled={paying} onPress={() => void payWithDoku()} style={[styles.action, { backgroundColor: theme.colors.primary, opacity: paying ? 0.55 : 1 }]}>{paying ? <ActivityIndicator color="#FFFFFF" size="small" /> : <NitipIcon color="#FFFFFF" name="receipt" size={16} />}<Text style={styles.primaryText}>{paying ? c.opening : c.pay}</Text></Pressable> : null}
+        {canPay ? <Pressable accessibilityRole="button" disabled={paying} onPress={() => void payWithDoku()} style={[styles.action, { backgroundColor: theme.colors.primary, opacity: paying ? 0.55 : 1 }]}>{paying ? <ActivityIndicator color="#FFFFFF" size="small" /> : <NitipIcon color="#FFFFFF" name="receipt" size={16} />}<Text style={styles.primaryText}>{paying ? c.opening : hasDokuSession ? c.reopen : c.pay}</Text></Pressable> : null}
+        {hasDokuSession ? <Pressable accessibilityRole="button" disabled={reconciling} onPress={() => void checkDokuStatus()} style={[styles.action, { backgroundColor: theme.colors.surfaceAccent, opacity: reconciling ? 0.55 : 1 }]}>{reconciling ? <ActivityIndicator color={theme.colors.primary} size="small" /> : <NitipIcon color={theme.colors.primary} name="refresh" size={16} />}<Text style={[styles.secondaryText, { color: theme.colors.primary }]}>{reconciling ? c.checking : c.check}</Text></Pressable> : null}
         {canCancel ? <Pressable accessibilityRole="button" disabled={cancelling} onPress={confirmCancel} style={[styles.action, { backgroundColor: theme.colors.dangerSurface, opacity: cancelling ? 0.55 : 1 }]}>{cancelling ? <ActivityIndicator color={theme.colors.danger} size="small" /> : <NitipIcon color={theme.colors.danger} name="trash" size={16} />}<Text style={[styles.secondaryText, { color: theme.colors.danger }]}>{c.cancel}</Text></Pressable> : null}
       </View>
     </View>
@@ -134,7 +133,7 @@ export function OrderActionDock() {
 const styles = StyleSheet.create({
   wrap: { left: 18, position: "absolute", right: 18, zIndex: 90 },
   dock: { borderRadius: 19, borderWidth: 1, elevation: 8, flexDirection: "row", gap: 8, padding: 7, shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.12, shadowRadius: 12 },
-  action: { alignItems: "center", borderRadius: 14, flex: 1, flexDirection: "row", gap: 7, justifyContent: "center", minHeight: 46, paddingHorizontal: 10 },
+  action: { alignItems: "center", borderRadius: 14, flex: 1, flexDirection: "row", gap: 7, justifyContent: "center", minHeight: 46, paddingHorizontal: 9 },
   primaryText: { color: "#FFFFFF", fontSize: 8, fontWeight: "900" },
   secondaryText: { fontSize: 8, fontWeight: "900" },
 });
