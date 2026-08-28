@@ -7,6 +7,7 @@ import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { BottomNavigation, type RootTab } from "../components/BottomNavigation";
+import { LiveTrackingShortcut } from "../components/LiveTrackingShortcut";
 import { AuthProvider } from "../context/AuthContext";
 import { DriverThemeProvider, useDriverTheme } from "../context/ThemeContext";
 
@@ -46,6 +47,7 @@ function AppStack() {
           <Stack.Screen name="home" options={{ animation: "fade" }} />
           <Stack.Screen name="orders" options={{ animation: "fade" }} />
           <Stack.Screen name="settings" options={{ animation: "fade" }} />
+          <Stack.Screen name="tracking" options={{ animation: "slide_from_right" }} />
         </Stack>
       </View>
 
@@ -57,6 +59,8 @@ function AppStack() {
           <BottomNavigation active={activeTab} />
         </View>
       ) : null}
+
+      <LiveTrackingShortcut bottom={activeTab ? ROOT_TAB_CLEARANCE + 12 : 24} />
     </View>
   );
 }
