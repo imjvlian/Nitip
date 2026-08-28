@@ -1,5 +1,5 @@
 import { useNitipTranslation } from "@nitip/i18n";
-import { nitipRadius, nitipSpacing } from "@nitip/theme";
+import { nitipSpacing } from "@nitip/theme";
 import { router } from "expo-router";
 import {
   createContext,
@@ -37,44 +37,41 @@ const tabs: {
 
 const styles = StyleSheet.create({
   shell: {
-    paddingHorizontal: nitipSpacing.md,
-    paddingTop: nitipSpacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: nitipSpacing.sm,
+    paddingTop: 5,
   },
   dock: {
     alignItems: "stretch",
-    borderRadius: nitipRadius.xl,
     flexDirection: "row",
-    minHeight: 64,
-    padding: nitipSpacing.xxs,
+    minHeight: 58,
     width: "100%",
   },
   tab: {
     alignItems: "center",
-    borderRadius: nitipRadius.lg,
     flexBasis: 0,
     flexGrow: 1,
     flexShrink: 1,
     justifyContent: "center",
     minHeight: 54,
     minWidth: 0,
-    paddingHorizontal: 2,
   },
   iconSlot: {
     alignItems: "center",
-    height: 22,
+    height: 23,
     justifyContent: "center",
     width: 30,
   },
   label: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "800",
-    lineHeight: 14,
-    marginTop: 3,
+    lineHeight: 12,
+    marginTop: 2,
     textAlign: "center",
     width: "100%",
   },
   pressed: {
-    opacity: 0.68,
+    opacity: 0.58,
   },
 });
 
@@ -91,26 +88,13 @@ export function BottomNavigation({ active }: { active: RootTab }) {
       style={[
         styles.shell,
         {
-          backgroundColor: theme.colors.background,
+          backgroundColor: theme.colors.surfaceRaised,
+          borderTopColor: theme.colors.border,
           paddingBottom: Math.max(insets.bottom, nitipSpacing.xs),
         },
       ]}
     >
-      <View
-        style={[
-          styles.dock,
-          {
-            backgroundColor: theme.colors.surfaceRaised,
-            borderColor: theme.colors.border,
-            borderWidth: StyleSheet.hairlineWidth,
-            elevation: 7,
-            shadowColor: theme.colors.shadow,
-            shadowOffset: { width: 0, height: 5 },
-            shadowOpacity: theme.mode === "dark" ? 0.28 : 0.07,
-            shadowRadius: 14,
-          },
-        ]}
-      >
+      <View style={styles.dock}>
         {tabs.map((tab) => {
           const selected = tab.key === active;
           const label = t(tab.label);
@@ -124,17 +108,13 @@ export function BottomNavigation({ active }: { active: RootTab }) {
               onPress={() => {
                 if (!selected) router.replace(tab.href);
               }}
-              style={({ pressed }) => [
-                styles.tab,
-                selected && { backgroundColor: theme.colors.surfaceAccent },
-                pressed && styles.pressed,
-              ]}
+              style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
             >
               <View style={styles.iconSlot}>
                 <NitipIcon
                   color={selected ? theme.colors.primary : theme.colors.textMuted}
                   name={tab.icon}
-                  size={19}
+                  size={18}
                 />
               </View>
               <Text
