@@ -140,6 +140,31 @@ export interface UpsertNitipOrderRatingInput {
   comment?: string | null;
 }
 
+export type OrderChatSenderRole = "customer" | "driver";
+
+export interface NitipOrderChatMessage {
+  id: string;
+  orderId: string;
+  senderRole: OrderChatSenderRole;
+  senderName: string;
+  text: string;
+  createdAt: string;
+}
+
+export interface NitipOrderChatThread {
+  orderId: string;
+  orderCode: string;
+  status: OrderStatus;
+  writable: boolean;
+  counterpartRole: OrderChatSenderRole;
+  counterpartName: string;
+  messages: NitipOrderChatMessage[];
+}
+
+export interface SendNitipOrderChatMessageInput {
+  text: string;
+}
+
 export interface NitipMerchantOrder extends NitipOrder {
   merchantCommission: number;
   merchantNet: number;

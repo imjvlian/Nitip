@@ -12,6 +12,8 @@ import type {
   NitipCheckoutQuote,
   NitipCheckoutRequest,
   NitipOrder,
+  NitipOrderChatMessage,
+  NitipOrderChatThread,
   NitipOrderOperations,
   NitipOrderRating,
   NitipOrderTracking,
@@ -116,6 +118,8 @@ export async function createOrder(user: User | null, input: NitipCheckoutRequest
 export const getOrder = (user: User | null, id: string) => apiRequest<NitipOrder>(user, `/orders/${id}`);
 export const getOrderOperations = (user: User | null, id: string) => apiRequest<NitipOrderOperations>(user, `/orders/${id}/operations`);
 export const getOrderTracking = (user: User | null, id: string) => apiRequest<NitipOrderTracking>(user, `/orders/${id}/tracking`);
+export const getOrderChat = (user: User | null, id: string) => apiRequest<NitipOrderChatThread>(user, `/orders/${id}/chat`);
+export const sendOrderChatMessage = (user: User | null, id: string, text: string) => apiRequest<NitipOrderChatMessage>(user, `/orders/${id}/chat`, { method: "POST", body: JSON.stringify({ text }) });
 export const listOrders = (user: User | null) => apiRequest<NitipOrder[]>(user, "/me/orders");
 export const getOrderRating = (user: User | null, id: string) => apiRequest<NitipOrderRating | null>(user, `/orders/${id}/rating`);
 export const upsertOrderRating = (user: User | null, id: string, input: UpsertNitipOrderRatingInput) => apiRequest<NitipOrderRating>(user, `/orders/${id}/rating`, { method: "PUT", body: JSON.stringify(input) });

@@ -35,6 +35,7 @@ export type NitipIconName =
   | "history"
   | "receipt"
   | "help"
+  | "chat"
   | "password"
   | "age"
   | "document"
@@ -81,6 +82,7 @@ const symbols: Record<NitipIconName, NitipSymbol> = {
   history: { ios: "clock.arrow.circlepath", android: "history", web: "history" },
   receipt: { ios: "doc.text.fill", android: "receipt", web: "receipt" },
   help: { ios: "questionmark.circle.fill", android: "help", web: "help" },
+  chat: { ios: "message.fill", android: "chat_bubble", web: "chat_bubble" },
   password: { ios: "key.fill", android: "key", web: "key" },
   age: { ios: "checkmark.seal.fill", android: "verified_user", web: "verified_user" },
   document: { ios: "doc.text.fill", android: "description", web: "description" },
@@ -95,6 +97,7 @@ const outlineSymbols: Partial<Record<NitipIconName, NitipSymbol>> = {
   notification: { ios: "bell", android: "notifications_none", web: "notifications_none" },
   cart: { ios: "cart", android: "shopping_cart", web: "shopping_cart" },
   profile: { ios: "person", android: "person", web: "person" },
+  chat: { ios: "message", android: "chat_bubble_outline", web: "chat_bubble_outline" },
 };
 
 export function NitipIcon({

@@ -4,6 +4,7 @@ import type {
   SupportTicketCategory,
 } from "@nitip/domain";
 import type { CloudinaryUploadSignature } from "@nitip/domain/catalog";
+import type { NitipOrderChatMessage, NitipOrderChatThread } from "@nitip/domain/commerce";
 import type {
   CreateNitipDriverInput,
   DriverDeliveryActionInput,
@@ -128,6 +129,15 @@ export const listDriverOrderHistory = (user: User | null) =>
 
 export const getDriverOrder = (user: User | null, id: string) =>
   apiRequest<NitipDriverOrder>(user, `/driver/orders/${id}`);
+
+export const getDriverOrderChat = (user: User | null, id: string) =>
+  apiRequest<NitipOrderChatThread>(user, `/driver/orders/${id}/chat`);
+
+export const sendDriverOrderChatMessage = (user: User | null, id: string, text: string) =>
+  apiRequest<NitipOrderChatMessage>(user, `/driver/orders/${id}/chat`, {
+    method: "POST",
+    body: JSON.stringify({ text }),
+  });
 
 export const acceptDriverOffer = (user: User | null, id: string) =>
   apiRequest<NitipDriverOrder>(user, `/driver/orders/${id}/accept`, { method: "POST" });

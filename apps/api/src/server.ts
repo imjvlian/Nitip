@@ -10,6 +10,7 @@ import { registerCatalogRoutes } from "./http/catalog-routes.js";
 import { registerDriverOrderRoutes } from "./http/driver-order-routes.js";
 import { registerDriverRoutes } from "./http/driver-routes.js";
 import { registerMerchantOrderRoutes } from "./http/merchant-order-routes.js";
+import { registerOrderChatRoutes } from "./http/order-chat-routes.js";
 import { registerOrderRoutes } from "./http/order-routes.js";
 import { registerSupportRoutes } from "./http/support-routes.js";
 import { registerUserMediaRoutes } from "./http/user-media-routes.js";
@@ -268,6 +269,7 @@ app.delete<{ Params: { id: string } }>("/merchant/outlets/:id", async (request, 
 registerCatalogRoutes(app);
 registerAdminRoutes(app);
 registerOrderRoutes(app);
+registerOrderChatRoutes(app);
 registerMerchantOrderRoutes(app);
 registerDriverRoutes(app);
 registerDriverOrderRoutes(app);

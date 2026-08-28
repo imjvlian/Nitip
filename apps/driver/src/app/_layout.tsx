@@ -9,6 +9,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AlertPopupProvider } from "../components/AlertPopupProvider";
 import { BottomNavigation, type RootTab } from "../components/BottomNavigation";
+import { DriverChatDock } from "../components/DriverChatDock";
 import { DriverTrackingSupervisor } from "../components/DriverTrackingSupervisor";
 import { LiveTrackingShortcut } from "../components/LiveTrackingShortcut";
 import { NotificationShortcut } from "../components/NotificationShortcut";
@@ -22,6 +23,7 @@ function AppStack() {
   const pathname = usePathname();
   const activeTab: RootTab | null = pathname === "/home" ? "home" : pathname === "/orders" ? "orders" : pathname === "/settings" ? "settings" : null;
   const screenBackground = resolvedMode === "dark" ? "#121318" : "#F2F3F5";
+  const onTripDetail = /^\/order\/[^/]+$/.test(pathname);
   return <View style={{ backgroundColor: screenBackground, flex: 1 }}>
     <StatusBar animated style={resolvedMode === "dark" ? "light" : "dark"} />
     <View style={{ flex: 1, paddingBottom: activeTab ? ROOT_TAB_CLEARANCE : 0 }}>
@@ -31,7 +33,8 @@ function AppStack() {
     </View>
     {activeTab ? <View pointerEvents="box-none" style={{ bottom: 0, left: 0, position: "absolute", right: 0, zIndex: 50 }}><BottomNavigation active={activeTab} /></View> : null}
     <NotificationShortcut visible={Boolean(activeTab)} />
-    <LiveTrackingShortcut bottom={activeTab ? ROOT_TAB_CLEARANCE + 12 : 24} />
+    <LiveTrackingShortcut bottom={onTripDetail ? 86 : activeTab ? ROOT_TAB_CLEARANCE + 12 : 24} />
+    <DriverChatDock />
   </View>;
 }
 

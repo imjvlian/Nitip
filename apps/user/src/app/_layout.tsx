@@ -12,6 +12,7 @@ import {
   BottomNavigationSuppressionProvider,
   type RootTab,
 } from "../components/BottomNavigation";
+import { OrderActionDock } from "../components/OrderActionDock";
 import { AuthProvider } from "../context/AuthContext";
 import { CartProvider } from "../context/CartContext";
 import { UserThemeProvider, useUserTheme } from "../context/ThemeContext";
@@ -102,6 +103,8 @@ function AppStack() {
           <BottomNavigation active={activeTab} root />
         </View>
       ) : null}
+
+      <OrderActionDock />
     </View>
   );
 }
