@@ -6,6 +6,7 @@ import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppHeader } from "../../components/AppHeader";
+import LocationPicker from "../../components/LocationPicker";
 import { NitipIcon, type NitipIconName } from "../../components/NitipIcon";
 import { useAuth } from "../../context/AuthContext";
 import { useNitipTheme } from "../../hooks/useNitipTheme";
@@ -28,6 +29,8 @@ export default function NewAddressScreen() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [addressLine, setAddressLine] = useState("");
   const [notes, setNotes] = useState("");
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
   const [isDefault, setIsDefault] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,8 +54,8 @@ export default function NewAddressScreen() {
         phoneNumber: phoneNumber.trim(),
         addressLine: addressLine.trim(),
         notes: notes.trim() || null,
-        latitude: null,
-        longitude: null,
+        latitude,
+        longitude,
         isDefault,
       });
       router.replace("/settings/addresses");
@@ -138,6 +141,20 @@ export default function NewAddressScreen() {
           {t("address.fullAddress")}
         </Text>
         <TextInput className="min-h-28 rounded-[16px] px-4 py-3.5 text-sm" maxLength={300} multiline onChangeText={setAddressLine} placeholder={t("address.fullAddressPlaceholder")} placeholderTextColor={theme.colors.textMuted} style={inputStyle} textAlignVertical="top" value={addressLine} />
+
+        <LocationPicker
+          latitude={latitude}
+          longitude={longitude}
+          onChange={(nextLatitude, nextLongitude) => {
+            setLatitude(nextLatitude);
+            setLongitude(nextLongitude);
+          }}
+          onPlaceSelected={(place) => {
+            if (!addressLine.trim()) {
+              setAddressLine(place.address === place.name ? place.name : `${place.name}, ${place.address}`);
+            }
+          }}
+        />
 
         <Text className="mb-2 mt-4 text-[10px] font-extrabold" style={{ color: theme.colors.textMuted }}>
           {t("address.addressNotes")}
