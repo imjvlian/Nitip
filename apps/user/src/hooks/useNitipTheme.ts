@@ -6,8 +6,7 @@ export function useNitipTheme() {
   const pathname = usePathname();
   const { theme } = useUserTheme();
 
-  const preserveExistingPresentation =
-    pathname === "/home" || pathname.startsWith("/settings");
+  const preserveExistingPresentation = pathname.startsWith("/settings");
 
   if (preserveExistingPresentation) return theme;
 
