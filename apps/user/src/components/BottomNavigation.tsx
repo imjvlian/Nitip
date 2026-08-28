@@ -37,36 +37,11 @@ const labels = {
 } as const;
 
 const tabs = [
-  {
-    key: "home",
-    href: "/home",
-    iconOutline: "home-outline",
-    iconFilled: "home",
-  },
-  {
-    key: "orders",
-    href: "/orders",
-    iconOutline: "receipt-outline",
-    iconFilled: "receipt",
-  },
-  {
-    key: "promos",
-    href: "/promos",
-    iconOutline: "pricetag-outline",
-    iconFilled: "pricetag",
-  },
-  {
-    key: "cart",
-    href: "/cart",
-    iconOutline: "cart-outline",
-    iconFilled: "cart",
-  },
-  {
-    key: "profile",
-    href: "/profile",
-    iconOutline: "person-outline",
-    iconFilled: "person",
-  },
+  { key: "home", href: "/home", iconOutline: "home-outline", iconFilled: "home" },
+  { key: "orders", href: "/orders", iconOutline: "receipt-outline", iconFilled: "receipt" },
+  { key: "promos", href: "/promos", iconOutline: "pricetag-outline", iconFilled: "pricetag" },
+  { key: "cart", href: "/cart", iconOutline: "cart-outline", iconFilled: "cart" },
+  { key: "profile", href: "/profile", iconOutline: "person-outline", iconFilled: "person" },
 ] as const satisfies readonly {
   key: RootTab;
   href: "/home" | "/orders" | "/promos" | "/cart" | "/profile";
@@ -75,7 +50,7 @@ const tabs = [
 }[];
 
 const styles = StyleSheet.create({
-  bar: {
+  legacyBar: {
     alignItems: "center",
     alignSelf: "stretch",
     borderTopLeftRadius: 30,
@@ -87,17 +62,43 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     width: "100%",
   },
-  tab: {
+  referenceBar: {
+    alignItems: "center",
+    alignSelf: "stretch",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderTopWidth: 1,
+    flexDirection: "row",
+    flexShrink: 0,
+    justifyContent: "space-around",
+    paddingHorizontal: 8,
+    paddingTop: 8,
+    width: "100%",
+  },
+  legacyTab: {
     alignItems: "center",
     justifyContent: "center",
     minHeight: 58,
     width: 66,
+  },
+  referenceTab: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 52,
+    width: 64,
   },
   iconArea: {
     alignItems: "center",
     height: 28,
     justifyContent: "center",
     width: 36,
+  },
+  activeIconPill: {
+    alignItems: "center",
+    borderRadius: 999,
+    height: 29,
+    justifyContent: "center",
+    width: 42,
   },
   label: {
     fontSize: 9,
@@ -106,12 +107,15 @@ const styles = StyleSheet.create({
     marginTop: 2,
     textAlign: "center",
   },
-  selectedLabel: {
-    fontWeight: "800",
+  referenceLabel: {
+    fontSize: 8,
+    fontWeight: "700",
+    lineHeight: 10,
+    marginTop: 2,
+    textAlign: "center",
   },
-  pressed: {
-    opacity: 0.55,
-  },
+  selectedLabel: { fontWeight: "900" },
+  pressed: { opacity: 0.55 },
 });
 
 export function BottomNavigation({
@@ -128,25 +132,32 @@ export function BottomNavigation({
 
   if (!root || suppressed) return null;
 
+  const legacyHome = active === "home";
+
   return (
     <View
       style={[
-        styles.bar,
+        legacyHome ? styles.legacyBar : styles.referenceBar,
         {
           backgroundColor: theme.colors.surfaceRaised,
-          elevation: 16,
-          paddingBottom: Math.max(insets.bottom, 18),
+          borderTopColor: legacyHome ? "transparent" : theme.colors.border,
+          elevation: legacyHome ? 16 : 12,
+          paddingBottom: Math.max(insets.bottom, legacyHome ? 18 : 12),
           shadowColor: theme.colors.shadow,
-          shadowOffset: { width: 0, height: -5 },
-          shadowOpacity: theme.mode === "dark" ? 0.3 : 0.14,
-          shadowRadius: 18,
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: legacyHome
+            ? theme.mode === "dark" ? 0.3 : 0.14
+            : theme.mode === "dark" ? 0.24 : 0.08,
+          shadowRadius: legacyHome ? 18 : 14,
         },
       ]}
     >
       {tabs.map((tab) => {
         const selected = tab.key === active;
         const label = labels[language][tab.key];
-        const color = selected ? theme.colors.text : theme.colors.textMuted;
+        const color = legacyHome
+          ? selected ? theme.colors.text : theme.colors.textMuted
+          : selected ? theme.colors.primary : theme.colors.textMuted;
 
         return (
           <Pressable
@@ -158,20 +169,38 @@ export function BottomNavigation({
             onPress={() => {
               if (!selected) router.replace(tab.href);
             }}
-            style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              legacyHome ? styles.legacyTab : styles.referenceTab,
+              pressed && styles.pressed,
+            ]}
           >
-            <View style={styles.iconArea}>
-              <Ionicons
-                color={color}
-                name={selected ? tab.iconFilled : tab.iconOutline}
-                size={selected ? 21 : 20}
-              />
-            </View>
+            {legacyHome ? (
+              <View style={styles.iconArea}>
+                <Ionicons
+                  color={color}
+                  name={selected ? tab.iconFilled : tab.iconOutline}
+                  size={selected ? 21 : 20}
+                />
+              </View>
+            ) : (
+              <View
+                style={[
+                  styles.activeIconPill,
+                  { backgroundColor: selected ? theme.colors.surfaceAccent : "transparent" },
+                ]}
+              >
+                <Ionicons
+                  color={color}
+                  name={selected ? tab.iconFilled : tab.iconOutline}
+                  size={selected ? 19 : 18}
+                />
+              </View>
+            )}
 
             <Text
               numberOfLines={1}
               style={[
-                styles.label,
+                legacyHome ? styles.label : styles.referenceLabel,
                 selected && styles.selectedLabel,
                 { color },
               ]}

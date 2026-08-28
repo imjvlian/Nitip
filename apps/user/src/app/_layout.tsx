@@ -31,20 +31,26 @@ function AppStack() {
             : pathname === "/profile"
               ? "profile"
               : null;
-  const statusBarStyle =
-    pathname === "/home" || resolvedMode === "dark" ? "light" : "dark";
+  const statusBarStyle = pathname === "/home" || resolvedMode === "dark" ? "light" : "dark";
+  const preserveExistingPresentation =
+    pathname === "/home" || pathname.startsWith("/settings");
+  const screenBackground = preserveExistingPresentation
+    ? theme.colors.background
+    : resolvedMode === "dark"
+      ? "#121318"
+      : "#F3F3F0";
   const navigationUnderlay =
     resolvedMode === "dark"
-      ? theme.colors.background
+      ? screenBackground
       : activeTab === "home"
         ? "#EEF0F4"
-        : theme.colors.surface;
+        : screenBackground;
 
   return (
     <View
       style={{
         alignSelf: "stretch",
-        backgroundColor: theme.colors.background,
+        backgroundColor: screenBackground,
         flex: 1,
         width: "100%",
       }}
@@ -56,7 +62,7 @@ function AppStack() {
           <Stack
             screenOptions={{
               headerShown: false,
-              contentStyle: { backgroundColor: theme.colors.background },
+              contentStyle: { backgroundColor: screenBackground },
               animation: "slide_from_right",
               animationTypeForReplace: "push",
               gestureEnabled: true,
