@@ -34,18 +34,18 @@ function ProfileRow({
   const rowBackground = danger
     ? theme.colors.dangerSurface
     : theme.mode === "dark"
-      ? "#242943"
-      : "#EEF1FF";
+      ? theme.colors.surfaceRaised
+      : "#FFFFFF";
   const rowBorder = danger
     ? theme.colors.dangerSurface
     : theme.mode === "dark"
-      ? "#343B61"
-      : "#D7DEFF";
+      ? theme.colors.border
+      : "#E7E9EE";
   const iconBackground = danger
     ? theme.colors.dangerSurface
     : theme.mode === "dark"
-      ? "#303757"
-      : "#FFFFFF";
+      ? theme.colors.surfaceAccent
+      : "#EEF1FF";
 
   return (
     <Pressable
@@ -56,12 +56,12 @@ function ProfileRow({
         backgroundColor: rowBackground,
         borderColor: rowBorder,
         borderWidth: 1,
-        elevation: 1,
+        elevation: 2,
         opacity: pressed ? 0.72 : 1,
         shadowColor: theme.colors.shadow,
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: theme.mode === "dark" ? 0.14 : 0.04,
-        shadowRadius: 6,
+        shadowOpacity: theme.mode === "dark" ? 0.16 : 0.06,
+        shadowRadius: 8,
       })}
     >
       <View
@@ -145,11 +145,10 @@ export default function ProfileScreen() {
   const addressDescription = language === "en" ? `${addresses.length} saved delivery locations` : `${addresses.length} alamat pengantaran tersimpan`;
   const languageValue = language === "id" ? t("common.indonesia") : t("common.english");
   const appearanceValue = t(`common.${preference}`);
-  const editButtonBackground = theme.mode === "dark" ? "#F7F7F8" : "#111318";
-  const editButtonText = theme.mode === "dark" ? "#111318" : "#FFFFFF";
+  const pageBackground = theme.mode === "dark" ? theme.colors.background : "#F2F3F5";
 
   return (
-    <View className="flex-1" style={{ backgroundColor: theme.colors.background }}>
+    <View className="flex-1" style={{ backgroundColor: pageBackground }}>
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: 18,
@@ -188,15 +187,11 @@ export default function ProfileScreen() {
             className="mt-4 min-h-10 items-center justify-center rounded-full px-6"
             onPress={() => router.push("/settings/account")}
             style={({ pressed }) => ({
-              backgroundColor: editButtonBackground,
-              borderColor: theme.mode === "dark" ? "#FFFFFF" : "#111318",
-              borderWidth: 1,
-              opacity: pressed ? 0.72 : 1,
+              backgroundColor: theme.colors.primary,
+              opacity: pressed ? 0.78 : 1,
             })}
           >
-            <Text className="text-[10px] font-black" style={{ color: editButtonText }}>
-              {editLabel}
-            </Text>
+            <Text className="text-[10px] font-black text-white">{editLabel}</Text>
           </Pressable>
         </View>
 
