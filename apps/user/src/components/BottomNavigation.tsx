@@ -68,14 +68,47 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     minHeight: 52,
+    position: "relative",
     width: 64,
   },
-  iconPill: {
+  activeLine: {
+    borderBottomLeftRadius: 999,
+    borderBottomRightRadius: 999,
+    height: 3,
+    position: "absolute",
+    top: -8,
+    width: 34,
+  },
+  iconStage: {
     alignItems: "center",
-    borderRadius: 999,
-    height: 29,
+    height: 30,
     justifyContent: "center",
-    width: 42,
+    position: "relative",
+    width: 46,
+  },
+  glowWide: {
+    borderBottomLeftRadius: 22,
+    borderBottomRightRadius: 22,
+    height: 27,
+    position: "absolute",
+    top: -5,
+    width: 46,
+  },
+  glowMedium: {
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
+    height: 22,
+    position: "absolute",
+    top: -4,
+    width: 36,
+  },
+  glowCore: {
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
+    height: 16,
+    position: "absolute",
+    top: -3,
+    width: 27,
   },
   label: {
     fontSize: 8,
@@ -123,8 +156,8 @@ export function BottomNavigation({
       {tabs.map((tab) => {
         const selected = tab.key === active;
         const label = labels[language][tab.key];
-        const iconColor = selected ? "#FFFFFF" : theme.colors.textMuted;
-        const labelColor = selected ? theme.colors.primary : theme.colors.textMuted;
+        const iconColor = selected ? "#111318" : theme.colors.textMuted;
+        const labelColor = selected ? theme.colors.text : theme.colors.textMuted;
 
         return (
           <Pressable
@@ -138,18 +171,44 @@ export function BottomNavigation({
             }}
             style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
           >
-            <View
-              style={[
-                styles.iconPill,
-                {
-                  backgroundColor: selected ? theme.colors.primary : "transparent",
-                },
-              ]}
-            >
+            {selected ? (
+              <View
+                pointerEvents="none"
+                style={[styles.activeLine, { backgroundColor: theme.colors.primary }]}
+              />
+            ) : null}
+
+            <View style={styles.iconStage}>
+              {selected ? (
+                <>
+                  <View
+                    pointerEvents="none"
+                    style={[
+                      styles.glowWide,
+                      { backgroundColor: theme.colors.primary, opacity: 0.05 },
+                    ]}
+                  />
+                  <View
+                    pointerEvents="none"
+                    style={[
+                      styles.glowMedium,
+                      { backgroundColor: theme.colors.primary, opacity: 0.09 },
+                    ]}
+                  />
+                  <View
+                    pointerEvents="none"
+                    style={[
+                      styles.glowCore,
+                      { backgroundColor: theme.colors.primary, opacity: 0.16 },
+                    ]}
+                  />
+                </>
+              ) : null}
+
               <Ionicons
                 color={iconColor}
                 name={selected ? tab.iconFilled : tab.iconOutline}
-                size={selected ? 19 : 18}
+                size={selected ? 20 : 18}
               />
             </View>
 
