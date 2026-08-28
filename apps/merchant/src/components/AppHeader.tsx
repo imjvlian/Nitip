@@ -1,28 +1,78 @@
 import type { ReactNode } from "react";
-import { Pressable, Text, View } from "react-native";
+import { usePathname } from "expo-router";
+import { StyleSheet, Text, View } from "react-native";
 
 import { useNitipTheme } from "../hooks/useNitipTheme";
-import { NitipIcon } from "./NitipIcon";
+import { BackButton } from "./BackButton";
 
-export function AppHeader({ title, onBack, right }: { title: string; onBack?: () => void; right?: ReactNode }) {
+const CLEAN_ROOT_TABS = new Set(["/home", "/orders", "/menu", "/settings"]);
+
+export function AppHeader({
+  title,
+  showBack = true,
+  onBack,
+  right,
+}: {
+  title: string;
+  showBack?: boolean;
+  onBack?: () => void;
+  right?: ReactNode;
+}) {
+  const pathname = usePathname();
   const theme = useNitipTheme();
+  const isDark = theme.mode === "dark";
+  const surface = isDark ? theme.colors.surfaceRaised : "#FFFFFF";
+  const cleanRoot = CLEAN_ROOT_TABS.has(pathname);
+
   return (
-    <View className="min-h-11 flex-row items-center justify-between">
-      <View className="w-11">
-        {onBack ? (
-          <Pressable
-            accessibilityRole="button"
-            className="h-10 w-10 items-center justify-center"
-            onPress={onBack}
-          >
-            <NitipIcon color={theme.colors.text} name="back" size={18} />
-          </Pressable>
-        ) : null}
+    <View style={styles.root}>
+      <View style={styles.side}>
+        {!cleanRoot && showBack ? <BackButton onPress={onBack} /> : null}
       </View>
-      <Text className="flex-1 text-center text-[13px] font-black" numberOfLines={1} style={{ color: theme.colors.text }}>
-        {title}
-      </Text>
-      <View className="w-11 items-end">{right}</View>
+
+      <View style={styles.center}>
+        <View style={[styles.titlePill, { backgroundColor: surface }]}> 
+          <Text numberOfLines={1} style={[styles.title, { color: theme.colors.text }]}> 
+            {title}
+          </Text>
+        </View>
+      </View>
+
+      <View style={[styles.side, styles.right]}>{cleanRoot ? null : right}</View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    alignItems: "center",
+    flexDirection: "row",
+    minHeight: 44,
+    width: "100%",
+  },
+  side: {
+    alignItems: "flex-start",
+    justifyContent: "center",
+    width: 44,
+  },
+  right: {
+    alignItems: "flex-end",
+  },
+  center: {
+    alignItems: "center",
+    flex: 1,
+    paddingHorizontal: 8,
+  },
+  titlePill: {
+    alignItems: "center",
+    borderRadius: 999,
+    justifyContent: "center",
+    minHeight: 34,
+    paddingHorizontal: 18,
+  },
+  title: {
+    fontSize: 11,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+});

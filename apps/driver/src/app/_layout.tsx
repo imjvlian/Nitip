@@ -1,7 +1,6 @@
 import "../../global.css";
 
 import { NitipI18nProvider } from "@nitip/i18n";
-import { lightTheme } from "@nitip/theme";
 import { Stack, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
@@ -9,8 +8,12 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { BottomNavigation, type RootTab } from "../components/BottomNavigation";
 import { AuthProvider } from "../context/AuthContext";
+import { DriverThemeProvider, useDriverTheme } from "../context/ThemeContext";
+
+const ROOT_TAB_CLEARANCE = 82;
 
 function AppStack() {
+  const { resolvedMode } = useDriverTheme();
   const pathname = usePathname();
   const activeTab: RootTab | null =
     pathname === "/home"
@@ -20,20 +23,22 @@ function AppStack() {
         : pathname === "/settings"
           ? "settings"
           : null;
+  const screenBackground = resolvedMode === "dark" ? "#121318" : "#F2F3F5";
 
   return (
-    <View className="flex-1" style={{ backgroundColor: lightTheme.colors.background }}>
-      <StatusBar style="dark" />
-      <View className="flex-1">
+    <View style={{ backgroundColor: screenBackground, flex: 1 }}>
+      <StatusBar animated style={resolvedMode === "dark" ? "light" : "dark"} />
+      <View style={{ flex: 1, paddingBottom: activeTab ? ROOT_TAB_CLEARANCE : 0 }}>
         <Stack
           screenOptions={{
             headerShown: false,
-            contentStyle: { backgroundColor: lightTheme.colors.background },
+            contentStyle: { backgroundColor: screenBackground },
             animation: "slide_from_right",
             animationTypeForReplace: "push",
             gestureEnabled: true,
             fullScreenGestureEnabled: true,
             animationMatchesGesture: true,
+            navigationBarHidden: false,
           }}
         >
           <Stack.Screen name="index" options={{ animation: "fade" }} />
@@ -43,7 +48,15 @@ function AppStack() {
           <Stack.Screen name="settings" options={{ animation: "fade" }} />
         </Stack>
       </View>
-      {activeTab ? <BottomNavigation active={activeTab} /> : null}
+
+      {activeTab ? (
+        <View
+          pointerEvents="box-none"
+          style={{ bottom: 0, left: 0, position: "absolute", right: 0, zIndex: 50 }}
+        >
+          <BottomNavigation active={activeTab} />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -52,9 +65,11 @@ export default function RootLayout() {
   return (
     <NitipI18nProvider>
       <SafeAreaProvider>
-        <AuthProvider>
-          <AppStack />
-        </AuthProvider>
+        <DriverThemeProvider>
+          <AuthProvider>
+            <AppStack />
+          </AuthProvider>
+        </DriverThemeProvider>
       </SafeAreaProvider>
     </NitipI18nProvider>
   );

@@ -1,89 +1,126 @@
 import { useNitipLanguage } from "@nitip/i18n";
 import { router } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { getMerchantCopy } from "../constants/merchantCopy";
 import { useNitipTheme } from "../hooks/useNitipTheme";
 import { NitipIcon, type NitipIconName } from "./NitipIcon";
 
-export type RootTab = "home" | "orders" | "settings";
+export type RootTab = "home" | "orders" | "menu" | "settings";
 
-const tabs: { key: RootTab; href: "/home" | "/orders" | "/settings"; icon: NitipIconName }[] = [
+const tabs: {
+  key: RootTab;
+  href: "/home" | "/orders" | "/menu" | "/settings";
+  icon: NitipIconName;
+}[] = [
   { key: "home", href: "/home", icon: "home" },
   { key: "orders", href: "/orders", icon: "orders" },
+  { key: "menu", href: "/menu", icon: "menu" },
   { key: "settings", href: "/settings", icon: "settings" },
 ];
 
-const styles = StyleSheet.create({
-  indicator: {
-    borderRadius: 999,
-    height: 3,
-    marginBottom: 7,
-    width: 24,
-  },
-  iconSlot: {
-    alignItems: "center",
-    height: 24,
-    justifyContent: "center",
-    width: 24,
-  },
-});
+const labels = {
+  id: { home: "Beranda", orders: "Pesanan", menu: "Menu", settings: "Pengaturan" },
+  en: { home: "Home", orders: "Orders", menu: "Menu", settings: "Settings" },
+} as const;
 
 export function BottomNavigation({ active }: { active: RootTab }) {
   const { language } = useNitipLanguage();
-  const c = getMerchantCopy(language);
   const theme = useNitipTheme();
-  const insets = useSafeAreaInsets();
+  const isDark = theme.mode === "dark";
 
   return (
     <View
-      className="px-5 pt-2"
-      style={{
-        backgroundColor: theme.colors.background,
-        borderTopColor: theme.colors.border,
-        borderTopWidth: StyleSheet.hairlineWidth,
-        paddingBottom: Math.max(insets.bottom, 10),
-      }}
+      style={[
+        styles.bar,
+        {
+          backgroundColor: isDark ? "#22242B" : "#FFFFFF",
+          borderTopColor: isDark ? "#2D3037" : "#E7E7E2",
+        },
+      ]}
     >
-      <View className="flex-row items-stretch">
-        {tabs.map((tab) => {
-          const selected = tab.key === active;
-          const label = c.navigation[tab.key];
-          return (
-            <Pressable
-              accessibilityRole="tab"
-              accessibilityState={{ selected }}
-              accessibilityLabel={label}
-              className="min-h-[58px] flex-1 items-center justify-center py-1"
-              key={tab.key}
-              onPress={() => {
-                if (!selected) router.replace(tab.href);
-              }}
-            >
-              <View
-                style={[
-                  styles.indicator,
-                  { backgroundColor: selected ? theme.colors.primary : "transparent" },
-                ]}
+      {tabs.map((tab) => {
+        const selected = tab.key === active;
+        const label = labels[language][tab.key];
+        return (
+          <Pressable
+            accessibilityLabel={label}
+            accessibilityRole="tab"
+            accessibilityState={{ selected }}
+            hitSlop={6}
+            key={tab.key}
+            onPress={() => {
+              if (!selected) router.replace(tab.href);
+            }}
+            style={styles.tab}
+          >
+            {selected ? <View style={[styles.activeLine, { backgroundColor: theme.colors.primary }]} /> : null}
+            <View style={styles.iconStage}>
+              <NitipIcon
+                color={selected ? "#111318" : theme.colors.textMuted}
+                name={tab.icon}
+                size={selected ? 20 : 18}
               />
-              <View style={styles.iconSlot}>
-                <NitipIcon
-                  color={selected ? theme.colors.primary : theme.colors.textMuted}
-                  name={tab.icon}
-                  size={20}
-                />
-              </View>
-              <Text
-                className="mt-1 text-[9px] font-extrabold"
-                style={{ color: selected ? theme.colors.primary : theme.colors.textMuted }}
-              >
-                {label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+            </View>
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.label,
+                selected && styles.selectedLabel,
+                { color: selected ? theme.colors.text : theme.colors.textMuted },
+              ]}
+            >
+              {label}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  bar: {
+    alignItems: "center",
+    alignSelf: "stretch",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderTopWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-around",
+    minHeight: 74,
+    overflow: "hidden",
+    paddingBottom: 14,
+    paddingHorizontal: 8,
+    paddingTop: 8,
+    width: "100%",
+  },
+  tab: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 52,
+    position: "relative",
+    width: 68,
+  },
+  activeLine: {
+    height: 3,
+    left: "50%",
+    marginLeft: -17,
+    position: "absolute",
+    top: -8,
+    width: 34,
+  },
+  iconStage: {
+    alignItems: "center",
+    height: 30,
+    justifyContent: "center",
+    width: 46,
+  },
+  label: {
+    fontSize: 8,
+    fontWeight: "700",
+    lineHeight: 10,
+    marginTop: 2,
+    textAlign: "center",
+  },
+  selectedLabel: { fontWeight: "900" },
+});
