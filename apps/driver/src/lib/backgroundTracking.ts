@@ -15,7 +15,7 @@ async function waitForUser(timeoutMs = 5000): Promise<User | null> {
   if (auth.currentUser) return auth.currentUser;
   return new Promise((resolve) => {
     let settled = false;
-    let unsubscribe = () => undefined;
+    let unsubscribe: () => void = () => {};
     let timer: ReturnType<typeof setTimeout>;
     const finish = (user: User | null) => {
       if (settled) return;
