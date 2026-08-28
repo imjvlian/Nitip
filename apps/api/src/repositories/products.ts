@@ -1,6 +1,8 @@
 import type {
+  CreateNitipProductAddonInput,
   CreateNitipProductInput,
   NitipProduct,
+  NitipProductAddon,
   UpdateNitipProductInput,
 } from "@nitip/domain/catalog";
 import type { Collection, WithId } from "mongodb";
@@ -8,6 +10,13 @@ import { ObjectId } from "mongodb";
 
 import { getMongoDb } from "../lib/mongodb.js";
 import { categoryBelongsToOutlet } from "./categories.js";
+
+interface ProductAddonDocument {
+  id: string;
+  name: string;
+  price: number;
+  isAvailable: boolean;
+}
 
 interface ProductDocument {
   outletId: ObjectId;
@@ -21,6 +30,7 @@ interface ProductDocument {
   isAvailable: boolean;
   isActive: boolean;
   sortOrder: number;
+  addons?: ProductAddonDocument[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -48,13 +58,35 @@ function parseObjectId(value: string) {
   return ObjectId.isValid(value) ? new ObjectId(value) : null;
 }
 
+function legacyDescription(name: string) {
+  return `Menu ${name}. Detail bahan dan penyajian dapat diperbarui merchant.`;
+}
+
+function serializeAddons(addons: ProductAddonDocument[] | undefined): NitipProductAddon[] {
+  return (addons ?? []).map((addon) => ({
+    id: addon.id,
+    name: addon.name,
+    price: addon.price,
+    isAvailable: addon.isAvailable,
+  }));
+}
+
+function normalizeAddonInputs(addons: CreateNitipProductAddonInput[] | undefined): ProductAddonDocument[] {
+  return (addons ?? []).map((addon) => ({
+    id: addon.id && ObjectId.isValid(addon.id) ? addon.id : new ObjectId().toHexString(),
+    name: addon.name,
+    price: addon.price,
+    isAvailable: addon.isAvailable ?? true,
+  }));
+}
+
 function serializeProduct(document: WithId<ProductDocument>): NitipProduct {
   return {
     id: document._id.toHexString(),
     outletId: document.outletId.toHexString(),
     categoryId: document.categoryId.toHexString(),
     name: document.name,
-    description: document.description ?? null,
+    description: document.description?.trim() || legacyDescription(document.name),
     price: document.price,
     imageUrl: document.imageUrl ?? null,
     imagePublicId: document.imagePublicId ?? null,
@@ -62,6 +94,7 @@ function serializeProduct(document: WithId<ProductDocument>): NitipProduct {
     isAvailable: document.isAvailable,
     isActive: document.isActive,
     sortOrder: document.sortOrder,
+    addons: serializeAddons(document.addons),
     createdAt: document.createdAt.toISOString(),
     updatedAt: document.updatedAt.toISOString(),
   };
@@ -94,7 +127,7 @@ export async function createOutletProduct(
     outletId: outletObjectId,
     categoryId: categoryObjectId,
     name: input.name,
-    description: input.description ?? null,
+    description: input.description,
     price: input.price,
     imageUrl: input.imageUrl ?? null,
     imagePublicId: input.imagePublicId ?? null,
@@ -102,6 +135,7 @@ export async function createOutletProduct(
     isAvailable: stockQuantity === 0 ? false : (input.isAvailable ?? true),
     isActive: input.isActive ?? true,
     sortOrder: input.sortOrder ?? 0,
+    addons: normalizeAddonInputs(input.addons),
     createdAt: now,
     updatedAt: now,
   };
@@ -130,7 +164,7 @@ export async function updateOutletProduct(
     set.categoryId = categoryObjectId;
   }
   if (input.name !== undefined) set.name = input.name;
-  if (Object.prototype.hasOwnProperty.call(input, "description")) set.description = input.description ?? null;
+  if (input.description !== undefined) set.description = input.description;
   if (input.price !== undefined) set.price = input.price;
   if (Object.prototype.hasOwnProperty.call(input, "imageUrl")) set.imageUrl = input.imageUrl ?? null;
   if (Object.prototype.hasOwnProperty.call(input, "imagePublicId")) set.imagePublicId = input.imagePublicId ?? null;
@@ -141,6 +175,7 @@ export async function updateOutletProduct(
   if (input.isAvailable !== undefined && input.stockQuantity !== 0) set.isAvailable = input.isAvailable;
   if (input.isActive !== undefined) set.isActive = input.isActive;
   if (input.sortOrder !== undefined) set.sortOrder = input.sortOrder;
+  if (input.addons !== undefined) set.addons = normalizeAddonInputs(input.addons);
 
   const document = await products.findOneAndUpdate(
     { _id: productObjectId, outletId: outletObjectId },
