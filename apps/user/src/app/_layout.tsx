@@ -33,8 +33,7 @@ function AppStack() {
               : null;
 
   const statusBarStyle = pathname === "/home" || resolvedMode === "dark" ? "light" : "dark";
-  const preserveExistingPresentation =
-    pathname === "/home" || pathname.startsWith("/settings");
+  const preserveExistingPresentation = pathname.startsWith("/settings");
   const screenBackground = preserveExistingPresentation
     ? theme.colors.background
     : resolvedMode === "dark"

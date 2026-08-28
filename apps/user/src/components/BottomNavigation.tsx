@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import { createContext, useContext, type ComponentProps, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { useNitipTheme } from "../hooks/useNitipTheme";
+import { useUserTheme } from "../context/ThemeContext";
 
 export type RootTab = "home" | "orders" | "promos" | "cart" | "profile";
 
@@ -58,9 +58,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexShrink: 0,
     justifyContent: "space-around",
-    marginBottom: 6,
-    minHeight: 68,
-    paddingBottom: 8,
+    minHeight: 74,
+    paddingBottom: 14,
     paddingHorizontal: 8,
     paddingTop: 8,
     width: "100%",
@@ -111,21 +110,25 @@ export function BottomNavigation({
 }) {
   const suppressed = useContext(SuppressBottomNavigationContext);
   const { language } = useNitipLanguage();
-  const theme = useNitipTheme();
+  const { resolvedMode, theme } = useUserTheme();
 
   if (!root || suppressed) return null;
+
+  const navigationSurface = resolvedMode === "dark" ? "#22242B" : "#FFFFFF";
+  const navigationBorder = resolvedMode === "dark" ? "#2D3037" : "#E7E7E2";
+  const navigationShadow = resolvedMode === "dark" ? theme.colors.shadow : "#111318";
 
   return (
     <View
       style={[
         styles.bar,
         {
-          backgroundColor: theme.colors.surfaceRaised,
-          borderTopColor: theme.colors.border,
+          backgroundColor: navigationSurface,
+          borderTopColor: navigationBorder,
           elevation: 12,
-          shadowColor: theme.colors.shadow,
+          shadowColor: navigationShadow,
           shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: theme.mode === "dark" ? 0.24 : 0.08,
+          shadowOpacity: resolvedMode === "dark" ? 0.24 : 0.08,
           shadowRadius: 14,
         },
       ]}
