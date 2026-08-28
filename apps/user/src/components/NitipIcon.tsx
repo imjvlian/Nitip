@@ -23,6 +23,8 @@ export type NitipIconName =
   | "trash"
   | "check"
   | "location"
+  | "delivery"
+  | "refresh"
   | "language"
   | "theme"
   | "system"
@@ -63,6 +65,8 @@ const symbols: Record<NitipIconName, NitipSymbol> = {
   trash: { ios: "trash.fill", android: "delete", web: "delete" },
   check: { ios: "checkmark", android: "check", web: "check" },
   location: { ios: "location.fill", android: "my_location", web: "my_location" },
+  delivery: { ios: "box.truck.fill", android: "local_shipping", web: "local_shipping" },
+  refresh: { ios: "arrow.clockwise", android: "refresh", web: "refresh" },
   language: { ios: "globe", android: "language", web: "language" },
   theme: { ios: "circle.lefthalf.filled", android: "contrast", web: "contrast" },
   system: { ios: "desktopcomputer", android: "devices", web: "devices" },
