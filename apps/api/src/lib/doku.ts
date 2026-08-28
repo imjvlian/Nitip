@@ -7,7 +7,7 @@ export const DOKU_STATUS_PATH = "/orders/v1/status";
 
 export interface DokuCheckoutResponse {
   response?: {
-    order?: { amount?: number; invoice_number?: string };
+    order?: { amount?: number | string; invoice_number?: string };
     payment?: { token_id?: string; url?: string; expired_date?: string };
   };
   error_messages?: string[];
@@ -37,6 +37,10 @@ function requireDokuCredentials() {
     throw new IntegrationNotConfiguredError("doku");
   }
   return { clientId: env.dokuClientId, secretKey: env.dokuSecretKey };
+}
+
+function dokuTimestamp() {
+  return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
 export function dokuDigest(rawBody: string) {
@@ -121,6 +125,28 @@ async function readDokuJson<T>(response: Response, operation: string): Promise<T
   return parsed as T;
 }
 
+function validateCheckoutResponse(parsed: DokuCheckoutResponse, input: { invoiceNumber: string; amount: number }) {
+  const returnedInvoice = parsed.response?.order?.invoice_number;
+  if (returnedInvoice && returnedInvoice !== input.invoiceNumber) {
+    throw new Error("DOKU Checkout returned a different invoice number");
+  }
+  const rawAmount = parsed.response?.order?.amount;
+  const returnedAmount = typeof rawAmount === "string" ? Number(rawAmount) : rawAmount;
+  if (returnedAmount != null && (!Number.isFinite(returnedAmount) || Math.round(returnedAmount) !== Math.round(input.amount))) {
+    throw new Error("DOKU Checkout returned a different order amount");
+  }
+  const checkoutUrl = parsed.response?.payment?.url;
+  if (!checkoutUrl) throw new Error("DOKU Checkout did not return payment.url");
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(checkoutUrl);
+  } catch {
+    throw new Error("DOKU Checkout returned an invalid payment.url");
+  }
+  if (parsedUrl.protocol !== "https:") throw new Error("DOKU Checkout returned an insecure payment.url");
+  return checkoutUrl;
+}
+
 export async function createDokuCheckout(input: {
   invoiceNumber: string;
   amount: number;
@@ -128,7 +154,7 @@ export async function createDokuCheckout(input: {
 }) {
   const credentials = requireDokuCredentials();
   const requestId = randomUUID();
-  const requestTimestamp = new Date().toISOString();
+  const requestTimestamp = dokuTimestamp();
   const body = {
     order: {
       amount: input.amount,
@@ -170,8 +196,7 @@ export async function createDokuCheckout(input: {
       signal: controller.signal,
     });
     const parsed = await readDokuJson<DokuCheckoutResponse>(response, "Checkout");
-    const checkoutUrl = parsed.response?.payment?.url;
-    if (!checkoutUrl) throw new Error("DOKU Checkout did not return payment.url");
+    const checkoutUrl = validateCheckoutResponse(parsed, input);
     return {
       requestId,
       checkoutUrl,
@@ -186,7 +211,7 @@ export async function createDokuCheckout(input: {
 export async function getDokuOrderStatus(invoiceNumber: string): Promise<DokuNotificationBody> {
   const credentials = requireDokuCredentials();
   const requestId = randomUUID();
-  const requestTimestamp = new Date().toISOString();
+  const requestTimestamp = dokuTimestamp();
   const requestTarget = `${DOKU_STATUS_PATH}/${encodeURIComponent(invoiceNumber)}`;
   const signature = dokuSignature({
     clientId: credentials.clientId,
