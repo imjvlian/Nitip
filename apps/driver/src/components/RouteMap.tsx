@@ -24,6 +24,7 @@ function escapeHtml(value: string) {
 function buildMapHtml(pickup: RoutePoint, destination: RoutePoint) {
   const hasPickup = pickup.latitude != null && pickup.longitude != null;
   const hasDestination = destination.latitude != null && destination.longitude != null;
+  const hasRoute = hasPickup && hasDestination;
   const initialLatitude = hasPickup
     ? (pickup.latitude as number)
     : hasDestination
@@ -35,6 +36,7 @@ function buildMapHtml(pickup: RoutePoint, destination: RoutePoint) {
       ? (destination.longitude as number)
       : FALLBACK.longitude;
   const tileUrl = `https://api.tomtom.com/maps/orbis/display/raster/tile/{z}/{x}/{y}?apiVersion=2&style=street-light&tileSize=256&key=${encodeURIComponent(tomTomApiKey)}`;
+  const routingUrl = "https://api.tomtom.com/maps/orbis/routing/routes/calculate";
 
   return `<!doctype html>
 <html>
@@ -64,6 +66,15 @@ function buildMapHtml(pickup: RoutePoint, destination: RoutePoint) {
     .nitip-marker span { transform: rotate(45deg); }
     .pickup { background: #2448F5; }
     .destination { background: #16A34A; }
+    .route-summary {
+      background: rgba(255,255,255,.96);
+      color: #111318;
+      border: 1px solid rgba(17,19,24,.08);
+      border-radius: 999px;
+      padding: 7px 10px;
+      box-shadow: 0 3px 10px rgba(17,19,24,.12);
+      font: 800 10px/1.2 system-ui, sans-serif;
+    }
     .leaflet-control-attribution { font-size: 9px !important; }
   </style>
 </head>
@@ -72,10 +83,14 @@ function buildMapHtml(pickup: RoutePoint, destination: RoutePoint) {
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     (function () {
-      if (!window.L) {
+      function post(message) {
         if (window.ReactNativeWebView) {
-          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error' }));
+          window.ReactNativeWebView.postMessage(JSON.stringify(message));
         }
+      }
+
+      if (!window.L) {
+        post({ type: 'error' });
         return;
       }
 
@@ -105,14 +120,109 @@ function buildMapHtml(pickup: RoutePoint, destination: RoutePoint) {
         bounds.push([latitude, longitude]);
       }
 
+      function fitMarkerBounds() {
+        if (bounds.length > 1) {
+          map.fitBounds(bounds, { padding: [36, 36], maxZoom: 16 });
+        } else if (bounds.length === 1) {
+          map.setView(bounds[0], 16);
+        }
+      }
+
+      function addRouteSummary(summary) {
+        if (!summary) return;
+        var distanceKm = typeof summary.lengthInMeters === 'number'
+          ? (summary.lengthInMeters / 1000).toFixed(summary.lengthInMeters < 10000 ? 1 : 0)
+          : null;
+        var durationMinutes = typeof summary.travelDurationInSeconds === 'number'
+          ? Math.max(1, Math.round(summary.travelDurationInSeconds / 60))
+          : null;
+        if (!distanceKm && !durationMinutes) return;
+
+        var SummaryControl = L.Control.extend({
+          options: { position: 'topright' },
+          onAdd: function () {
+            var container = L.DomUtil.create('div', 'route-summary');
+            container.textContent = [
+              distanceKm ? distanceKm + ' km' : null,
+              durationMinutes ? durationMinutes + ' min' : null
+            ].filter(Boolean).join(' • ');
+            return container;
+          }
+        });
+        map.addControl(new SummaryControl());
+      }
+
       ${hasPickup ? `addMarker(${pickup.latitude}, ${pickup.longitude}, 'pickup', 'A', ${JSON.stringify(escapeHtml(pickup.label))});` : ""}
       ${hasDestination ? `addMarker(${destination.latitude}, ${destination.longitude}, 'destination', 'B', ${JSON.stringify(escapeHtml(destination.label))});` : ""}
 
-      if (bounds.length > 1) {
-        map.fitBounds(bounds, { padding: [36, 36], maxZoom: 16 });
-      } else if (bounds.length === 1) {
-        map.setView(bounds[0], 16);
+      fitMarkerBounds();
+
+      async function loadRoadRoute() {
+        if (!${hasRoute ? "true" : "false"}) return;
+
+        try {
+          var response = await fetch(${JSON.stringify(routingUrl)}, {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'TomTom-Api-Version': '3',
+              'TomTom-Api-Key': ${JSON.stringify(tomTomApiKey)},
+              'Attributes': 'routes'
+            },
+            body: JSON.stringify({
+              routePlanningLocations: {
+                origin: {
+                  type: 'Point',
+                  coordinates: [${pickup.longitude ?? 0}, ${pickup.latitude ?? 0}]
+                },
+                destination: {
+                  type: 'Point',
+                  coordinates: [${destination.longitude ?? 0}, ${destination.latitude ?? 0}]
+                }
+              },
+              routeType: 'fast',
+              traffic: 'live'
+            })
+          });
+
+          if (!response.ok) throw new Error('routing_' + response.status);
+          var body = await response.json();
+          var route = body && body.routes && body.routes[0];
+          var coordinates = route && route.path && route.path.coordinates;
+          if (!Array.isArray(coordinates) || coordinates.length < 2) {
+            throw new Error('route_geometry_missing');
+          }
+
+          var latLngs = coordinates
+            .filter(function (point) {
+              return Array.isArray(point) && point.length >= 2 && Number.isFinite(point[0]) && Number.isFinite(point[1]);
+            })
+            .map(function (point) { return [point[1], point[0]]; });
+
+          if (latLngs.length < 2) throw new Error('route_geometry_invalid');
+
+          L.polyline(latLngs, {
+            color: '#2448F5',
+            weight: 5,
+            opacity: 0.9,
+            lineCap: 'round',
+            lineJoin: 'round'
+          }).addTo(map);
+          map.fitBounds(latLngs, { padding: [38, 38], maxZoom: 16 });
+          addRouteSummary(route.summary);
+          post({
+            type: 'route',
+            distanceMeters: route.summary && route.summary.lengthInMeters,
+            durationSeconds: route.summary && route.summary.travelDurationInSeconds
+          });
+        } catch (error) {
+          fitMarkerBounds();
+          post({ type: 'route_fallback' });
+        }
       }
+
+      void loadRoadRoute();
 
       window.setTimeout(function () {
         map.invalidateSize();
