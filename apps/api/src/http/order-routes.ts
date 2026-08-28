@@ -111,6 +111,13 @@ export function registerOrderRoutes(app: FastifyInstance) {
     const identity = await authenticateRequest(request, reply); if (!identity) return;
     if (env.nodeEnv === "production") return reply.code(404).send({ error: "not_found" });
     try {
+      const current = await getCustomerOrder(identity.uid, request.params.id);
+      if (current?.payment?.provider === "doku") {
+        return reply.code(409).send({
+          error: "doku_payment_active",
+          message: "DOKU Checkout sudah aktif. Gunakan webhook atau Check Status untuk memperbarui pembayaran.",
+        });
+      }
       const order = await simulateCustomerPayment(identity.uid, request.params.id);
       if (!order) return reply.code(409).send({ error: "payment_not_simulatable", message: "Pesanan tidak ditemukan atau sudah tidak menunggu pembayaran" });
       if (order.status === "paid") await autoDisableSoldOutProducts(order.items);
