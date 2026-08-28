@@ -56,17 +56,20 @@ function ProfileMenuCard({
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [
+      style={[
         styles.menuCard,
         {
           backgroundColor: cardBackground,
-          borderColor: danger ? theme.colors.dangerSurface : isDark ? theme.colors.border : "#E8E9ED",
-          opacity: pressed ? 0.72 : 1,
+          borderColor: danger
+            ? theme.colors.dangerSurface
+            : isDark
+              ? theme.colors.border
+              : "#E8E9ED",
           shadowColor: theme.colors.shadow,
         },
       ]}
     >
-      <View style={[styles.iconBadge, { backgroundColor: badgeBackground }]}> 
+      <View style={[styles.iconBadge, { backgroundColor: badgeBackground }]}>
         <NitipIcon color={iconColor} name={icon} size={18} />
       </View>
 
@@ -88,7 +91,11 @@ function ProfileMenuCard({
       ) : null}
 
       <View style={styles.chevronWrap}>
-        <NitipIcon color={danger ? theme.colors.danger : theme.colors.textMuted} name="next" size={14} />
+        <NitipIcon
+          color={danger ? theme.colors.danger : theme.colors.textMuted}
+          name="next"
+          size={14}
+        />
       </View>
     </Pressable>
   );
@@ -175,12 +182,11 @@ export default function ProfileScreen() {
             accessibilityLabel={t("common.back")}
             accessibilityRole="button"
             onPress={() => router.replace("/home")}
-            style={({ pressed }) => [
+            style={[
               styles.headerButton,
               {
                 backgroundColor: headerSurface,
                 borderColor: isDark ? theme.colors.border : "#E8E9ED",
-                opacity: pressed ? 0.7 : 1,
               },
             ]}
           >
@@ -214,13 +220,7 @@ export default function ProfileScreen() {
           <Pressable
             accessibilityRole="button"
             onPress={() => router.push("/settings/account")}
-            style={({ pressed }) => [
-              styles.editButton,
-              {
-                backgroundColor: theme.colors.primary,
-                opacity: pressed ? 0.78 : 1,
-              },
-            ]}
+            style={[styles.editButton, { backgroundColor: theme.colors.primary }]}
           >
             <Text style={styles.editButtonText}>{editLabel}</Text>
           </Pressable>
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 28,
+    paddingBottom: 112,
     paddingHorizontal: 20,
   },
   topBar: {
@@ -405,14 +405,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 18,
     borderWidth: 1,
-    elevation: 1,
+    elevation: 2,
     flexDirection: "row",
     minHeight: 66,
     paddingHorizontal: 12,
     paddingVertical: 10,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    shadowOpacity: 0.07,
+    shadowRadius: 7,
     width: "100%",
   },
   iconBadge: {
