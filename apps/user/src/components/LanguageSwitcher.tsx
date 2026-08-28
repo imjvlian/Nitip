@@ -4,7 +4,7 @@ import {
   useNitipTranslation,
   type NitipLanguage,
 } from "@nitip/i18n";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useNitipTheme } from "../hooks/useNitipTheme";
 import { NitipIcon } from "./NitipIcon";
@@ -17,24 +17,25 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   const { language, setLanguage } = useNitipLanguage();
   const { t } = useNitipTranslation();
   const theme = useNitipTheme();
+  const isDark = theme.mode === "dark";
 
   return (
     <View>
       {!compact ? (
-        <View className="mb-2 flex-row items-center gap-2">
+        <View style={styles.labelRow}>
           <NitipIcon color={theme.colors.textMuted} name="language" size={15} />
-          <Text className="text-[10px] font-extrabold" style={{ color: theme.colors.textMuted }}>
-            {t("common.language")}
-          </Text>
+          <Text style={[styles.label, { color: theme.colors.textMuted }]}>{t("common.language")}</Text>
         </View>
       ) : null}
+
       <View
-        className="flex-row gap-1 rounded-2xl p-1"
-        style={{
-          backgroundColor: theme.colors.surfaceRaised,
-          borderColor: theme.colors.border,
-          borderWidth: 1,
-        }}
+        style={[
+          styles.switcher,
+          {
+            backgroundColor: isDark ? theme.colors.surface : "#EEF1FF",
+            borderColor: isDark ? theme.colors.border : "#E1E5F2",
+          },
+        ]}
       >
         {NITIP_LANGUAGES.map((option) => {
           const active = option === language;
@@ -42,17 +43,24 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
             <Pressable
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
-              className="flex-1 rounded-xl px-3 py-2.5"
               key={option}
               onPress={() => void setLanguage(option)}
-              style={({ pressed }) => ({
-                backgroundColor: active ? theme.colors.primary : theme.colors.surface,
-                opacity: pressed ? 0.72 : 1,
-              })}
+              style={[
+                styles.option,
+                {
+                  backgroundColor: active
+                    ? theme.colors.primary
+                    : isDark
+                      ? theme.colors.surfaceRaised
+                      : "#FFFFFF",
+                },
+              ]}
             >
               <Text
-                className="text-center text-[10px] font-extrabold"
-                style={{ color: active ? "#FFFFFF" : theme.colors.text }}
+                style={[
+                  styles.optionText,
+                  { color: active ? "#FFFFFF" : theme.colors.text },
+                ]}
               >
                 {languageLabel(option, t)}
               </Text>
@@ -63,3 +71,36 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  labelRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 10,
+  },
+  label: {
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  switcher: {
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 6,
+    padding: 5,
+  },
+  option: {
+    alignItems: "center",
+    borderRadius: 14,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 42,
+    paddingHorizontal: 12,
+  },
+  optionText: {
+    fontSize: 10,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+});

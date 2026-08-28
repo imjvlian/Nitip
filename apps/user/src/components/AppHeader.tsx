@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { router, usePathname } from "expo-router";
-import { Pressable, Text, View } from "react-native";
+import { router } from "expo-router";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useNitipTheme } from "../hooks/useNitipTheme";
 import { NitipIcon } from "./NitipIcon";
@@ -17,79 +17,87 @@ export function AppHeader({
   right?: ReactNode;
 }) {
   const theme = useNitipTheme();
-  const pathname = usePathname();
-  const legacy = pathname.startsWith("/settings");
-
-  if (legacy) {
-    return (
-      <View className="min-h-10 flex-row items-center">
-        <View className="w-10">
-          {showBack ? (
-            <Pressable
-              accessibilityRole="button"
-              className="h-10 w-10 items-center justify-center rounded-full"
-              onPress={onBack ?? (() => router.back())}
-              style={{ backgroundColor: theme.colors.surface }}
-            >
-              <NitipIcon color={theme.colors.text} name="back" size={18} />
-            </Pressable>
-          ) : null}
-        </View>
-
-        <Text
-          className="flex-1 px-3 text-center text-sm font-black"
-          numberOfLines={1}
-          style={{ color: theme.colors.text }}
-        >
-          {title}
-        </Text>
-
-        <View className="w-10 items-end">{right}</View>
-      </View>
-    );
-  }
+  const isDark = theme.mode === "dark";
+  const surface = isDark ? theme.colors.surfaceRaised : "#FFFFFF";
+  const border = isDark ? theme.colors.border : "#E8E9ED";
 
   return (
-    <View className="min-h-11 flex-row items-center">
-      <View className="w-11">
+    <View style={styles.root}>
+      <View style={styles.side}>
         {showBack ? (
           <Pressable
             accessibilityRole="button"
-            className="h-9 w-9 items-center justify-center rounded-full"
             onPress={onBack ?? (() => router.back())}
-            style={({ pressed }) => ({
-              backgroundColor: theme.colors.surfaceRaised,
-              borderColor: theme.colors.border,
-              borderWidth: 1,
-              elevation: 2,
-              opacity: pressed ? 0.7 : 1,
-              shadowColor: theme.colors.shadow,
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: theme.mode === "dark" ? 0.22 : 0.08,
-              shadowRadius: 7,
-            })}
+            style={[
+              styles.backButton,
+              {
+                backgroundColor: surface,
+                borderColor: border,
+                shadowColor: theme.colors.shadow,
+              },
+            ]}
           >
             <NitipIcon color={theme.colors.text} name="back" size={16} />
           </Pressable>
         ) : null}
       </View>
 
-      <View className="flex-1 items-center px-2">
-        <View
-          className="rounded-full px-4 py-2"
-          style={{ backgroundColor: theme.colors.surfaceRaised }}
-        >
-          <Text
-            className="text-center text-[11px] font-black"
-            numberOfLines={1}
-            style={{ color: theme.colors.text }}
-          >
+      <View style={styles.center}>
+        <View style={[styles.titlePill, { backgroundColor: surface, borderColor: border }]}>
+          <Text numberOfLines={1} style={[styles.title, { color: theme.colors.text }]}>
             {title}
           </Text>
         </View>
       </View>
 
-      <View className="w-11 items-end">{right}</View>
+      <View style={[styles.side, styles.right]}>{right}</View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    alignItems: "center",
+    flexDirection: "row",
+    minHeight: 44,
+    width: "100%",
+  },
+  side: {
+    alignItems: "flex-start",
+    justifyContent: "center",
+    width: 44,
+  },
+  right: {
+    alignItems: "flex-end",
+  },
+  center: {
+    alignItems: "center",
+    flex: 1,
+    paddingHorizontal: 8,
+  },
+  backButton: {
+    alignItems: "center",
+    borderRadius: 20,
+    borderWidth: 1,
+    elevation: 2,
+    height: 40,
+    justifyContent: "center",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 7,
+    width: 40,
+  },
+  titlePill: {
+    alignItems: "center",
+    borderRadius: 999,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 34,
+    paddingHorizontal: 18,
+  },
+  title: {
+    fontSize: 11,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+});

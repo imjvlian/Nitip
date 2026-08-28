@@ -3,9 +3,17 @@ import type { NitipCheckoutQuote, NitipCheckoutRequest } from "@nitip/domain/com
 import { useNitipTranslation } from "@nitip/i18n";
 import { Redirect, router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AppHeader } from "../components/AppHeader";
 import { NitipIcon } from "../components/NitipIcon";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
@@ -114,114 +122,117 @@ export default function CheckoutScreen() {
 
   if (cart.items.length === 0 || !cart.outlet) {
     return (
-      <View className="flex-1 items-center justify-center px-6" style={{ backgroundColor: theme.colors.background, paddingTop: insets.top, paddingBottom: insets.bottom }}>
-        <View className="mb-4 h-11 w-11 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surface }}>
-          <NitipIcon color={theme.colors.primary} name="cart" size={21} />
+      <View
+        style={[
+          styles.emptyScreen,
+          {
+            backgroundColor: theme.colors.background,
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom,
+          },
+        ]}
+      >
+        <View style={[styles.emptyIcon, { backgroundColor: theme.colors.surfaceAccent }]}>
+          <NitipIcon color={theme.colors.primary} name="cart" size={22} />
         </View>
-        <Text className="text-center text-[26px] font-black tracking-tighter" style={{ color: theme.colors.text }}>
-          {t("checkout.emptyCart")}
-        </Text>
-        <Pressable className="mt-5 min-h-12 w-full flex-row items-center justify-center gap-2 rounded-2xl" onPress={() => router.replace("/home")} style={{ backgroundColor: theme.colors.primary }}>
+        <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>{t("checkout.emptyCart")}</Text>
+        <Pressable onPress={() => router.replace("/home")} style={[styles.emptyButton, { backgroundColor: theme.colors.primary }]}>
           <NitipIcon color="#FFFFFF" name="home" size={17} />
-          <Text className="text-xs font-black text-white">{t("checkout.backHome")}</Text>
+          <Text style={styles.emptyButtonText}>{t("checkout.backHome")}</Text>
         </Pressable>
       </View>
     );
   }
 
   return (
-    <View className="flex-1" style={{ backgroundColor: theme.colors.background }}>
+    <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: insets.top + 14, paddingBottom: 165 }}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 10 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View className="flex-row items-center justify-between">
-          <Pressable className="h-10 w-10 items-center justify-center rounded-full" onPress={() => router.back()} style={{ backgroundColor: theme.colors.surface }}>
-            <NitipIcon color={theme.colors.text} name="back" size={18} />
-          </Pressable>
-          <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
-            {t("checkout.eyebrow")}
-          </Text>
-          <View className="h-10 w-10" />
-        </View>
+        <AppHeader title={t("checkout.eyebrow")} />
 
-        <View className="mt-7">
-          <Text className="text-[26px] font-black tracking-tighter" style={{ color: theme.colors.text }}>
-            {t("checkout.title")}
-          </Text>
-          <Text className="mt-1 text-xs" style={{ color: theme.colors.textMuted }}>
+        <View style={styles.hero}>
+          <Text style={[styles.heroTitle, { color: theme.colors.text }]}>{t("checkout.title")}</Text>
+          <Text style={[styles.heroSubtitle, { color: theme.colors.textMuted }]}>
             {cart.outlet.businessName} · {cart.outlet.name}
           </Text>
         </View>
 
-        <Text className="mt-7 text-sm font-black" style={{ color: theme.colors.text }}>
-          {t("checkout.deliveryAddress")}
-        </Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t("checkout.deliveryAddress")}</Text>
 
         {loadingAddresses ? (
-          <View className="mt-3 items-center rounded-[24px] p-5" style={{ backgroundColor: theme.colors.surface }}>
+          <View style={[styles.card, styles.centeredCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
             <ActivityIndicator color={theme.colors.primary} />
-            <Text className="mt-2 text-xs" style={{ color: theme.colors.textMuted }}>{t("checkout.loadingAddresses")}</Text>
+            <Text style={[styles.loadingText, { color: theme.colors.textMuted }]}>{t("checkout.loadingAddresses")}</Text>
           </View>
         ) : addresses.length === 0 ? (
-          <View className="mt-3 rounded-[24px] p-5" style={{ backgroundColor: theme.colors.surface }}>
-            <Text className="text-sm font-black" style={{ color: theme.colors.text }}>{t("checkout.noAddressTitle")}</Text>
-            <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>{t("checkout.noAddressDescription")}</Text>
-            <Pressable className="mt-4 min-h-11 flex-row items-center justify-center gap-2 rounded-2xl" onPress={() => router.push("/address/new")} style={{ backgroundColor: theme.colors.surfaceRaised }}>
+          <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+            <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t("checkout.noAddressTitle")}</Text>
+            <Text style={[styles.cardBody, { color: theme.colors.textMuted }]}>{t("checkout.noAddressDescription")}</Text>
+            <Pressable onPress={() => router.push("/address/new")} style={[styles.secondaryButton, { backgroundColor: theme.colors.surfaceAccent }]}>
               <NitipIcon color={theme.colors.primary} name="plus" size={16} />
-              <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>{t("checkout.addAddress")}</Text>
+              <Text style={[styles.secondaryButtonText, { color: theme.colors.primary }]}>{t("checkout.addAddress")}</Text>
             </Pressable>
           </View>
         ) : (
-          <View className="mt-3 gap-2">
+          <View style={styles.addressList}>
             {addresses.map((address) => {
               const selected = addressId === address.id;
               return (
                 <Pressable
-                  className="rounded-[24px] p-4"
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
                   key={address.id}
                   onPress={() => setAddressId(address.id)}
-                  style={{
-                    backgroundColor: selected ? theme.colors.surfaceAccent : theme.colors.surface,
-                    borderColor: selected ? theme.colors.primary : "transparent",
-                    borderWidth: selected ? 1.5 : 0,
-                  }}
+                  style={[
+                    styles.addressCard,
+                    {
+                      backgroundColor: selected ? theme.colors.surfaceAccent : theme.colors.surface,
+                      borderColor: selected ? theme.colors.primary : theme.colors.border,
+                    },
+                  ]}
                 >
-                  <View className="flex-row items-center justify-between gap-3">
-                    <Text className="text-xs font-black" style={{ color: theme.colors.text }}>{addressLabel(address)}</Text>
+                  <View style={styles.addressTop}>
+                    <View style={[styles.addressIcon, { backgroundColor: selected ? theme.colors.primary : theme.colors.surfaceAccent }]}>
+                      <NitipIcon color={selected ? "#FFFFFF" : theme.colors.primary} name="location" size={16} />
+                    </View>
+                    <View style={styles.addressCopy}>
+                      <Text style={[styles.addressLabel, { color: theme.colors.text }]}>{addressLabel(address)}</Text>
+                      <Text style={[styles.recipient, { color: theme.colors.primary }]}>{address.recipientName} · {address.phoneNumber}</Text>
+                    </View>
                     {selected ? (
-                      <View className="h-7 w-7 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.primary }}>
-                        <NitipIcon color="#FFFFFF" name="check" size={13} />
+                      <View style={[styles.check, { backgroundColor: theme.colors.primary }]}>
+                        <NitipIcon color="#FFFFFF" name="check" size={12} />
                       </View>
                     ) : null}
                   </View>
-                  <Text className="mt-2 text-[11px] font-extrabold" style={{ color: theme.colors.primary }}>{address.recipientName} · {address.phoneNumber}</Text>
-                  <Text className="mt-1 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>{address.addressLine}</Text>
+                  <Text style={[styles.addressLine, { color: theme.colors.textMuted }]}>{address.addressLine}</Text>
                 </Pressable>
               );
             })}
           </View>
         )}
 
-        <Text className="mt-7 text-sm font-black" style={{ color: theme.colors.text }}>{t("checkout.summary")}</Text>
+        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t("checkout.summary")}</Text>
 
         {loadingQuote ? (
-          <View className="mt-3 items-center rounded-[24px] p-5" style={{ backgroundColor: theme.colors.surface }}>
+          <View style={[styles.card, styles.centeredCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
             <ActivityIndicator color={theme.colors.primary} />
-            <Text className="mt-2 text-xs" style={{ color: theme.colors.textMuted }}>{t("checkout.validating")}</Text>
+            <Text style={[styles.loadingText, { color: theme.colors.textMuted }]}>{t("checkout.validating")}</Text>
           </View>
         ) : quote ? (
-          <View className="mt-3 rounded-[24px] p-5" style={{ backgroundColor: theme.colors.surface }}>
+          <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
             {quote.items.map((item) => (
-              <View className="py-1.5" key={item.productId}>
-                <View className="flex-row justify-between gap-4">
-                  <Text className="flex-1 text-[10px]" style={{ color: theme.colors.textMuted }}>{item.quantity}× {item.name}</Text>
-                  <Text className="text-[10px] font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(item.lineTotal)}</Text>
+              <View style={styles.quoteItem} key={item.productId}>
+                <View style={styles.quoteRow}>
+                  <Text style={[styles.quoteName, { color: theme.colors.textMuted }]}>{item.quantity}× {item.name}</Text>
+                  <Text style={[styles.quotePrice, { color: theme.colors.text }]}>{formatRupiah(item.lineTotal)}</Text>
                 </View>
                 {(item.addons ?? []).length > 0 ? (
-                  <View className="mt-1 pl-3">
+                  <View style={styles.quoteAddons}>
                     {(item.addons ?? []).map((addon) => (
-                      <Text key={addon.id} className="text-[8px] leading-3.5" style={{ color: theme.colors.textMuted }}>
+                      <Text key={addon.id} style={[styles.quoteAddon, { color: theme.colors.textMuted }]}>
                         + {addon.name}{addon.price > 0 ? ` · ${formatRupiah(addon.price)}` : ""}
                       </Text>
                     ))}
@@ -229,15 +240,16 @@ export default function CheckoutScreen() {
                 ) : null}
               </View>
             ))}
-            <View className="my-3 h-px" style={{ backgroundColor: theme.colors.border }} />
-            <View className="flex-row justify-between py-1.5"><Text className="text-[10px]" style={{ color: theme.colors.textMuted }}>{t("common.subtotal")}</Text><Text className="text-[10px] font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(quote.subtotal)}</Text></View>
-            <View className="flex-row justify-between py-1.5"><Text className="text-[10px]" style={{ color: theme.colors.textMuted }}>{t("common.deliveryFee")}</Text><Text className="text-[10px] font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(quote.deliveryFare)}</Text></View>
-            <View className="flex-row justify-between py-1.5"><Text className="text-[10px]" style={{ color: theme.colors.textMuted }}>{t("common.serviceFee")}</Text><Text className="text-[10px] font-extrabold" style={{ color: theme.colors.text }}>{formatRupiah(quote.serviceFee)}</Text></View>
-            <View className="mt-3 flex-row justify-between border-t pt-4" style={{ borderTopColor: theme.colors.border }}>
-              <Text className="text-sm font-black" style={{ color: theme.colors.text }}>{t("common.total")}</Text>
-              <Text className="text-base font-black" style={{ color: theme.colors.primary }}>{formatRupiah(quote.customerTotal)}</Text>
+
+            <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+            <View style={styles.moneyRow}><Text style={[styles.moneyLabel, { color: theme.colors.textMuted }]}>{t("common.subtotal")}</Text><Text style={[styles.moneyValue, { color: theme.colors.text }]}>{formatRupiah(quote.subtotal)}</Text></View>
+            <View style={styles.moneyRow}><Text style={[styles.moneyLabel, { color: theme.colors.textMuted }]}>{t("common.deliveryFee")}</Text><Text style={[styles.moneyValue, { color: theme.colors.text }]}>{formatRupiah(quote.deliveryFare)}</Text></View>
+            <View style={styles.moneyRow}><Text style={[styles.moneyLabel, { color: theme.colors.textMuted }]}>{t("common.serviceFee")}</Text><Text style={[styles.moneyValue, { color: theme.colors.text }]}>{formatRupiah(quote.serviceFee)}</Text></View>
+            <View style={[styles.totalRow, { borderTopColor: theme.colors.border }]}>
+              <Text style={[styles.totalLabel, { color: theme.colors.text }]}>{t("common.total")}</Text>
+              <Text style={[styles.totalValue, { color: theme.colors.primary }]}>{formatRupiah(quote.customerTotal)}</Text>
             </View>
-            <Text className="mt-4 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>
+            <Text style={[styles.distanceNote, { color: theme.colors.textMuted }]}>
               {quote.distanceMethod === "minimum_fare_fallback"
                 ? t("checkout.distanceFallback")
                 : t("checkout.distanceHaversine", { distance: quote.distanceKm?.toFixed(2) ?? "-" })}
@@ -246,41 +258,120 @@ export default function CheckoutScreen() {
         ) : null}
 
         {error ? (
-          <View className="mt-4 rounded-2xl p-4" style={{ backgroundColor: theme.colors.dangerSurface }}>
-            <Text className="text-xs leading-5" style={{ color: theme.colors.danger }}>{error}</Text>
+          <View style={[styles.errorCard, { backgroundColor: theme.colors.dangerSurface }]}>
+            <Text style={[styles.errorText, { color: theme.colors.danger }]}>{error}</Text>
           </View>
         ) : null}
 
-        <Text className="mt-4 text-center text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{t("checkout.paymentNote")}</Text>
+        <Text style={[styles.paymentNote, { color: theme.colors.textMuted }]}>{t("checkout.paymentNote")}</Text>
       </ScrollView>
 
       <View
-        className="absolute bottom-0 left-0 right-0 px-5 pt-3"
-        style={{
-          backgroundColor: theme.colors.surfaceRaised,
-          paddingBottom: Math.max(insets.bottom, 12),
-          shadowColor: theme.colors.shadow,
-          shadowOffset: { width: 0, height: -5 },
-          shadowOpacity: theme.mode === "dark" ? 0.22 : 0.06,
-          shadowRadius: 14,
-          elevation: 10,
-        }}
+        style={[
+          styles.bottomBar,
+          {
+            backgroundColor: theme.colors.surface,
+            borderColor: theme.colors.border,
+            paddingBottom: Math.max(insets.bottom, 12),
+            shadowColor: theme.colors.shadow,
+          },
+        ]}
       >
-        <View className="flex-row items-center gap-4">
-          <View className="flex-1">
-            <Text className="text-[9px] font-bold" style={{ color: theme.colors.textMuted }}>{t("common.total")}</Text>
-            <Text className="mt-0.5 text-sm font-black" style={{ color: theme.colors.text }}>{quote ? formatRupiah(quote.customerTotal) : "—"}</Text>
-          </View>
-          <Pressable
-            className="min-h-[52px] flex-[1.45] flex-row items-center justify-center gap-2 rounded-2xl px-4"
-            disabled={!quote || creating}
-            onPress={() => void submitOrder()}
-            style={{ backgroundColor: theme.colors.primary, opacity: !quote || creating ? 0.45 : 1 }}
-          >
-            {creating ? <ActivityIndicator color="#FFFFFF" /> : <><NitipIcon color="#FFFFFF" name="receipt" size={17} /><Text className="text-center text-xs font-black text-white">{t("checkout.createOrder")}</Text></>}
-          </Pressable>
+        <View style={styles.bottomCopy}>
+          <Text style={[styles.bottomLabel, { color: theme.colors.textMuted }]}>{t("common.total")}</Text>
+          <Text style={[styles.bottomTotal, { color: theme.colors.text }]}>{quote ? formatRupiah(quote.customerTotal) : "—"}</Text>
         </View>
+        <Pressable
+          disabled={!quote || creating}
+          onPress={() => void submitOrder()}
+          style={[
+            styles.orderButton,
+            {
+              backgroundColor: theme.colors.primary,
+              opacity: !quote || creating ? 0.45 : 1,
+            },
+          ]}
+        >
+          {creating ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <>
+              <NitipIcon color="#FFFFFF" name="receipt" size={17} />
+              <Text style={styles.orderButtonText}>{t("checkout.createOrder")}</Text>
+            </>
+          )}
+        </Pressable>
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  content: { paddingBottom: 166, paddingHorizontal: 20 },
+  hero: { marginTop: 26 },
+  heroTitle: { fontSize: 27, fontWeight: "900", letterSpacing: -0.7 },
+  heroSubtitle: { fontSize: 11, marginTop: 5 },
+  sectionTitle: { fontSize: 13, fontWeight: "900", marginTop: 24 },
+  card: { borderRadius: 20, borderWidth: 1, marginTop: 10, padding: 16 },
+  centeredCard: { alignItems: "center", paddingVertical: 22 },
+  loadingText: { fontSize: 10, marginTop: 9 },
+  cardTitle: { fontSize: 13, fontWeight: "900" },
+  cardBody: { fontSize: 10, lineHeight: 17, marginTop: 5 },
+  secondaryButton: { alignItems: "center", borderRadius: 15, flexDirection: "row", gap: 7, justifyContent: "center", marginTop: 14, minHeight: 44 },
+  secondaryButtonText: { fontSize: 10, fontWeight: "900" },
+  addressList: { gap: 9, marginTop: 10 },
+  addressCard: { borderRadius: 18, borderWidth: 1, padding: 13 },
+  addressTop: { alignItems: "center", flexDirection: "row" },
+  addressIcon: { alignItems: "center", borderRadius: 19, height: 38, justifyContent: "center", width: 38 },
+  addressCopy: { flex: 1, minWidth: 0, paddingHorizontal: 11 },
+  addressLabel: { fontSize: 11, fontWeight: "900" },
+  recipient: { fontSize: 9, fontWeight: "800", marginTop: 2 },
+  check: { alignItems: "center", borderRadius: 13, height: 26, justifyContent: "center", width: 26 },
+  addressLine: { fontSize: 9, lineHeight: 14, marginTop: 9, paddingLeft: 49 },
+  quoteItem: { paddingVertical: 5 },
+  quoteRow: { flexDirection: "row", gap: 12, justifyContent: "space-between" },
+  quoteName: { flex: 1, fontSize: 9 },
+  quotePrice: { fontSize: 9, fontWeight: "800" },
+  quoteAddons: { marginTop: 3, paddingLeft: 12 },
+  quoteAddon: { fontSize: 8, lineHeight: 12 },
+  divider: { height: 1, marginVertical: 12 },
+  moneyRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 5 },
+  moneyLabel: { fontSize: 9 },
+  moneyValue: { fontSize: 9, fontWeight: "800" },
+  totalRow: { borderTopWidth: 1, flexDirection: "row", justifyContent: "space-between", marginTop: 8, paddingTop: 13 },
+  totalLabel: { fontSize: 13, fontWeight: "900" },
+  totalValue: { fontSize: 15, fontWeight: "900" },
+  distanceNote: { fontSize: 8, lineHeight: 13, marginTop: 12 },
+  errorCard: { borderRadius: 16, marginTop: 12, padding: 13 },
+  errorText: { fontSize: 10, lineHeight: 16 },
+  paymentNote: { fontSize: 8, lineHeight: 13, marginTop: 14, textAlign: "center" },
+  bottomBar: {
+    alignItems: "center",
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    borderTopWidth: 1,
+    bottom: 0,
+    elevation: 10,
+    flexDirection: "row",
+    gap: 14,
+    left: 0,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    position: "absolute",
+    right: 0,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+  },
+  bottomCopy: { flex: 1 },
+  bottomLabel: { fontSize: 9, fontWeight: "700" },
+  bottomTotal: { fontSize: 14, fontWeight: "900", marginTop: 2 },
+  orderButton: { alignItems: "center", borderRadius: 16, flex: 1.55, flexDirection: "row", gap: 7, justifyContent: "center", minHeight: 52, paddingHorizontal: 14 },
+  orderButtonText: { color: "#FFFFFF", fontSize: 10, fontWeight: "900", textAlign: "center" },
+  emptyScreen: { alignItems: "center", flex: 1, justifyContent: "center", paddingHorizontal: 24 },
+  emptyIcon: { alignItems: "center", borderRadius: 25, height: 50, justifyContent: "center", width: 50 },
+  emptyTitle: { fontSize: 24, fontWeight: "900", letterSpacing: -0.6, marginTop: 14, textAlign: "center" },
+  emptyButton: { alignItems: "center", borderRadius: 16, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 18, minHeight: 48, width: "100%" },
+  emptyButtonText: { color: "#FFFFFF", fontSize: 11, fontWeight: "900" },
+});

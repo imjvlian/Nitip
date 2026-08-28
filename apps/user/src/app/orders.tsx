@@ -8,12 +8,13 @@ import {
   Pressable,
   RefreshControl,
   ScrollView,
+  StyleSheet,
   Text,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { BottomNavigation } from "../components/BottomNavigation";
+import { AppHeader } from "../components/AppHeader";
 import { NitipIcon } from "../components/NitipIcon";
 import { useAuth } from "../context/AuthContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
@@ -72,18 +73,19 @@ export default function OrdersScreen() {
 
   if (!user) return <Redirect href="/login" />;
 
+  const isDark = theme.mode === "dark";
   const activeOrders = orders.filter((order) => !HISTORY_STATUSES.has(order.status));
   const historyOrders = orders.filter((order) => HISTORY_STATUSES.has(order.status));
   const visibleOrders = tab === "active" ? activeOrders : historyOrders;
+  const headerTitle = language === "en" ? "Orders" : "Pesanan";
 
   return (
-    <View className="flex-1" style={{ backgroundColor: theme.colors.background }}>
+    <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
       <ScrollView
-        contentContainerStyle={{
-          paddingHorizontal: 20,
-          paddingTop: insets.top + 14,
-          paddingBottom: 28,
-        }}
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: insets.top + 10 },
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -94,92 +96,101 @@ export default function OrdersScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        <View className="flex-row items-center justify-between">
-          <Text className="text-[26px] font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>
-            nitip.
-          </Text>
-          <View className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surface }}>
-            <NitipIcon color={theme.colors.primary} name="orders" size={19} />
-          </View>
+        <AppHeader
+          title={headerTitle}
+          showBack={false}
+          right={
+            <View
+              style={[
+                styles.headerIcon,
+                {
+                  backgroundColor: isDark ? theme.colors.surfaceRaised : "#FFFFFF",
+                  borderColor: isDark ? theme.colors.border : "#E8E9ED",
+                },
+              ]}
+            >
+              <NitipIcon color={theme.colors.primary} name="orders" size={18} />
+            </View>
+          }
+        />
+
+        <View style={styles.hero}>
+          <Text style={[styles.heroTitle, { color: theme.colors.text }]}>{t("orders.title")}</Text>
+          <Text style={[styles.heroSubtitle, { color: theme.colors.textMuted }]}>{t("orders.subtitle")}</Text>
         </View>
 
-        <View className="mt-7">
-          <Text className="text-[28px] font-black tracking-tighter" style={{ color: theme.colors.text }}>
-            {t("orders.title")}
-          </Text>
-          <Text className="mt-1.5 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
-            {t("orders.subtitle")}
-          </Text>
-        </View>
-
-        <View className="mt-5 flex-row rounded-[18px] p-1" style={{ backgroundColor: theme.colors.surface }}>
+        <View
+          style={[
+            styles.segment,
+            {
+              backgroundColor: isDark ? theme.colors.surface : "#FFFFFF",
+              borderColor: isDark ? theme.colors.border : "#E8E9ED",
+            },
+          ]}
+        >
           <Pressable
-            className="flex-1 flex-row items-center justify-center gap-2 rounded-[14px] py-3"
+            accessibilityRole="button"
+            accessibilityState={{ selected: tab === "active" }}
             onPress={() => setTab("active")}
-            style={{ backgroundColor: tab === "active" ? theme.colors.primary : "transparent" }}
+            style={[
+              styles.segmentButton,
+              { backgroundColor: tab === "active" ? theme.colors.primary : "transparent" },
+            ]}
           >
             <NitipIcon color={tab === "active" ? "#FFFFFF" : theme.colors.textMuted} name="clock" size={15} />
-            <Text className="text-[11px] font-black" style={{ color: tab === "active" ? "#FFFFFF" : theme.colors.textMuted }}>
+            <Text style={[styles.segmentText, { color: tab === "active" ? "#FFFFFF" : theme.colors.textMuted }]}>
               {t("orders.active")} · {activeOrders.length}
             </Text>
           </Pressable>
           <Pressable
-            className="flex-1 flex-row items-center justify-center gap-2 rounded-[14px] py-3"
+            accessibilityRole="button"
+            accessibilityState={{ selected: tab === "history" }}
             onPress={() => setTab("history")}
-            style={{ backgroundColor: tab === "history" ? theme.colors.primary : "transparent" }}
+            style={[
+              styles.segmentButton,
+              { backgroundColor: tab === "history" ? theme.colors.primary : "transparent" },
+            ]}
           >
             <NitipIcon color={tab === "history" ? "#FFFFFF" : theme.colors.textMuted} name="history" size={15} />
-            <Text className="text-[11px] font-black" style={{ color: tab === "history" ? "#FFFFFF" : theme.colors.textMuted }}>
+            <Text style={[styles.segmentText, { color: tab === "history" ? "#FFFFFF" : theme.colors.textMuted }]}>
               {t("orders.history")} · {historyOrders.length}
             </Text>
           </Pressable>
         </View>
 
         {loading ? (
-          <View className="mt-4 items-center rounded-[24px] p-6" style={{ backgroundColor: theme.colors.surface }}>
+          <View style={[styles.stateCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
             <ActivityIndicator color={theme.colors.primary} />
-            <Text className="mt-3 text-xs" style={{ color: theme.colors.textMuted }}>
-              {t("orders.loading")}
-            </Text>
+            <Text style={[styles.stateBody, { color: theme.colors.textMuted }]}>{t("orders.loading")}</Text>
           </View>
         ) : error ? (
-          <View className="mt-4 rounded-[24px] p-5" style={{ backgroundColor: theme.colors.dangerSurface }}>
-            <Text className="text-sm font-black" style={{ color: theme.colors.danger }}>
-              {t("orders.errorTitle")}
-            </Text>
-            <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
-              {error}
-            </Text>
-            <Pressable className="mt-4 self-start rounded-xl px-4 py-2.5" onPress={() => void load()} style={{ backgroundColor: theme.colors.surfaceRaised }}>
-              <Text className="text-xs font-black" style={{ color: theme.colors.primary }}>
-                {t("common.retry")}
-              </Text>
+          <View style={[styles.stateCard, { backgroundColor: theme.colors.dangerSurface, borderColor: theme.colors.dangerSurface }]}>
+            <Text style={[styles.stateTitle, { color: theme.colors.danger }]}>{t("orders.errorTitle")}</Text>
+            <Text style={[styles.stateBody, { color: theme.colors.textMuted }]}>{error}</Text>
+            <Pressable onPress={() => void load()} style={[styles.smallButton, { backgroundColor: theme.colors.primary }]}>
+              <Text style={styles.smallButtonText}>{t("common.retry")}</Text>
             </Pressable>
           </View>
         ) : visibleOrders.length === 0 ? (
-          <View className="mt-4 items-center rounded-[24px] p-7" style={{ backgroundColor: theme.colors.surface }}>
-            <View className="mb-4 h-11 w-11 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surfaceRaised }}>
-              <NitipIcon color={theme.colors.primary} name={tab === "active" ? "orders" : "history"} size={21} />
+          <View style={[styles.stateCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+            <View style={[styles.emptyIcon, { backgroundColor: theme.colors.surfaceAccent }]}>
+              <NitipIcon color={theme.colors.primary} name={tab === "active" ? "orders" : "history"} size={22} />
             </View>
-            <Text className="text-center text-sm font-black" style={{ color: theme.colors.text }}>
+            <Text style={[styles.stateTitle, { color: theme.colors.text }]}>
               {tab === "active" ? t("orders.emptyActiveTitle") : t("orders.emptyHistoryTitle")}
             </Text>
-            <Text className="mt-2 text-center text-[11px] leading-5" style={{ color: theme.colors.textMuted }}>
+            <Text style={[styles.stateBodyCentered, { color: theme.colors.textMuted }]}>
               {tab === "active" ? t("orders.emptyActiveDescription") : t("orders.emptyHistoryDescription")}
             </Text>
             {tab === "active" ? (
-              <Pressable
-                className="mt-5 min-h-12 w-full flex-row items-center justify-center gap-2 rounded-2xl"
-                onPress={() => router.replace("/home")}
-                style={{ backgroundColor: theme.colors.primary }}
-              >
+              <Pressable onPress={() => router.replace("/home")} style={[styles.primaryButton, { backgroundColor: theme.colors.primary }]}>
                 <NitipIcon color="#FFFFFF" name="store" size={17} />
-                <Text className="text-xs font-black text-white">{t("orders.browseMerchants")}</Text>
+                <Text style={styles.primaryButtonText}>{t("orders.browseMerchants")}</Text>
               </Pressable>
             ) : null}
           </View>
         ) : (
-          <View className="mt-4 gap-2.5">
+          <View style={styles.list}>
             {visibleOrders.map((order) => {
               const quantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
               const isCancelled = order.status === "cancelled" || order.status === "refunded";
@@ -188,7 +199,7 @@ export default function OrdersScreen() {
                 ? theme.colors.dangerSurface
                 : isDelivered
                   ? theme.colors.successSurface
-                  : theme.colors.surfaceRaised;
+                  : theme.colors.surfaceAccent;
               const badgeColor = isCancelled
                 ? theme.colors.danger
                 : isDelivered
@@ -197,60 +208,49 @@ export default function OrdersScreen() {
 
               return (
                 <Pressable
-                  className="rounded-[24px] p-4"
+                  accessibilityRole="button"
                   key={order.id}
                   onPress={() => router.push({ pathname: "/order/[id]", params: { id: order.id } })}
-                  style={{ backgroundColor: theme.colors.surface }}
+                  style={[
+                    styles.orderCard,
+                    {
+                      backgroundColor: theme.colors.surface,
+                      borderColor: theme.colors.border,
+                      shadowColor: theme.colors.shadow,
+                    },
+                  ]}
                 >
-                  <View className="flex-row items-start justify-between gap-3">
-                    <View className="flex-1">
-                      <Text className="text-[9px] font-black tracking-wide" style={{ color: theme.colors.primary }}>
-                        {order.orderCode}
-                      </Text>
-                      <Text className="mt-1.5 text-sm font-black" numberOfLines={1} style={{ color: theme.colors.text }}>
-                        {order.businessName}
-                      </Text>
-                      <Text className="mt-0.5 text-[11px]" numberOfLines={1} style={{ color: theme.colors.textMuted }}>
-                        {order.outletName}
-                      </Text>
+                  <View style={styles.orderTop}>
+                    <View style={styles.orderIdentity}>
+                      <Text style={[styles.orderCode, { color: theme.colors.primary }]}>{order.orderCode}</Text>
+                      <Text numberOfLines={1} style={[styles.businessName, { color: theme.colors.text }]}>{order.businessName}</Text>
+                      <Text numberOfLines={1} style={[styles.outletName, { color: theme.colors.textMuted }]}>{order.outletName}</Text>
                     </View>
-                    <View className="max-w-[135px] rounded-full px-3 py-2" style={{ backgroundColor: badgeBackground }}>
-                      <Text className="text-center text-[9px] font-black leading-3" style={{ color: badgeColor }}>
-                        {t(`orders.status.${order.status}`)}
-                      </Text>
+                    <View style={[styles.statusBadge, { backgroundColor: badgeBackground }]}>
+                      <Text style={[styles.statusText, { color: badgeColor }]}>{t(`orders.status.${order.status}`)}</Text>
                     </View>
                   </View>
 
-                  <View className="my-4 h-px" style={{ backgroundColor: theme.colors.border }} />
-                  <View className="flex-row items-center justify-between gap-3">
-                    <Text className="flex-1 text-[10px]" style={{ color: theme.colors.textMuted }}>
-                      {formatOrderTime(order.createdAt, language)}
-                    </Text>
-                    <Text className="text-sm font-black" style={{ color: theme.colors.text }}>
-                      {formatRupiah(order.customerTotal)}
-                    </Text>
+                  <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+
+                  <View style={styles.priceRow}>
+                    <Text style={[styles.date, { color: theme.colors.textMuted }]}>{formatOrderTime(order.createdAt, language)}</Text>
+                    <Text style={[styles.total, { color: theme.colors.text }]}>{formatRupiah(order.customerTotal)}</Text>
                   </View>
-                  <Text className="mt-2 text-[10px] leading-4" numberOfLines={2} style={{ color: theme.colors.textMuted }}>
-                    {quantity} {t("common.items")} · {order.items.slice(0, 2).map((item) => item.name).join(", ")}
-                    {order.items.length > 2 ? "…" : ""}
+                  <Text numberOfLines={2} style={[styles.items, { color: theme.colors.textMuted }]}>
+                    {quantity} {t("common.items")} · {order.items.slice(0, 2).map((item) => item.name).join(", ")}{order.items.length > 2 ? "…" : ""}
                   </Text>
 
                   {order.status === "cancelled" && order.cancellationReason ? (
-                    <View className="mt-3 rounded-2xl p-3" style={{ backgroundColor: theme.colors.dangerSurface }}>
-                      <Text className="text-[9px] font-black tracking-wide" style={{ color: theme.colors.danger }}>
-                        {t("orders.cancellationReason")}
-                      </Text>
-                      <Text className="mt-1 text-[10px] leading-4" style={{ color: theme.colors.danger }}>
-                        {order.cancellationReason}
-                      </Text>
+                    <View style={[styles.cancelBox, { backgroundColor: theme.colors.dangerSurface }]}>
+                      <Text style={[styles.cancelLabel, { color: theme.colors.danger }]}>{t("orders.cancellationReason")}</Text>
+                      <Text style={[styles.cancelText, { color: theme.colors.danger }]}>{order.cancellationReason}</Text>
                     </View>
                   ) : null}
 
-                  <View className="mt-4 flex-row items-center justify-between">
-                    <Text className="text-[11px] font-black" style={{ color: theme.colors.primary }}>
-                      {t("orders.details")}
-                    </Text>
-                    <NitipIcon color={theme.colors.textMuted} name="next" size={16} />
+                  <View style={styles.detailRow}>
+                    <Text style={[styles.detailText, { color: theme.colors.primary }]}>{t("orders.details")}</Text>
+                    <NitipIcon color={theme.colors.textMuted} name="next" size={15} />
                   </View>
                 </Pressable>
               );
@@ -258,7 +258,90 @@ export default function OrdersScreen() {
           </View>
         )}
       </ScrollView>
-      <BottomNavigation active="orders" />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  content: { paddingBottom: 32, paddingHorizontal: 20 },
+  headerIcon: {
+    alignItems: "center",
+    borderRadius: 20,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
+  },
+  hero: { marginTop: 26 },
+  heroTitle: { fontSize: 28, fontWeight: "900", letterSpacing: -0.8 },
+  heroSubtitle: { fontSize: 11, lineHeight: 18, marginTop: 6 },
+  segment: {
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: "row",
+    marginTop: 20,
+    padding: 4,
+  },
+  segmentButton: {
+    alignItems: "center",
+    borderRadius: 14,
+    flex: 1,
+    flexDirection: "row",
+    gap: 7,
+    justifyContent: "center",
+    minHeight: 42,
+  },
+  segmentText: { fontSize: 10, fontWeight: "800" },
+  stateCard: {
+    alignItems: "center",
+    borderRadius: 20,
+    borderWidth: 1,
+    marginTop: 14,
+    padding: 24,
+  },
+  stateTitle: { fontSize: 14, fontWeight: "900", textAlign: "center" },
+  stateBody: { fontSize: 10, lineHeight: 16, marginTop: 8 },
+  stateBodyCentered: { fontSize: 10, lineHeight: 17, marginTop: 8, textAlign: "center" },
+  emptyIcon: { alignItems: "center", borderRadius: 24, height: 48, justifyContent: "center", marginBottom: 14, width: 48 },
+  smallButton: { borderRadius: 999, marginTop: 15, paddingHorizontal: 18, paddingVertical: 10 },
+  smallButtonText: { color: "#FFFFFF", fontSize: 10, fontWeight: "900" },
+  primaryButton: {
+    alignItems: "center",
+    borderRadius: 16,
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "center",
+    marginTop: 18,
+    minHeight: 48,
+    width: "100%",
+  },
+  primaryButtonText: { color: "#FFFFFF", fontSize: 11, fontWeight: "900" },
+  list: { gap: 10, marginTop: 14 },
+  orderCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    elevation: 2,
+    padding: 16,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 7,
+  },
+  orderTop: { alignItems: "flex-start", flexDirection: "row", gap: 12, justifyContent: "space-between" },
+  orderIdentity: { flex: 1, minWidth: 0 },
+  orderCode: { fontSize: 9, fontWeight: "900", letterSpacing: 0.3 },
+  businessName: { fontSize: 13, fontWeight: "900", marginTop: 5 },
+  outletName: { fontSize: 10, marginTop: 2 },
+  statusBadge: { borderRadius: 999, maxWidth: 136, paddingHorizontal: 10, paddingVertical: 7 },
+  statusText: { fontSize: 8, fontWeight: "900", lineHeight: 11, textAlign: "center" },
+  divider: { height: 1, marginVertical: 14 },
+  priceRow: { alignItems: "center", flexDirection: "row", gap: 12, justifyContent: "space-between" },
+  date: { flex: 1, fontSize: 9 },
+  total: { fontSize: 13, fontWeight: "900" },
+  items: { fontSize: 9, lineHeight: 14, marginTop: 7 },
+  cancelBox: { borderRadius: 14, marginTop: 12, padding: 11 },
+  cancelLabel: { fontSize: 8, fontWeight: "900", letterSpacing: 0.3 },
+  cancelText: { fontSize: 9, lineHeight: 14, marginTop: 4 },
+  detailRow: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", marginTop: 14 },
+  detailText: { fontSize: 10, fontWeight: "900" },
+});

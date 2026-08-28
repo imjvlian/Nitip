@@ -7,11 +7,13 @@ import {
   Image,
   Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AppHeader } from "../components/AppHeader";
 import { NitipIcon } from "../components/NitipIcon";
 import { useAuth } from "../context/AuthContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
@@ -21,6 +23,7 @@ const COPY = {
   id: {
     title: "Promo",
     subtitle: "Campaign pilihan yang sedang aktif di Nitip.",
+    heading: "Promo untukmu.",
     loading: "Memuat promo...",
     emptyTitle: "Belum ada promo aktif",
     emptyBody: "Promo dari Nitip akan muncul di sini saat campaign sedang berlangsung.",
@@ -31,6 +34,7 @@ const COPY = {
   en: {
     title: "Offers",
     subtitle: "Featured campaigns that are currently active on Nitip.",
+    heading: "Offers for you.",
     loading: "Loading offers...",
     emptyTitle: "No active offers yet",
     emptyBody: "Nitip campaigns will appear here while they are active.",
@@ -68,9 +72,7 @@ export default function PromotionsScreen() {
         if (active) setPromotions(items);
       })
       .catch((reason: unknown) => {
-        if (active) {
-          setError(reason instanceof Error ? reason.message : copy.errorTitle);
-        }
+        if (active) setError(reason instanceof Error ? reason.message : copy.errorTitle);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -82,132 +84,98 @@ export default function PromotionsScreen() {
 
   if (!user) return <Redirect href="/login" />;
 
+  const isDark = theme.mode === "dark";
+
   return (
-    <View className="flex-1" style={{ backgroundColor: theme.colors.background }}>
+    <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
       <ScrollView
-        contentContainerStyle={{
-          paddingHorizontal: 16,
-          paddingTop: insets.top + 14,
-          paddingBottom: 30,
-        }}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 10 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View className="flex-row items-center justify-between">
-          <View>
-            <Text className="text-[28px] font-black tracking-tighter" style={{ color: theme.colors.text }}>
-              {copy.title}
-            </Text>
-            <Text className="mt-1 max-w-[300px] text-[11px] leading-4" style={{ color: theme.colors.textMuted }}>
-              {copy.subtitle}
-            </Text>
-          </View>
-          <View
-            className="h-11 w-11 items-center justify-center rounded-full"
-            style={{ backgroundColor: theme.colors.surfaceAccent }}
-          >
-            <NitipIcon color={theme.colors.primary} name="promo" size={19} />
-          </View>
+        <AppHeader
+          title={copy.title}
+          showBack={false}
+          right={
+            <View
+              style={[
+                styles.headerIcon,
+                {
+                  backgroundColor: isDark ? theme.colors.surfaceRaised : "#FFFFFF",
+                  borderColor: isDark ? theme.colors.border : "#E8E9ED",
+                },
+              ]}
+            >
+              <NitipIcon color={theme.colors.primary} name="promo" size={18} />
+            </View>
+          }
+        />
+
+        <View style={styles.hero}>
+          <Text style={[styles.heroTitle, { color: theme.colors.text }]}>{copy.heading}</Text>
+          <Text style={[styles.heroSubtitle, { color: theme.colors.textMuted }]}>{copy.subtitle}</Text>
         </View>
 
         {!apiConfigured ? (
-          <View className="mt-6 rounded-[20px] p-5" style={{ backgroundColor: theme.colors.warningSurface }}>
-            <Text className="font-black" style={{ color: theme.colors.warning }}>
-              API belum dikonfigurasi
-            </Text>
+          <View style={[styles.stateCard, { backgroundColor: theme.colors.warningSurface, borderColor: theme.colors.warningSurface }]}>
+            <Text style={[styles.stateTitle, { color: theme.colors.warning }]}>API belum dikonfigurasi</Text>
           </View>
         ) : loading ? (
-          <View className="mt-8 items-center py-10">
+          <View style={[styles.stateCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
             <ActivityIndicator color={theme.colors.primary} />
-            <Text className="mt-3 text-[11px]" style={{ color: theme.colors.textMuted }}>
-              {copy.loading}
-            </Text>
+            <Text style={[styles.loadingText, { color: theme.colors.textMuted }]}>{copy.loading}</Text>
           </View>
         ) : error ? (
-          <View className="mt-6 rounded-[20px] p-5" style={{ backgroundColor: theme.colors.dangerSurface }}>
-            <Text className="font-black" style={{ color: theme.colors.danger }}>
-              {copy.errorTitle}
-            </Text>
-            <Text className="mt-1 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
-              {error}
-            </Text>
+          <View style={[styles.stateCard, { backgroundColor: theme.colors.dangerSurface, borderColor: theme.colors.dangerSurface }]}>
+            <Text style={[styles.stateTitle, { color: theme.colors.danger }]}>{copy.errorTitle}</Text>
+            <Text style={[styles.stateBody, { color: theme.colors.textMuted }]}>{error}</Text>
           </View>
         ) : promotions.length === 0 ? (
-          <View className="mt-8 items-center rounded-[24px] px-6 py-10" style={{ backgroundColor: theme.colors.surface }}>
-            <View
-              className="h-14 w-14 items-center justify-center rounded-full"
-              style={{ backgroundColor: theme.colors.surfaceAccent }}
-            >
+          <View style={[styles.stateCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+            <View style={[styles.emptyIcon, { backgroundColor: theme.colors.surfaceAccent }]}>
               <NitipIcon color={theme.colors.primary} name="promo" size={23} />
             </View>
-            <Text className="mt-4 text-center text-sm font-black" style={{ color: theme.colors.text }}>
-              {copy.emptyTitle}
-            </Text>
-            <Text className="mt-2 text-center text-[11px] leading-5" style={{ color: theme.colors.textMuted }}>
-              {copy.emptyBody}
-            </Text>
+            <Text style={[styles.stateTitle, { color: theme.colors.text }]}>{copy.emptyTitle}</Text>
+            <Text style={[styles.emptyBody, { color: theme.colors.textMuted }]}>{copy.emptyBody}</Text>
           </View>
         ) : (
-          <View className="mt-6 gap-4">
+          <View style={styles.list}>
             {promotions.map((promotion) => (
               <View
-                className="overflow-hidden rounded-[22px]"
                 key={promotion.id}
-                style={{ backgroundColor: theme.colors.surface }}
+                style={[
+                  styles.promoCard,
+                  {
+                    backgroundColor: theme.colors.surface,
+                    borderColor: theme.colors.border,
+                    shadowColor: theme.colors.shadow,
+                  },
+                ]}
               >
                 {promotion.imageUrl ? (
                   <Image
-                    className="h-[150px] w-full"
                     resizeMode="cover"
                     source={{ uri: promotion.imageUrl }}
-                    style={{ backgroundColor: theme.colors.surfaceAccent }}
+                    style={[styles.image, { backgroundColor: theme.colors.surfaceAccent }]}
                   />
                 ) : (
-                  <View
-                    className="h-[122px] flex-row items-center justify-between px-5"
-                    style={{ backgroundColor: theme.colors.surfaceAccent }}
-                  >
-                    <View className="max-w-[68%]">
-                      <Text className="text-[9px] font-black uppercase tracking-[1.2px]" style={{ color: theme.colors.primary }}>
-                        NITIP PROMO
-                      </Text>
-                      <Text className="mt-2 text-[20px] font-black leading-6" numberOfLines={2} style={{ color: theme.colors.text }}>
-                        {promotion.title}
-                      </Text>
+                  <View style={[styles.placeholder, { backgroundColor: theme.colors.surfaceAccent }]}>
+                    <View style={styles.placeholderCopy}>
+                      <Text style={[styles.eyebrow, { color: theme.colors.primary }]}>NITIP PROMO</Text>
+                      <Text numberOfLines={2} style={[styles.placeholderTitle, { color: theme.colors.text }]}>{promotion.title}</Text>
                     </View>
-                    <View
-                      className="h-16 w-16 items-center justify-center rounded-full"
-                      style={{ backgroundColor: theme.colors.primary }}
-                    >
+                    <View style={[styles.promoIcon, { backgroundColor: theme.colors.primary }]}>
                       <NitipIcon color="#FFFFFF" name="promo" size={27} />
                     </View>
                   </View>
                 )}
 
-                <View className="p-4">
-                  {promotion.imageUrl ? (
-                    <Text className="text-[17px] font-black leading-5" style={{ color: theme.colors.text }}>
-                      {promotion.title}
-                    </Text>
-                  ) : null}
-                  {promotion.description ? (
-                    <Text className="mt-2 text-[11px] leading-5" style={{ color: theme.colors.textMuted }}>
-                      {promotion.description}
-                    </Text>
-                  ) : null}
-                  {promotion.endsAt ? (
-                    <Text className="mt-2 text-[9px] font-bold" style={{ color: theme.colors.textMuted }}>
-                      {copy.until} {formatEndDate(promotion.endsAt, language)}
-                    </Text>
-                  ) : null}
+                <View style={styles.cardBody}>
+                  {promotion.imageUrl ? <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{promotion.title}</Text> : null}
+                  {promotion.description ? <Text style={[styles.description, { color: theme.colors.textMuted }]}>{promotion.description}</Text> : null}
+                  {promotion.endsAt ? <Text style={[styles.until, { color: theme.colors.textMuted }]}>{copy.until} {formatEndDate(promotion.endsAt, language)}</Text> : null}
                   {promotion.outletId ? (
-                    <Pressable
-                      className="mt-4 self-start rounded-full px-4 py-2.5"
-                      onPress={() => router.push(`/outlet/${promotion.outletId}`)}
-                      style={{ backgroundColor: theme.colors.primary }}
-                    >
-                      <Text className="text-[10px] font-black text-white">
-                        {promotion.ctaLabel ?? copy.viewMerchant}
-                      </Text>
+                    <Pressable onPress={() => router.push(`/outlet/${promotion.outletId}`)} style={[styles.cta, { backgroundColor: theme.colors.primary }]}>
+                      <Text style={styles.ctaText}>{promotion.ctaLabel ?? copy.viewMerchant}</Text>
                     </Pressable>
                   ) : null}
                 </View>
@@ -219,3 +187,60 @@ export default function PromotionsScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  content: { paddingBottom: 32, paddingHorizontal: 20 },
+  headerIcon: {
+    alignItems: "center",
+    borderRadius: 20,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
+  },
+  hero: { marginTop: 26 },
+  heroTitle: { fontSize: 28, fontWeight: "900", letterSpacing: -0.8 },
+  heroSubtitle: { fontSize: 11, lineHeight: 18, marginTop: 6 },
+  stateCard: {
+    alignItems: "center",
+    borderRadius: 20,
+    borderWidth: 1,
+    marginTop: 20,
+    padding: 24,
+  },
+  loadingText: { fontSize: 10, marginTop: 10 },
+  stateTitle: { fontSize: 14, fontWeight: "900", textAlign: "center" },
+  stateBody: { fontSize: 10, lineHeight: 16, marginTop: 8, textAlign: "center" },
+  emptyIcon: { alignItems: "center", borderRadius: 28, height: 56, justifyContent: "center", marginBottom: 14, width: 56 },
+  emptyBody: { fontSize: 10, lineHeight: 17, marginTop: 8, textAlign: "center" },
+  list: { gap: 14, marginTop: 20 },
+  promoCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    elevation: 2,
+    overflow: "hidden",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 7,
+  },
+  image: { height: 150, width: "100%" },
+  placeholder: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    minHeight: 122,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+  },
+  placeholderCopy: { flex: 1, maxWidth: "70%" },
+  eyebrow: { fontSize: 8, fontWeight: "900", letterSpacing: 1.1 },
+  placeholderTitle: { fontSize: 19, fontWeight: "900", lineHeight: 23, marginTop: 7 },
+  promoIcon: { alignItems: "center", borderRadius: 32, height: 64, justifyContent: "center", width: 64 },
+  cardBody: { padding: 16 },
+  cardTitle: { fontSize: 17, fontWeight: "900", lineHeight: 21 },
+  description: { fontSize: 10, lineHeight: 17, marginTop: 7 },
+  until: { fontSize: 9, fontWeight: "700", marginTop: 7 },
+  cta: { alignItems: "center", alignSelf: "flex-start", borderRadius: 999, justifyContent: "center", marginTop: 14, minHeight: 38, paddingHorizontal: 17 },
+  ctaText: { color: "#FFFFFF", fontSize: 10, fontWeight: "900" },
+});

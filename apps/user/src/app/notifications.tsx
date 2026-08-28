@@ -1,6 +1,6 @@
 import { useNitipLanguage } from "@nitip/i18n";
 import { Redirect, router } from "expo-router";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppHeader } from "../components/AppHeader";
@@ -31,39 +31,50 @@ export default function NotificationsScreen() {
   if (!user) return <Redirect href="/login" />;
 
   return (
-    <View className="flex-1" style={{ backgroundColor: theme.colors.background }}>
+    <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
       <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          paddingHorizontal: 18,
-          paddingTop: insets.top + 10,
-          paddingBottom: Math.max(insets.bottom, 24),
-        }}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 10 }]}
         showsVerticalScrollIndicator={false}
       >
         <AppHeader title={copy.title} onBack={() => router.back()} />
 
-        <View className="flex-1 items-center justify-center px-6 pb-16 pt-10">
-          <View
-            className="h-16 w-16 items-center justify-center rounded-full"
-            style={{ backgroundColor: theme.colors.surfaceAccent }}
-          >
-            <NitipIcon color={theme.colors.primary} name="notification" size={27} />
+        <View
+          style={[
+            styles.emptyCard,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+              shadowColor: theme.colors.shadow,
+            },
+          ]}
+        >
+          <View style={[styles.iconBadge, { backgroundColor: theme.colors.surfaceAccent }]}>
+            <NitipIcon color={theme.colors.primary} name="notification" size={25} />
           </View>
-          <Text
-            className="mt-5 text-center text-[17px] font-black"
-            style={{ color: theme.colors.text }}
-          >
-            {copy.emptyTitle}
-          </Text>
-          <Text
-            className="mt-2 max-w-[280px] text-center text-[11px] leading-5"
-            style={{ color: theme.colors.textMuted }}
-          >
-            {copy.emptyBody}
-          </Text>
+          <Text style={[styles.title, { color: theme.colors.text }]}>{copy.emptyTitle}</Text>
+          <Text style={[styles.body, { color: theme.colors.textMuted }]}>{copy.emptyBody}</Text>
         </View>
       </ScrollView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  content: { flexGrow: 1, paddingBottom: 30, paddingHorizontal: 20 },
+  emptyCard: {
+    alignItems: "center",
+    borderRadius: 20,
+    borderWidth: 1,
+    elevation: 2,
+    marginTop: 28,
+    paddingHorizontal: 24,
+    paddingVertical: 36,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 7,
+  },
+  iconBadge: { alignItems: "center", borderRadius: 29, height: 58, justifyContent: "center", width: 58 },
+  title: { fontSize: 16, fontWeight: "900", marginTop: 16, textAlign: "center" },
+  body: { fontSize: 10, lineHeight: 17, marginTop: 8, maxWidth: 280, textAlign: "center" },
+});

@@ -1,5 +1,5 @@
 import { useNitipTranslation } from "@nitip/i18n";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import {
   useUserTheme,
@@ -22,22 +22,25 @@ export function ThemeSwitcher() {
   const { t } = useNitipTranslation();
   const { preference, setPreference } = useUserTheme();
   const theme = useNitipTheme();
+  const isDark = theme.mode === "dark";
 
   return (
     <View>
-      <View className="mb-2 flex-row items-center gap-2">
+      <View style={styles.labelRow}>
         <NitipIcon color={theme.colors.textMuted} name="theme" size={15} />
-        <Text className="text-[10px] font-extrabold" style={{ color: theme.colors.textMuted }}>
+        <Text style={[styles.label, { color: theme.colors.textMuted }]}>
           {t("common.appearance")}
         </Text>
       </View>
+
       <View
-        className="flex-row gap-1 rounded-2xl p-1"
-        style={{
-          backgroundColor: theme.colors.surfaceRaised,
-          borderColor: theme.colors.border,
-          borderWidth: 1,
-        }}
+        style={[
+          styles.switcher,
+          {
+            backgroundColor: isDark ? theme.colors.surface : "#EEF1FF",
+            borderColor: isDark ? theme.colors.border : "#E1E5F2",
+          },
+        ]}
       >
         {options.map((option) => {
           const active = option.value === preference;
@@ -46,18 +49,21 @@ export function ThemeSwitcher() {
             <Pressable
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
-              className="flex-1 items-center rounded-xl px-2 py-2.5"
               key={option.value}
               onPress={() => void setPreference(option.value)}
-              style={({ pressed }) => ({
-                backgroundColor: active ? theme.colors.primary : theme.colors.surface,
-                opacity: pressed ? 0.72 : 1,
-              })}
+              style={[
+                styles.option,
+                {
+                  backgroundColor: active
+                    ? theme.colors.primary
+                    : isDark
+                      ? theme.colors.surfaceRaised
+                      : "#FFFFFF",
+                },
+              ]}
             >
-              <NitipIcon color={color} name={option.icon} size={15} />
-              <Text className="mt-1 text-center text-[9px] font-extrabold" style={{ color }}>
-                {t(option.label)}
-              </Text>
+              <NitipIcon color={color} name={option.icon} size={16} />
+              <Text style={[styles.optionText, { color }]}>{t(option.label)}</Text>
             </Pressable>
           );
         })}
@@ -65,3 +71,37 @@ export function ThemeSwitcher() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  labelRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 10,
+  },
+  label: {
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  switcher: {
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 6,
+    padding: 5,
+  },
+  option: {
+    alignItems: "center",
+    borderRadius: 14,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 52,
+    paddingHorizontal: 8,
+  },
+  optionText: {
+    fontSize: 9,
+    fontWeight: "800",
+    marginTop: 4,
+    textAlign: "center",
+  },
+});
