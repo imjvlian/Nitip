@@ -9,6 +9,7 @@ export type NitipIconName =
   | "cart"
   | "promo"
   | "search"
+  | "filter"
   | "food"
   | "drink"
   | "store"
@@ -46,6 +47,7 @@ const symbols: Record<
   cart: { ios: "cart.fill", android: "shopping_cart", web: "shopping_cart" },
   promo: { ios: "tag.fill", android: "local_offer", web: "local_offer" },
   search: { ios: "magnifyingglass", android: "search", web: "search" },
+  filter: { ios: "slider.horizontal.3", android: "tune", web: "tune" },
   food: { ios: "fork.knife", android: "restaurant", web: "restaurant" },
   drink: { ios: "cup.and.saucer.fill", android: "local_cafe", web: "local_cafe" },
   store: { ios: "storefront.fill", android: "storefront", web: "storefront" },
