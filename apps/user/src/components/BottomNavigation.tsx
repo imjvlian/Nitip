@@ -3,7 +3,6 @@ import { useNitipLanguage } from "@nitip/i18n";
 import { router } from "expo-router";
 import { createContext, useContext, type ComponentProps, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useNitipTheme } from "../hooks/useNitipTheme";
 
@@ -75,10 +74,6 @@ const tabs = [
 }[];
 
 const styles = StyleSheet.create({
-  container: {
-    alignSelf: "stretch",
-    width: "100%",
-  },
   bar: {
     alignItems: "center",
     alignSelf: "stretch",
@@ -129,74 +124,61 @@ export function BottomNavigation({
   const suppressed = useContext(SuppressBottomNavigationContext);
   const { language } = useNitipLanguage();
   const theme = useNitipTheme();
-  const insets = useSafeAreaInsets();
 
   if (!root || suppressed) return null;
 
   return (
-    <View style={styles.container}>
-      <View
-        style={[
-          styles.bar,
-          {
-            backgroundColor: theme.colors.surfaceRaised,
-            elevation: 16,
-            shadowColor: theme.colors.shadow,
-            shadowOffset: { width: 0, height: -5 },
-            shadowOpacity: theme.mode === "dark" ? 0.3 : 0.14,
-            shadowRadius: 18,
-          },
-        ]}
-      >
-        {tabs.map((tab) => {
-          const selected = tab.key === active;
-          const label = labels[language][tab.key];
-          const color = selected ? theme.colors.text : theme.colors.textMuted;
+    <View
+      style={[
+        styles.bar,
+        {
+          backgroundColor: theme.colors.surfaceRaised,
+          elevation: 16,
+          shadowColor: theme.colors.shadow,
+          shadowOffset: { width: 0, height: -5 },
+          shadowOpacity: theme.mode === "dark" ? 0.3 : 0.14,
+          shadowRadius: 18,
+        },
+      ]}
+    >
+      {tabs.map((tab) => {
+        const selected = tab.key === active;
+        const label = labels[language][tab.key];
+        const color = selected ? theme.colors.text : theme.colors.textMuted;
 
-          return (
-            <Pressable
-              accessibilityLabel={label}
-              accessibilityRole="tab"
-              accessibilityState={{ selected }}
-              hitSlop={6}
-              key={tab.key}
-              onPress={() => {
-                if (!selected) router.replace(tab.href);
-              }}
-              style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
+        return (
+          <Pressable
+            accessibilityLabel={label}
+            accessibilityRole="tab"
+            accessibilityState={{ selected }}
+            hitSlop={6}
+            key={tab.key}
+            onPress={() => {
+              if (!selected) router.replace(tab.href);
+            }}
+            style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
+          >
+            <View style={styles.iconArea}>
+              <Ionicons
+                color={color}
+                name={selected ? tab.iconFilled : tab.iconOutline}
+                size={selected ? 21 : 20}
+              />
+            </View>
+
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.label,
+                selected && styles.selectedLabel,
+                { color },
+              ]}
             >
-              <View style={styles.iconArea}>
-                <Ionicons
-                  color={color}
-                  name={selected ? tab.iconFilled : tab.iconOutline}
-                  size={selected ? 21 : 20}
-                />
-              </View>
-
-              <Text
-                numberOfLines={1}
-                style={[
-                  styles.label,
-                  selected && styles.selectedLabel,
-                  { color },
-                ]}
-              >
-                {label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      {insets.bottom > 0 ? (
-        <View
-          pointerEvents="none"
-          style={{
-            backgroundColor: "transparent",
-            height: insets.bottom,
-          }}
-        />
-      ) : null}
+              {label}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
