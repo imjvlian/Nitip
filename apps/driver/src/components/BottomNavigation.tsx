@@ -1,6 +1,6 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useNitipLanguage } from "@nitip/i18n";
 import { router } from "expo-router";
-import { SymbolView } from "expo-symbols";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useNitipTheme } from "../hooks/useNitipTheme";
@@ -8,25 +8,10 @@ import { useNitipTheme } from "../hooks/useNitipTheme";
 export type RootTab = "home" | "orders" | "settings";
 
 const tabs = [
-  {
-    key: "home" as const,
-    href: "/home" as const,
-    outline: { ios: "house", android: "home", web: "home" },
-    filled: { ios: "house.fill", android: "home", web: "home" },
-  },
-  {
-    key: "orders" as const,
-    href: "/orders" as const,
-    outline: { ios: "receipt", android: "receipt_long", web: "receipt_long" },
-    filled: { ios: "receipt.fill", android: "receipt_long", web: "receipt_long" },
-  },
-  {
-    key: "settings" as const,
-    href: "/settings" as const,
-    outline: { ios: "gearshape", android: "settings", web: "settings" },
-    filled: { ios: "gearshape.fill", android: "settings", web: "settings" },
-  },
-];
+  { key: "home", href: "/home", outline: "home-outline", filled: "home" },
+  { key: "orders", href: "/orders", outline: "receipt-outline", filled: "receipt" },
+  { key: "settings", href: "/settings", outline: "settings-outline", filled: "settings" },
+] as const;
 
 const labels = {
   id: { home: "Beranda", orders: "Pesanan", settings: "Pengaturan" },
@@ -65,10 +50,10 @@ export function BottomNavigation({ active }: { active: RootTab }) {
           >
             {selected ? <View style={[styles.activeLine, { backgroundColor: theme.colors.primary }]} /> : null}
             <View style={styles.iconStage}>
-              <SymbolView
-                name={(selected ? tab.filled : tab.outline) as never}
+              <Ionicons
+                color={selected ? "#111318" : theme.colors.textMuted}
+                name={selected ? tab.filled : tab.outline}
                 size={selected ? 20 : 18}
-                tintColor={selected ? "#111318" : theme.colors.textMuted}
               />
             </View>
             <Text

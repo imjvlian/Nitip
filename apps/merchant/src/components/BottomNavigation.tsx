@@ -1,22 +1,18 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useNitipLanguage } from "@nitip/i18n";
 import { router } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useNitipTheme } from "../hooks/useNitipTheme";
-import { NitipIcon, type NitipIconName } from "./NitipIcon";
 
 export type RootTab = "home" | "orders" | "menu" | "settings";
 
-const tabs: {
-  key: RootTab;
-  href: "/home" | "/orders" | "/menu" | "/settings";
-  icon: NitipIconName;
-}[] = [
-  { key: "home", href: "/home", icon: "home" },
-  { key: "orders", href: "/orders", icon: "orders" },
-  { key: "menu", href: "/menu", icon: "menu" },
-  { key: "settings", href: "/settings", icon: "settings" },
-];
+const tabs = [
+  { key: "home", href: "/home", outline: "home-outline", filled: "home" },
+  { key: "orders", href: "/orders", outline: "receipt-outline", filled: "receipt" },
+  { key: "menu", href: "/menu", outline: "restaurant-outline", filled: "restaurant" },
+  { key: "settings", href: "/settings", outline: "settings-outline", filled: "settings" },
+] as const;
 
 const labels = {
   id: { home: "Beranda", orders: "Pesanan", menu: "Menu", settings: "Pengaturan" },
@@ -55,9 +51,9 @@ export function BottomNavigation({ active }: { active: RootTab }) {
           >
             {selected ? <View style={[styles.activeLine, { backgroundColor: theme.colors.primary }]} /> : null}
             <View style={styles.iconStage}>
-              <NitipIcon
+              <Ionicons
                 color={selected ? "#111318" : theme.colors.textMuted}
-                name={tab.icon}
+                name={selected ? tab.filled : tab.outline}
                 size={selected ? 20 : 18}
               />
             </View>
