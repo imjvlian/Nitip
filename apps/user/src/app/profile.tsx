@@ -2,10 +2,16 @@ import type { NitipAddress, NitipUserProfile } from "@nitip/domain";
 import { useNitipLanguage, useNitipTranslation } from "@nitip/i18n";
 import { Redirect, router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { AppHeader } from "../components/AppHeader";
 import { NitipIcon, type NitipIconName } from "../components/NitipIcon";
 import { UserAvatar } from "../components/UserAvatar";
 import { SETTINGS_COPY } from "../constants/settingsCopy";
@@ -14,106 +20,76 @@ import { useUserTheme } from "../context/ThemeContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
 import { getMe, listAddresses } from "../lib/api";
 
-function ProfileRow({
-  danger = false,
-  icon,
-  onPress,
-  subtitle,
-  title,
-  value,
-}: {
+type ProfileMenuCardProps = {
   danger?: boolean;
   icon: NitipIconName;
   onPress: () => void;
   subtitle?: string;
   title: string;
   value?: string;
-}) {
+};
+
+function ProfileMenuCard({
+  danger = false,
+  icon,
+  onPress,
+  subtitle,
+  title,
+  value,
+}: ProfileMenuCardProps) {
   const theme = useNitipTheme();
-  const foreground = danger ? theme.colors.danger : theme.colors.text;
-  const rowBackground = danger
+  const isDark = theme.mode === "dark";
+  const cardBackground = danger
     ? theme.colors.dangerSurface
-    : theme.mode === "dark"
-      ? "#22242B"
+    : isDark
+      ? theme.colors.surfaceRaised
       : "#FFFFFF";
-  const rowBorder = danger
-    ? theme.colors.danger
-    : theme.mode === "dark"
-      ? "#343842"
-      : "#DFE3EA";
+  const badgeBackground = danger
+    ? theme.colors.dangerSurface
+    : isDark
+      ? theme.colors.surfaceAccent
+      : "#EEF1FF";
+  const titleColor = danger ? theme.colors.danger : theme.colors.text;
+  const iconColor = danger ? theme.colors.danger : theme.colors.primary;
 
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => ({
-        alignItems: "center",
-        backgroundColor: rowBackground,
-        borderColor: rowBorder,
-        borderRadius: 999,
-        borderWidth: 1,
-        elevation: 3,
-        flexDirection: "row",
-        marginBottom: 10,
-        minHeight: 64,
-        opacity: pressed ? 0.72 : 1,
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        shadowColor: theme.colors.shadow,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: theme.mode === "dark" ? 0.16 : 0.08,
-        shadowRadius: 8,
-        width: "100%",
-      })}
+      style={({ pressed }) => [
+        styles.menuCard,
+        {
+          backgroundColor: cardBackground,
+          borderColor: danger ? theme.colors.dangerSurface : isDark ? theme.colors.border : "#E8E9ED",
+          opacity: pressed ? 0.72 : 1,
+          shadowColor: theme.colors.shadow,
+        },
+      ]}
     >
-      <View
-        style={{
-          alignItems: "center",
-          justifyContent: "center",
-          width: 28,
-        }}
-      >
-        <NitipIcon
-          color={danger ? theme.colors.danger : theme.colors.primary}
-          name={icon}
-          size={18}
-        />
+      <View style={[styles.iconBadge, { backgroundColor: badgeBackground }]}> 
+        <NitipIcon color={iconColor} name={icon} size={18} />
       </View>
 
-      <View style={{ flex: 1, minWidth: 0, paddingHorizontal: 12 }}>
-        <Text
-          className="text-[11px] font-black"
-          numberOfLines={1}
-          style={{ color: foreground }}
-        >
+      <View style={styles.menuCopy}>
+        <Text numberOfLines={1} style={[styles.menuTitle, { color: titleColor }]}>
           {title}
         </Text>
         {subtitle ? (
-          <Text
-            className="mt-0.5 text-[9px] leading-4"
-            numberOfLines={2}
-            style={{ color: theme.colors.textMuted }}
-          >
+          <Text numberOfLines={2} style={[styles.menuSubtitle, { color: theme.colors.textMuted }]}>
             {subtitle}
           </Text>
         ) : null}
       </View>
 
       {value ? (
-        <Text
-          className="mr-2 max-w-[92px] text-right text-[9px] font-bold"
-          numberOfLines={1}
-          style={{ color: theme.colors.textMuted }}
-        >
+        <Text numberOfLines={1} style={[styles.menuValue, { color: theme.colors.textMuted }]}>
           {value}
         </Text>
       ) : null}
 
-      <NitipIcon
-        color={danger ? theme.colors.danger : theme.colors.textMuted}
-        name="next"
-        size={14}
-      />
+      <View style={styles.chevronWrap}>
+        <NitipIcon color={danger ? theme.colors.danger : theme.colors.textMuted} name="next" size={14} />
+      </View>
     </Pressable>
   );
 }
@@ -126,6 +102,7 @@ export default function ProfileScreen() {
   const { preference } = useUserTheme();
   const theme = useNitipTheme();
   const insets = useSafeAreaInsets();
+
   const [profile, setProfile] = useState<NitipUserProfile | null>(null);
   const [addresses, setAddresses] = useState<NitipAddress[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,6 +111,7 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       if (!user) return undefined;
+
       let active = true;
       setLoading(true);
       setError(null);
@@ -145,9 +123,8 @@ export default function ProfileScreen() {
           setAddresses(nextAddresses);
         })
         .catch((nextError: unknown) => {
-          if (active) {
-            setError(nextError instanceof Error ? nextError.message : t("profile.loadError"));
-          }
+          if (!active) return;
+          setError(nextError instanceof Error ? nextError.message : t("profile.loadError"));
         })
         .finally(() => {
           if (active) setLoading(false);
@@ -161,6 +138,9 @@ export default function ProfileScreen() {
 
   if (!user) return <Redirect href="/login" />;
 
+  const isDark = theme.mode === "dark";
+  const pageBackground = isDark ? theme.colors.background : "#F2F3F5";
+  const headerSurface = isDark ? theme.colors.surfaceRaised : "#FFFFFF";
   const avatarLabel =
     profile?.displayName || profile?.email || user.displayName || user.email || "Nitip";
   const displayName = profile?.displayName || user.displayName || t("home.fallbackName");
@@ -178,164 +158,303 @@ export default function ProfileScreen() {
       : `${addresses.length} alamat pengantaran tersimpan`;
   const languageValue = language === "id" ? t("common.indonesia") : t("common.english");
   const appearanceValue = t(`common.${preference}`);
-  const pageBackground = theme.mode === "dark" ? theme.colors.background : "#F2F3F5";
 
   return (
-    <View className="flex-1" style={{ backgroundColor: pageBackground }}>
+    <View style={[styles.screen, { backgroundColor: pageBackground }]}>
       <ScrollView
-        contentContainerStyle={{
-          paddingHorizontal: 18,
-          paddingTop: insets.top + 10,
-          paddingBottom: 32,
-        }}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: insets.top + 10,
+          },
+        ]}
         showsVerticalScrollIndicator={false}
       >
-        <AppHeader title={profileTitle} onBack={() => router.replace("/home")} />
-
-        <View className="items-center pb-3 pt-5">
-          <View
-            className="rounded-full p-1.5"
-            style={{
-              backgroundColor: theme.colors.surfaceRaised,
-              borderColor: theme.colors.border,
-              borderWidth: 1,
-              elevation: 5,
-              shadowColor: theme.colors.shadow,
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: theme.mode === "dark" ? 0.25 : 0.1,
-              shadowRadius: 12,
-            }}
-          >
-            <UserAvatar label={avatarLabel} photoUrl={profile?.photoUrl} size={86} />
-          </View>
-          <Text
-            className="mt-4 text-[19px] font-black tracking-[-0.4px]"
-            style={{ color: theme.colors.text }}
-          >
-            {displayName}
-          </Text>
-          {email ? (
-            <Text className="mt-1 text-[10px]" style={{ color: theme.colors.textMuted }}>
-              {email}
-            </Text>
-          ) : null}
+        <View style={styles.topBar}>
           <Pressable
-            className="mt-4 min-h-10 items-center justify-center rounded-full px-6"
-            onPress={() => router.push("/settings/account")}
-            style={({ pressed }) => ({
-              backgroundColor: theme.colors.primary,
-              opacity: pressed ? 0.78 : 1,
-            })}
+            accessibilityLabel={t("common.back")}
+            accessibilityRole="button"
+            onPress={() => router.replace("/home")}
+            style={({ pressed }) => [
+              styles.headerButton,
+              {
+                backgroundColor: headerSurface,
+                borderColor: isDark ? theme.colors.border : "#E8E9ED",
+                opacity: pressed ? 0.7 : 1,
+              },
+            ]}
           >
-            <Text className="text-[10px] font-black text-white">{editLabel}</Text>
+            <NitipIcon color={theme.colors.text} name="back" size={17} />
+          </Pressable>
+
+          <View style={[styles.titlePill, { backgroundColor: headerSurface }]}>
+            <Text style={[styles.titlePillText, { color: theme.colors.text }]}>{profileTitle}</Text>
+          </View>
+
+          <View style={styles.headerButtonPlaceholder} />
+        </View>
+
+        <View style={styles.profileHero}>
+          <View
+            style={[
+              styles.avatarFrame,
+              {
+                backgroundColor: headerSurface,
+                borderColor: isDark ? theme.colors.border : "#FFFFFF",
+                shadowColor: theme.colors.shadow,
+              },
+            ]}
+          >
+            <UserAvatar label={avatarLabel} photoUrl={profile?.photoUrl} size={88} />
+          </View>
+
+          <Text style={[styles.name, { color: theme.colors.text }]}>{displayName}</Text>
+          {email ? <Text style={[styles.email, { color: theme.colors.textMuted }]}>{email}</Text> : null}
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push("/settings/account")}
+            style={({ pressed }) => [
+              styles.editButton,
+              {
+                backgroundColor: theme.colors.primary,
+                opacity: pressed ? 0.78 : 1,
+              },
+            ]}
+          >
+            <Text style={styles.editButtonText}>{editLabel}</Text>
           </Pressable>
         </View>
 
         {loading ? (
-          <View
-            className="mt-4 items-center rounded-[22px] p-6"
-            style={{ backgroundColor: theme.colors.surfaceRaised }}
-          >
+          <View style={[styles.loadingCard, { backgroundColor: headerSurface }]}>
             <ActivityIndicator color={theme.colors.primary} />
-            <Text className="mt-3 text-[10px]" style={{ color: theme.colors.textMuted }}>
+            <Text style={[styles.loadingText, { color: theme.colors.textMuted }]}>
               {t("profile.loading")}
             </Text>
           </View>
         ) : (
-          <>
-            <Text className="mb-3 mt-6 text-[12px] font-black" style={{ color: theme.colors.text }}>
-              {copy.account}
-            </Text>
-            <ProfileRow
+          <View style={styles.menuList}>
+            <ProfileMenuCard
               icon="orders"
               onPress={() => router.push("/orders")}
               subtitle={orderHistoryDescription}
               title={orderHistory}
             />
-            <ProfileRow
+            <ProfileMenuCard
               icon="profile"
               onPress={() => router.push("/settings/account")}
               subtitle={copy.accountInformationDescription}
               title={copy.accountInformation}
               value={profile?.displayName ?? undefined}
             />
-            <ProfileRow
+            <ProfileMenuCard
               icon="location"
               onPress={() => router.push("/settings/addresses")}
               subtitle={addressDescription}
               title={copy.addresses}
             />
-            <ProfileRow
+            <ProfileMenuCard
               icon="password"
               onPress={() => router.push("/settings/password")}
               subtitle={copy.passwordDescription}
               title={copy.password}
             />
-
-            <Text className="mb-3 mt-6 text-[12px] font-black" style={{ color: theme.colors.text }}>
-              {copy.preferences}
-            </Text>
-            <ProfileRow
+            <ProfileMenuCard
               icon="language"
               onPress={() => router.push("/settings/language")}
               subtitle={copy.languageDescription}
               title={copy.language}
               value={languageValue}
             />
-            <ProfileRow
+            <ProfileMenuCard
               icon="theme"
               onPress={() => router.push("/settings/appearance")}
               subtitle={copy.appearanceDescription}
               title={copy.appearance}
               value={appearanceValue}
             />
-
-            <Text className="mb-3 mt-6 text-[12px] font-black" style={{ color: theme.colors.text }}>
-              {copy.helpLegal}
-            </Text>
-            <ProfileRow
+            <ProfileMenuCard
               icon="help"
               onPress={() => router.push("/support")}
               subtitle={copy.helpReportDescription}
               title={copy.helpReport}
             />
-            <ProfileRow
+            <ProfileMenuCard
               icon="document"
               onPress={() => router.push("/legal/terms")}
               subtitle={copy.termsDescription}
               title={copy.terms}
             />
-            <ProfileRow
+            <ProfileMenuCard
               icon="privacy"
               onPress={() => router.push("/legal/privacy")}
               subtitle={copy.privacyDescription}
               title={copy.privacy}
             />
-
-            <Text className="mb-3 mt-6 text-[12px] font-black" style={{ color: theme.colors.text }}>
-              {copy.session}
-            </Text>
-            <ProfileRow
+            <ProfileMenuCard
               danger
               icon="logout"
               onPress={() => void signOut()}
               subtitle={t("profile.signOutDescription")}
               title={t("common.signOut")}
             />
-          </>
+          </View>
         )}
 
         {error ? (
-          <View
-            className="mt-4 rounded-[18px] p-4"
-            style={{ backgroundColor: theme.colors.dangerSurface }}
-          >
-            <Text className="text-[10px] leading-4" style={{ color: theme.colors.danger }}>
-              {error}
-            </Text>
+          <View style={[styles.errorCard, { backgroundColor: theme.colors.dangerSurface }]}>
+            <Text style={[styles.errorText, { color: theme.colors.danger }]}>{error}</Text>
           </View>
         ) : null}
       </ScrollView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 28,
+    paddingHorizontal: 20,
+  },
+  topBar: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    minHeight: 44,
+  },
+  headerButton: {
+    alignItems: "center",
+    borderRadius: 20,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
+  },
+  headerButtonPlaceholder: {
+    height: 40,
+    width: 40,
+  },
+  titlePill: {
+    alignItems: "center",
+    borderRadius: 999,
+    justifyContent: "center",
+    minHeight: 34,
+    paddingHorizontal: 18,
+  },
+  titlePillText: {
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  profileHero: {
+    alignItems: "center",
+    paddingBottom: 18,
+    paddingTop: 18,
+  },
+  avatarFrame: {
+    borderRadius: 52,
+    borderWidth: 4,
+    elevation: 5,
+    padding: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
+  },
+  name: {
+    fontSize: 21,
+    fontWeight: "900",
+    letterSpacing: -0.4,
+    marginTop: 14,
+  },
+  email: {
+    fontSize: 10,
+    fontWeight: "500",
+    marginTop: 3,
+  },
+  editButton: {
+    alignItems: "center",
+    borderRadius: 999,
+    justifyContent: "center",
+    marginTop: 15,
+    minHeight: 40,
+    paddingHorizontal: 28,
+  },
+  editButtonText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  loadingCard: {
+    alignItems: "center",
+    borderRadius: 18,
+    marginTop: 10,
+    padding: 24,
+  },
+  loadingText: {
+    fontSize: 10,
+    marginTop: 10,
+  },
+  menuList: {
+    gap: 10,
+    marginTop: 8,
+  },
+  menuCard: {
+    alignItems: "center",
+    borderRadius: 18,
+    borderWidth: 1,
+    elevation: 1,
+    flexDirection: "row",
+    minHeight: 66,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    width: "100%",
+  },
+  iconBadge: {
+    alignItems: "center",
+    borderRadius: 21,
+    height: 42,
+    justifyContent: "center",
+    width: 42,
+  },
+  menuCopy: {
+    flex: 1,
+    minWidth: 0,
+    paddingHorizontal: 12,
+  },
+  menuTitle: {
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  menuSubtitle: {
+    fontSize: 9,
+    fontWeight: "500",
+    lineHeight: 13,
+    marginTop: 2,
+  },
+  menuValue: {
+    fontSize: 9,
+    fontWeight: "700",
+    marginRight: 8,
+    maxWidth: 82,
+  },
+  chevronWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: 18,
+  },
+  errorCard: {
+    borderRadius: 16,
+    marginTop: 12,
+    padding: 14,
+  },
+  errorText: {
+    fontSize: 10,
+    lineHeight: 15,
+  },
+});
