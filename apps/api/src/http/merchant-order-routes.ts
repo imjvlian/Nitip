@@ -56,6 +56,18 @@ export function registerMerchantOrderRoutes(app: FastifyInstance) {
     try {
       const merchant = await resolveMerchant(request, reply); if (!merchant) return;
       const input = parseMerchantOrderAction(request.body);
+
+      if (input.action === "reject") {
+        const current = await getMerchantOrder(merchant.id, request.params.id);
+        if (!current) return reply.code(404).send({ error: "order_not_found" });
+        if (current.payment?.provider === "doku" && current.payment.status === "paid") {
+          return reply.code(409).send({
+            error: "doku_refund_required",
+            message: "Pesanan DOKU yang sudah dibayar tidak dapat ditolak langsung. Gunakan proses refund/support agar status pembayaran dan dana tetap konsisten.",
+          });
+        }
+      }
+
       const order = await applyMerchantOrderAction(merchant.id, request.params.id, input);
       if (!order) return reply.code(409).send({ error: "order_not_actionable", message: "Status pesanan sudah berubah atau aksi ini tidak lagi tersedia" });
 

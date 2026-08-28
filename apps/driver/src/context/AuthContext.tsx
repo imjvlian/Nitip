@@ -33,9 +33,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 function requireAuth() {
-  if (!firebaseAuth) {
-    throw new Error("Firebase Authentication belum dikonfigurasi");
-  }
+  if (!firebaseAuth) throw new Error("Firebase Authentication belum dikonfigurasi");
   return firebaseAuth;
 }
 
@@ -49,7 +47,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setLoading(false);
       return undefined;
     }
-
     return onAuthStateChanged(firebaseAuth, (nextUser) => {
       setUser(nextUser);
       setLoading(false);
@@ -65,15 +62,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
         await signInWithEmailAndPassword(requireAuth(), email.trim(), password);
       },
       async signUp(displayName, email, password) {
-        const credential = await createUserWithEmailAndPassword(
-          requireAuth(),
-          email.trim(),
-          password,
-        );
+        const credential = await createUserWithEmailAndPassword(requireAuth(), email.trim(), password);
         const trimmedName = displayName.trim();
-        if (trimmedName) {
-          await updateProfile(credential.user, { displayName: trimmedName });
-        }
+        if (trimmedName) await updateProfile(credential.user, { displayName: trimmedName });
       },
       async resetPassword(email) {
         const normalizedEmail = email.trim();
@@ -89,7 +80,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
               ? "Sesi Nitip Driver di perangkat ini akan diakhiri."
               : "Your Nitip Driver session on this device will be ended.",
             [
-              { text: language === "id" ? "Batal" : "Cancel", style: "cancel", onPress: resolve },
+              { text: language === "id" ? "Batal" : "Cancel", style: "cancel", onPress: () => resolve() },
               {
                 text: language === "id" ? "Keluar" : "Sign out",
                 style: "destructive",

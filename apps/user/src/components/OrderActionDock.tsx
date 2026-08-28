@@ -2,21 +2,16 @@ import type { NitipOrder } from "@nitip/domain/commerce";
 import { useNitipLanguage } from "@nitip/i18n";
 import { router, usePathname } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "../context/AuthContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
-import { getOrder } from "../lib/api";
+import { getOrder, startDokuOrderPayment } from "../lib/api";
 import { cancelPendingOrder } from "../lib/cancelOrder";
 import { NitipIcon } from "./NitipIcon";
 
-const CHAT_STATUSES: NitipOrder["status"][] = [
-  "driver_assigned",
-  "picked_up",
-  "on_delivery",
-  "delivered",
-];
+const CHAT_STATUSES: NitipOrder["status"][] = ["driver_assigned", "picked_up", "on_delivery", "delivered"];
 
 function orderIdFromPath(pathname: string) {
   const match = /^\/order\/([^/]+)$/.exec(pathname);
@@ -32,9 +27,15 @@ export function OrderActionDock() {
   const insets = useSafeAreaInsets();
   const [order, setOrder] = useState<NitipOrder | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [paying, setPaying] = useState(false);
 
   const c = language === "id" ? {
     chat: "Chat driver",
+    pay: "Bayar DOKU",
+    opening: "Membuka...",
+    paymentFailed: "DOKU belum dapat dibuka",
+    paymentOpened: "DOKU Checkout dibuka",
+    paymentOpenedBody: "Selesaikan pembayaran di halaman DOKU, lalu kembali ke Nitip. Status pesanan akan diperbarui otomatis.",
     cancel: "Batalkan",
     cancelTitle: "Batalkan pesanan?",
     cancelBody: "Pesanan belum dibayar. Stok yang ditahan akan langsung dilepas.",
@@ -45,6 +46,11 @@ export function OrderActionDock() {
     failed: "Tidak dapat membatalkan",
   } : {
     chat: "Driver chat",
+    pay: "Pay with DOKU",
+    opening: "Opening...",
+    paymentFailed: "DOKU could not be opened",
+    paymentOpened: "DOKU Checkout opened",
+    paymentOpenedBody: "Complete payment on the DOKU page, then return to Nitip. The order status will refresh automatically.",
     cancel: "Cancel",
     cancelTitle: "Cancel this order?",
     cancelBody: "The order has not been paid. Reserved stock will be released immediately.",
@@ -56,15 +62,8 @@ export function OrderActionDock() {
   };
 
   const load = useCallback(async () => {
-    if (!user || !orderId) {
-      setOrder(null);
-      return;
-    }
-    try {
-      setOrder(await getOrder(user, orderId));
-    } catch {
-      setOrder(null);
-    }
+    if (!user || !orderId) { setOrder(null); return; }
+    try { setOrder(await getOrder(user, orderId)); } catch { setOrder(null); }
   }, [orderId, user]);
 
   useEffect(() => {
@@ -77,8 +76,28 @@ export function OrderActionDock() {
   if (!orderId || !user || !order) return null;
 
   const canChat = CHAT_STATUSES.includes(order.status);
-  const canCancel = order.status === "pending_payment";
-  if (!canChat && !canCancel) return null;
+  const canPay = order.status === "pending_payment";
+  const canCancel = order.status === "pending_payment" && !order.payment?.checkoutUrl;
+  if (!canChat && !canPay && !canCancel) return null;
+
+  async function payWithDoku() {
+    if (!order || paying) return;
+    setPaying(true);
+    try {
+      const next = await startDokuOrderPayment(user, order.id);
+      setOrder(next);
+      const checkoutUrl = next.payment?.checkoutUrl;
+      if (!checkoutUrl) throw new Error("DOKU Checkout URL tidak tersedia");
+      const supported = await Linking.canOpenURL(checkoutUrl);
+      if (!supported) throw new Error("Perangkat tidak dapat membuka DOKU Checkout URL");
+      await Linking.openURL(checkoutUrl);
+      Alert.alert(c.paymentOpened, c.paymentOpenedBody);
+    } catch (error) {
+      Alert.alert(c.paymentFailed, error instanceof Error ? error.message : c.paymentFailed);
+    } finally {
+      setPaying(false);
+    }
+  }
 
   async function performCancel() {
     if (!order || cancelling) return;
@@ -104,27 +123,9 @@ export function OrderActionDock() {
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { bottom: Math.max(insets.bottom + 14, 20) }]}>
       <View style={[styles.dock, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, shadowColor: theme.colors.shadow }]}>
-        {canChat ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push({ pathname: "/chat/[orderId]", params: { orderId } })}
-            style={[styles.action, { backgroundColor: theme.colors.primary }]}
-          >
-            <NitipIcon color="#FFFFFF" name="chat" size={16} />
-            <Text style={styles.primaryText}>{c.chat}</Text>
-          </Pressable>
-        ) : null}
-        {canCancel ? (
-          <Pressable
-            accessibilityRole="button"
-            disabled={cancelling}
-            onPress={confirmCancel}
-            style={[styles.action, { backgroundColor: theme.colors.dangerSurface, opacity: cancelling ? 0.55 : 1 }]}
-          >
-            {cancelling ? <ActivityIndicator color={theme.colors.danger} size="small" /> : <NitipIcon color={theme.colors.danger} name="trash" size={16} />}
-            <Text style={[styles.secondaryText, { color: theme.colors.danger }]}>{c.cancel}</Text>
-          </Pressable>
-        ) : null}
+        {canChat ? <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: "/chat/[orderId]", params: { orderId } })} style={[styles.action, { backgroundColor: theme.colors.primary }]}><NitipIcon color="#FFFFFF" name="chat" size={16} /><Text style={styles.primaryText}>{c.chat}</Text></Pressable> : null}
+        {canPay ? <Pressable accessibilityRole="button" disabled={paying} onPress={() => void payWithDoku()} style={[styles.action, { backgroundColor: theme.colors.primary, opacity: paying ? 0.55 : 1 }]}>{paying ? <ActivityIndicator color="#FFFFFF" size="small" /> : <NitipIcon color="#FFFFFF" name="receipt" size={16} />}<Text style={styles.primaryText}>{paying ? c.opening : c.pay}</Text></Pressable> : null}
+        {canCancel ? <Pressable accessibilityRole="button" disabled={cancelling} onPress={confirmCancel} style={[styles.action, { backgroundColor: theme.colors.dangerSurface, opacity: cancelling ? 0.55 : 1 }]}>{cancelling ? <ActivityIndicator color={theme.colors.danger} size="small" /> : <NitipIcon color={theme.colors.danger} name="trash" size={16} />}<Text style={[styles.secondaryText, { color: theme.colors.danger }]}>{c.cancel}</Text></Pressable> : null}
       </View>
     </View>
   );
@@ -133,7 +134,7 @@ export function OrderActionDock() {
 const styles = StyleSheet.create({
   wrap: { left: 18, position: "absolute", right: 18, zIndex: 90 },
   dock: { borderRadius: 19, borderWidth: 1, elevation: 8, flexDirection: "row", gap: 8, padding: 7, shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.12, shadowRadius: 12 },
-  action: { alignItems: "center", borderRadius: 14, flex: 1, flexDirection: "row", gap: 7, justifyContent: "center", minHeight: 46, paddingHorizontal: 12 },
-  primaryText: { color: "#FFFFFF", fontSize: 9, fontWeight: "900" },
-  secondaryText: { fontSize: 9, fontWeight: "900" },
+  action: { alignItems: "center", borderRadius: 14, flex: 1, flexDirection: "row", gap: 7, justifyContent: "center", minHeight: 46, paddingHorizontal: 10 },
+  primaryText: { color: "#FFFFFF", fontSize: 8, fontWeight: "900" },
+  secondaryText: { fontSize: 8, fontWeight: "900" },
 });

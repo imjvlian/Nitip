@@ -62,6 +62,17 @@ export async function cancelPendingCustomerOrder(customerFirebaseUid: string, id
         throw new CustomerCancellationError("cancellation_requires_support", 409, "Pesanan yang sudah diproses pembayaran tidak dapat dibatalkan langsung. Hubungi Support Nitip.");
       }
       const now = new Date();
+      if (
+        existing.payment?.provider === "doku" &&
+        existing.payment.checkoutUrl &&
+        (!existing.payment.expiresAt || existing.payment.expiresAt > now)
+      ) {
+        throw new CustomerCancellationError(
+          "doku_cancellation_requires_support",
+          409,
+          "DOKU Checkout sudah dibuat. Pembatalan langsung dinonaktifkan agar tidak terjadi pembayaran pada order yang dibatalkan. Hubungi Support Nitip.",
+        );
+      }
       const shouldRestore = existing.stockReservationStatus === "reserved";
       const payment = existing.payment ? { ...existing.payment, status: "failed" as const, checkoutUrl: null, expiresAt: now } : null;
       const result = await orders.updateOne(

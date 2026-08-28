@@ -7,6 +7,7 @@ import {
 } from "./config/env.js";
 import { registerAdminRoutes } from "./http/admin-routes.js";
 import { registerCatalogRoutes } from "./http/catalog-routes.js";
+import { registerDokuRoutes } from "./http/doku-routes.js";
 import { registerDriverOrderRoutes } from "./http/driver-order-routes.js";
 import { registerDriverRoutes } from "./http/driver-routes.js";
 import { registerMerchantOrderRoutes } from "./http/merchant-order-routes.js";
@@ -270,6 +271,7 @@ registerCatalogRoutes(app);
 registerAdminRoutes(app);
 registerOrderRoutes(app);
 registerOrderChatRoutes(app);
+registerDokuRoutes(app);
 registerMerchantOrderRoutes(app);
 registerDriverRoutes(app);
 registerDriverOrderRoutes(app);

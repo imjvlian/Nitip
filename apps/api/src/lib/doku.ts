@@ -1,224 +1,180 @@
-import {
-  createHash,
-  createHmac,
-  randomUUID,
-  timingSafeEqual,
-} from "node:crypto";
+import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 
-import {
-  env,
-  IntegrationNotConfiguredError,
-} from "../config/env.js";
+import { env, IntegrationNotConfiguredError } from "../config/env.js";
 
-export const DOKU_CHECKOUT_TARGET = "/checkout/v1/payment";
+export const DOKU_CHECKOUT_PATH = "/checkout/v1/payment";
 
-export interface DokuConfig {
-  baseUrl: string;
-  clientId: string;
-  secretKey: string;
-  notificationUrl: string | null;
+export interface DokuCheckoutResponse {
+  response?: {
+    order?: {
+      amount?: number;
+      invoice_number?: string;
+    };
+    payment?: {
+      token_id?: string;
+      url?: string;
+      expired_date?: string;
+    };
+  };
+  error_messages?: string[];
+  message?: unknown;
 }
 
-export interface DokuSignatureInput {
+export interface DokuNotificationBody {
+  order?: {
+    invoice_number?: string;
+    amount?: number | string;
+    status?: string;
+  };
+  transaction?: {
+    status?: string;
+    date?: string;
+    original_request_id?: string;
+  };
+  service?: { id?: string };
+  acquirer?: { id?: string };
+  channel?: { id?: string };
+  [key: string]: unknown;
+}
+
+function requireDokuCredentials() {
+  if (!env.dokuClientId || !env.dokuSecretKey) {
+    throw new IntegrationNotConfiguredError("doku");
+  }
+  return { clientId: env.dokuClientId, secretKey: env.dokuSecretKey };
+}
+
+export function dokuDigest(rawBody: string) {
+  return createHash("sha256").update(rawBody, "utf8").digest("base64");
+}
+
+export function dokuSignature(input: {
   clientId: string;
   requestId: string;
   requestTimestamp: string;
   requestTarget: string;
-  body?: string | null;
+  rawBody?: string | null;
   secretKey: string;
-}
-
-export interface DokuCheckoutInput {
-  invoiceNumber: string;
-  amount: number;
-  paymentDueMinutes?: number;
-  notificationUrl?: string | null;
-}
-
-export interface DokuCheckoutResult {
-  requestId: string;
-  checkoutUrl: string;
-  response: unknown;
-}
-
-export class DokuApiError extends Error {
-  constructor(
-    message: string,
-    public readonly status: number,
-    public readonly response: unknown,
-  ) {
-    super(message);
-    this.name = "DokuApiError";
-  }
-}
-
-export function getDokuConfig(): DokuConfig {
-  if (!env.dokuClientId || !env.dokuSecretKey) {
-    throw new IntegrationNotConfiguredError("doku");
-  }
-
-  return {
-    baseUrl: env.dokuBaseUrl.replace(/\/+$/, ""),
-    clientId: env.dokuClientId,
-    secretKey: env.dokuSecretKey,
-    notificationUrl: env.dokuNotificationUrl,
-  };
-}
-
-export function generateDokuDigest(body: string) {
-  return createHash("sha256").update(body, "utf8").digest("base64");
-}
-
-export function generateDokuSignature(input: DokuSignatureInput) {
-  const components = [
+}) {
+  const parts = [
     `Client-Id:${input.clientId}`,
     `Request-Id:${input.requestId}`,
     `Request-Timestamp:${input.requestTimestamp}`,
     `Request-Target:${input.requestTarget}`,
   ];
-
-  if (input.body != null) {
-    components.push(`Digest:${generateDokuDigest(input.body)}`);
-  }
-
+  if (input.rawBody != null) parts.push(`Digest:${dokuDigest(input.rawBody)}`);
   const digest = createHmac("sha256", input.secretKey)
-    .update(components.join("\n"), "utf8")
+    .update(parts.join("\n"), "utf8")
     .digest("base64");
-
   return `HMACSHA256=${digest}`;
 }
 
-export function verifyDokuSignature(
-  input: DokuSignatureInput & { signature: string },
-) {
-  const expected = Buffer.from(generateDokuSignature(input), "utf8");
-  const received = Buffer.from(input.signature.trim(), "utf8");
-
-  return (
-    expected.length === received.length &&
-    timingSafeEqual(expected, received)
-  );
+export function verifyDokuNotificationSignature(input: {
+  clientId: string;
+  requestId: string;
+  requestTimestamp: string;
+  signature: string;
+  requestTarget: string;
+  rawBody: string;
+}) {
+  const credentials = requireDokuCredentials();
+  if (input.clientId !== credentials.clientId) return false;
+  const expected = dokuSignature({
+    clientId: input.clientId,
+    requestId: input.requestId,
+    requestTimestamp: input.requestTimestamp,
+    requestTarget: input.requestTarget,
+    rawBody: input.rawBody,
+    secretKey: credentials.secretKey,
+  });
+  const actualBuffer = Buffer.from(input.signature, "utf8");
+  const expectedBuffer = Buffer.from(expected, "utf8");
+  return actualBuffer.length === expectedBuffer.length && timingSafeEqual(actualBuffer, expectedBuffer);
 }
 
-export function createDokuRequestHeaders(
-  requestTarget: string,
-  body?: string | null,
-) {
-  const config = getDokuConfig();
+function parseDokuExpiry(value: string | undefined) {
+  if (!value || !/^\d{14}$/.test(value)) return null;
+  const year = Number(value.slice(0, 4));
+  const month = Number(value.slice(4, 6));
+  const day = Number(value.slice(6, 8));
+  const hourUtcPlus7 = Number(value.slice(8, 10));
+  const minute = Number(value.slice(10, 12));
+  const second = Number(value.slice(12, 14));
+  const timestamp = Date.UTC(year, month - 1, day, hourUtcPlus7 - 7, minute, second);
+  const date = new Date(timestamp);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export async function createDokuCheckout(input: {
+  invoiceNumber: string;
+  amount: number;
+  dueMinutes: number;
+}) {
+  const credentials = requireDokuCredentials();
   const requestId = randomUUID();
   const requestTimestamp = new Date().toISOString();
-  const signature = generateDokuSignature({
-    clientId: config.clientId,
-    requestId,
-    requestTimestamp,
-    requestTarget,
-    body,
-    secretKey: config.secretKey,
-  });
-
-  return {
-    requestId,
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "Client-Id": config.clientId,
-      "Request-Id": requestId,
-      "Request-Timestamp": requestTimestamp,
-      Signature: signature,
-    },
-  };
-}
-
-export function buildDokuCheckoutBody(input: DokuCheckoutInput) {
-  const invoiceNumber = input.invoiceNumber.trim();
-  if (!invoiceNumber || invoiceNumber.length > 64) {
-    throw new Error("DOKU invoiceNumber must be between 1 and 64 characters");
-  }
-  if (!Number.isSafeInteger(input.amount) || input.amount <= 0) {
-    throw new Error("DOKU amount must be a positive integer in IDR");
-  }
-  if (
-    input.paymentDueMinutes != null &&
-    (!Number.isSafeInteger(input.paymentDueMinutes) || input.paymentDueMinutes <= 0)
-  ) {
-    throw new Error("DOKU paymentDueMinutes must be a positive integer");
-  }
-
-  const config = getDokuConfig();
-  const notificationUrl = input.notificationUrl ?? config.notificationUrl;
-
-  return JSON.stringify({
+  const body = {
     order: {
       amount: input.amount,
-      invoice_number: invoiceNumber,
+      invoice_number: input.invoiceNumber,
       currency: "IDR",
+      auto_redirect: false,
     },
-    ...(input.paymentDueMinutes != null
-      ? { payment: { payment_due_date: input.paymentDueMinutes } }
+    payment: {
+      payment_due_date: Math.max(1, Math.floor(input.dueMinutes)),
+      type: "SALE",
+    },
+    ...(env.dokuNotificationUrl
+      ? { additional_info: { override_notification_url: env.dokuNotificationUrl } }
       : {}),
-    ...(notificationUrl
-      ? { additional_info: { override_notification_url: notificationUrl } }
-      : {}),
-  });
-}
-
-function readCheckoutUrl(value: unknown) {
-  if (!value || typeof value !== "object") return null;
-
-  const root = value as {
-    payment?: { url?: unknown };
-    response?: { payment?: { url?: unknown } };
   };
-  const candidate = root.response?.payment?.url ?? root.payment?.url;
-  return typeof candidate === "string" && candidate.trim()
-    ? candidate.trim()
-    : null;
-}
-
-export async function createDokuCheckout(
-  input: DokuCheckoutInput,
-): Promise<DokuCheckoutResult> {
-  const config = getDokuConfig();
-  const body = buildDokuCheckoutBody(input);
-  const { requestId, headers } = createDokuRequestHeaders(
-    DOKU_CHECKOUT_TARGET,
-    body,
-  );
-
-  const response = await fetch(`${config.baseUrl}${DOKU_CHECKOUT_TARGET}`, {
-    method: "POST",
-    headers,
-    body,
-  });
-
-  const raw = await response.text();
-  let parsed: unknown = raw;
-  try {
-    parsed = raw ? JSON.parse(raw) : null;
-  } catch {
-    // Keep the raw response for diagnostics when DOKU does not return JSON.
-  }
-
-  if (!response.ok) {
-    throw new DokuApiError(
-      `DOKU checkout request failed with HTTP ${response.status}`,
-      response.status,
-      parsed,
-    );
-  }
-
-  const checkoutUrl = readCheckoutUrl(parsed);
-  if (!checkoutUrl) {
-    throw new DokuApiError(
-      "DOKU checkout response did not include payment.url",
-      response.status,
-      parsed,
-    );
-  }
-
-  return {
+  const rawBody = JSON.stringify(body);
+  const signature = dokuSignature({
+    clientId: credentials.clientId,
     requestId,
-    checkoutUrl,
-    response: parsed,
-  };
+    requestTimestamp,
+    requestTarget: DOKU_CHECKOUT_PATH,
+    rawBody,
+    secretKey: credentials.secretKey,
+  });
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
+  try {
+    const response = await fetch(`${env.dokuBaseUrl}${DOKU_CHECKOUT_PATH}`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "Client-Id": credentials.clientId,
+        "Request-Id": requestId,
+        "Request-Timestamp": requestTimestamp,
+        Signature: signature,
+      },
+      body: rawBody,
+      signal: controller.signal,
+    });
+
+    let parsed: DokuCheckoutResponse = {};
+    try {
+      parsed = (await response.json()) as DokuCheckoutResponse;
+    } catch {
+      throw new Error("DOKU returned an invalid JSON response");
+    }
+    if (!response.ok) {
+      const message = parsed.error_messages?.join("; ") || `DOKU Checkout failed with HTTP ${response.status}`;
+      throw new Error(message);
+    }
+
+    const checkoutUrl = parsed.response?.payment?.url;
+    if (!checkoutUrl) throw new Error("DOKU Checkout did not return payment.url");
+    return {
+      requestId,
+      checkoutUrl,
+      expiresAt: parseDokuExpiry(parsed.response?.payment?.expired_date),
+      tokenId: parsed.response?.payment?.token_id ?? null,
+    };
+  } finally {
+    clearTimeout(timer);
+  }
 }

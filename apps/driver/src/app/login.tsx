@@ -111,10 +111,8 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.topRow}>
-          <Text style={[styles.brand, { color: theme.colors.primaryStrong }]}>nitip driver.</Text>
-          <View style={styles.language}><LanguageSwitcher compact /></View>
-        </View>
+        <Text style={[styles.brand, { color: theme.colors.primaryStrong }]}>nitip driver.</Text>
+        <View style={styles.language}><LanguageSwitcher /></View>
 
         <View style={styles.hero}>
           <Text style={[styles.eyebrow, { color: theme.colors.primary }]}>{c.access}</Text>
@@ -132,40 +130,14 @@ export default function LoginScreen() {
         <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           {mode === "register" ? (
             <Field label={c.name}>
-              <TextInput
-                editable={!submitting}
-                onChangeText={setDisplayName}
-                placeholder={c.namePlaceholder}
-                placeholderTextColor={theme.colors.textMuted}
-                style={[styles.input, { backgroundColor: theme.colors.surfaceRaised, borderColor: theme.colors.border, color: theme.colors.text }]}
-                value={displayName}
-              />
+              <TextInput editable={!submitting} onChangeText={setDisplayName} placeholder={c.namePlaceholder} placeholderTextColor={theme.colors.textMuted} style={[styles.input, { backgroundColor: theme.colors.surfaceRaised, borderColor: theme.colors.border, color: theme.colors.text }]} value={displayName} />
             </Field>
           ) : null}
           <Field label={c.email}>
-            <TextInput
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!submitting}
-              keyboardType="email-address"
-              onChangeText={setEmail}
-              placeholder="nama@email.com"
-              placeholderTextColor={theme.colors.textMuted}
-              style={[styles.input, { backgroundColor: theme.colors.surfaceRaised, borderColor: theme.colors.border, color: theme.colors.text }]}
-              value={email}
-            />
+            <TextInput autoCapitalize="none" autoCorrect={false} editable={!submitting} keyboardType="email-address" onChangeText={setEmail} placeholder="nama@email.com" placeholderTextColor={theme.colors.textMuted} style={[styles.input, { backgroundColor: theme.colors.surfaceRaised, borderColor: theme.colors.border, color: theme.colors.text }]} value={email} />
           </Field>
           <Field label={c.password}>
-            <TextInput
-              autoCapitalize="none"
-              editable={!submitting}
-              onChangeText={setPassword}
-              placeholder={c.passwordPlaceholder}
-              placeholderTextColor={theme.colors.textMuted}
-              secureTextEntry
-              style={[styles.input, { backgroundColor: theme.colors.surfaceRaised, borderColor: theme.colors.border, color: theme.colors.text }]}
-              value={password}
-            />
+            <TextInput autoCapitalize="none" editable={!submitting} onChangeText={setPassword} placeholder={c.passwordPlaceholder} placeholderTextColor={theme.colors.textMuted} secureTextEntry style={[styles.input, { backgroundColor: theme.colors.surfaceRaised, borderColor: theme.colors.border, color: theme.colors.text }]} value={password} />
           </Field>
 
           {mode === "login" ? (
@@ -174,17 +146,9 @@ export default function LoginScreen() {
             </Pressable>
           ) : null}
 
-          {error ? (
-            <View style={[styles.errorCard, { backgroundColor: theme.colors.dangerSurface }]}>
-              <Text style={[styles.errorText, { color: theme.colors.danger }]}>{error}</Text>
-            </View>
-          ) : null}
+          {error ? <View style={[styles.errorCard, { backgroundColor: theme.colors.dangerSurface }]}><Text style={[styles.errorText, { color: theme.colors.danger }]}>{error}</Text></View> : null}
 
-          <Pressable
-            disabled={!configured || submitting}
-            onPress={() => void submit()}
-            style={[styles.primaryButton, { backgroundColor: theme.colors.primary, opacity: !configured || submitting ? 0.45 : 1 }]}
-          >
+          <Pressable disabled={!configured || submitting} onPress={() => void submit()} style={[styles.primaryButton, { backgroundColor: theme.colors.primary, opacity: !configured || submitting ? 0.45 : 1 }]}>
             {submitting ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryText}>{mode === "login" ? c.signIn : c.register}</Text>}
           </Pressable>
 
@@ -204,10 +168,9 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { flexGrow: 1, paddingHorizontal: 20 },
-  topRow: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
   brand: { fontSize: 27, fontWeight: "900", letterSpacing: -1 },
-  language: { width: 150 },
-  hero: { marginTop: 38 },
+  language: { marginTop: 12 },
+  hero: { marginTop: 30 },
   eyebrow: { fontSize: 8, fontWeight: "900", letterSpacing: 1.2 },
   title: { fontSize: 32, fontWeight: "900", letterSpacing: -1, lineHeight: 37, marginTop: 7 },
   subtitle: { fontSize: 10, lineHeight: 17, marginTop: 8, maxWidth: 350 },

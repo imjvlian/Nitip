@@ -124,3 +124,4 @@ export const listOrders = (user: User | null) => apiRequest<NitipOrder[]>(user, 
 export const getOrderRating = (user: User | null, id: string) => apiRequest<NitipOrderRating | null>(user, `/orders/${id}/rating`);
 export const upsertOrderRating = (user: User | null, id: string, input: UpsertNitipOrderRatingInput) => apiRequest<NitipOrderRating>(user, `/orders/${id}/rating`, { method: "PUT", body: JSON.stringify(input) });
 export const simulateOrderPayment = (user: User | null, id: string) => apiRequest<NitipOrder>(user, `/orders/${id}/simulate-payment`, { method: "POST" });
+export const startDokuOrderPayment = (user: User | null, id: string) => apiRequest<NitipOrder>(user, `/orders/${id}/payment/doku`, { method: "POST" });
