@@ -5,6 +5,7 @@ import { env, IntegrationNotConfiguredError } from "../config/env.js";
 import { authenticateRequest } from "../lib/authenticate.js";
 import { autoDisableSoldOutProducts } from "../repositories/inventory-guard.js";
 import { getCustomerOrderOperations } from "../repositories/order-operations.js";
+import { getCustomerOrderTracking } from "../repositories/order-tracking.js";
 import { CheckoutError, createCustomerOrder, getCustomerOrder, listCustomerOrders, quoteCheckout, simulateCustomerPayment } from "../repositories/orders.js";
 import { getCustomerOrderRating, RatingError, upsertCustomerOrderRating } from "../repositories/ratings.js";
 import { parseCheckoutRequest } from "./checkout-validation.js";
@@ -75,6 +76,15 @@ export function registerOrderRoutes(app: FastifyInstance) {
     const identity = await authenticateRequest(request, reply); if (!identity) return;
     try {
       const data = await getCustomerOrderOperations(identity.uid, request.params.id);
+      if (!data) return reply.code(404).send({ error: "order_not_found" });
+      return { data };
+    } catch (error) { return handleOrderError(request, reply, error); }
+  });
+
+  app.get<{ Params: { id: string } }>("/orders/:id/tracking", async (request, reply) => {
+    const identity = await authenticateRequest(request, reply); if (!identity) return;
+    try {
+      const data = await getCustomerOrderTracking(identity.uid, request.params.id);
       if (!data) return reply.code(404).send({ error: "order_not_found" });
       return { data };
     } catch (error) { return handleOrderError(request, reply, error); }

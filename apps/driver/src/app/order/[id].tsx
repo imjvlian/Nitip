@@ -2,6 +2,7 @@ import { formatRupiah } from "@nitip/domain";
 import type { DriverDeliveryActionInput, NitipDriverOrder } from "@nitip/domain/driver";
 import { useNitipLanguage } from "@nitip/i18n";
 import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
@@ -10,15 +11,28 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AnimatedPopup, type PopupNotice } from "../../components/AnimatedPopup";
 import { AppHeader } from "../../components/AppHeader";
 import { NitipIcon } from "../../components/NitipIcon";
-import RouteMap from "../../components/RouteMap";
+import RouteMap, { type RouteSummary } from "../../components/RouteMap";
 import { useAuth } from "../../context/AuthContext";
 import { useNitipTheme } from "../../hooks/useNitipTheme";
-import { actOnDriverOrder, getDriverOrder, uploadDeliveryProof } from "../../lib/api";
+import { actOnDriverOrder, getDriverOrder, updateDriverLocation, uploadDeliveryProof } from "../../lib/api";
 
 function statusLabel(status: NitipDriverOrder["status"], language: "id" | "en") {
   const id = { driver_assigned: "ORDER DITUGASKAN", picked_up: "SUDAH DIAMBIL", on_delivery: "SEDANG DIANTAR", delivered: "SELESAI" } as const;
   const en = { driver_assigned: "ASSIGNED", picked_up: "PICKED UP", on_delivery: "ON DELIVERY", delivered: "COMPLETED" } as const;
   return (language === "id" ? id : en)[status];
+}
+
+function routeSummaryLabel(summary: RouteSummary | null, language: "id" | "en") {
+  if (!summary) return null;
+  const parts: string[] = [];
+  if (summary.distanceMeters != null) {
+    const km = summary.distanceMeters / 1000;
+    parts.push(`${km < 10 ? km.toFixed(1) : Math.round(km)} km`);
+  }
+  if (summary.durationSeconds != null) {
+    parts.push(`${Math.max(1, Math.round(summary.durationSeconds / 60))} ${language === "id" ? "menit" : "min"}`);
+  }
+  return parts.join(" • ") || null;
 }
 
 export default function DriverOrderDetailScreen() {
@@ -36,6 +50,8 @@ export default function DriverOrderDetailScreen() {
   const [otp, setOtp] = useState("");
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notice, setNotice] = useState<PopupNotice | null>(null);
+  const [livePosition, setLivePosition] = useState<{ latitude: number; longitude: number; accuracyMeters: number | null } | null>(null);
+  const [routeSummary, setRouteSummary] = useState<RouteSummary | null>(null);
   const [pendingAction, setPendingAction] = useState<{
     input: DriverDeliveryActionInput;
     title: string;
@@ -51,6 +67,7 @@ export default function DriverOrderDetailScreen() {
     doneAction: "Selesaikan pengantaran", doneTitle: "Konfirmasi penerimaan?", doneMessage: "Pastikan OTP customer benar dan pesanan benar-benar sudah diterima.", doneHelper: "Minta kode 4 digit dari customer. Tambahkan foto bukti bila tersedia.",
     otp: "OTP PENERIMAAN", otpHint: "Masukkan kode 4 digit yang tampil di aplikasi customer.", proof: "Bukti pengantaran", proofHint: "Foto paket di tangan customer atau lokasi penyerahan. Sangat disarankan untuk mengurangi sengketa.", takePhoto: "Ambil foto bukti", uploaded: "Foto bukti tersimpan", navigation: "Navigasi", call: "Telepon customer", safety: "Safety Center", noProof: "Foto belum terunggah. OTP tetap menjadi bukti utama.",
     pickupOk: "Pickup dikonfirmasi", pickupOkBody: "Status perjalanan diperbarui.", deliveryStarted: "Pengantaran dimulai", deliveryStartedBody: "Customer sekarang melihat pesanan sedang diantar.", otpCorrect: "OTP benar", otpCorrectBody: "Pengantaran berhasil diselesaikan.", otpWrong: "OTP salah", otpWrongBody: "Kode tidak cocok. Minta customer mengecek kembali 4 digit OTP.", actionFailed: "Aksi gagal", proofSaved: "Bukti tersimpan", proofSavedBody: "Foto bukti pengantaran berhasil diunggah.", cameraDenied: "Izin kamera diperlukan", cameraDeniedBody: "Aktifkan izin kamera untuk mengambil bukti pengantaran.", proofFailed: "Upload bukti gagal", navigationFailed: "Navigasi tidak dapat dibuka",
+    trackingTitle: "LIVE ROUTE", trackingStarting: "Mengambil posisi GPS...", trackingActive: "Posisi kamu dikirim ke customer setiap beberapa detik selama pengantaran.", trackingDenied: "Live tracking tidak aktif", trackingDeniedBody: "Izin lokasi diperlukan agar customer dapat melacak pengantaran secara realtime.", remaining: "Sisa perjalanan",
   } : {
     title: "Trip details", loading: "Loading assignment...", unavailable: "Order unavailable", fare: "Delivery earning", status: "TRIP STATUS",
     assigned: "Pick up the order from the merchant before heading to the customer.", picked: "The order is secured and ready for delivery.", delivery: "The order is on its way to the customer.", done: "Delivery is complete and the active assignment has been released.",
@@ -60,6 +77,7 @@ export default function DriverOrderDetailScreen() {
     doneAction: "Complete delivery", doneTitle: "Confirm receipt?", doneMessage: "Make sure the customer OTP is correct and the order has been received.", doneHelper: "Ask the customer for the 4-digit code. Add proof photo when available.",
     otp: "DELIVERY OTP", otpHint: "Enter the 4-digit code shown in the customer app.", proof: "Delivery proof", proofHint: "Photograph the package at handoff or drop-off location. Recommended for dispute protection.", takePhoto: "Take proof photo", uploaded: "Proof photo saved", navigation: "Navigate", call: "Call customer", safety: "Safety Center", noProof: "Photo was not uploaded. OTP remains the primary proof.",
     pickupOk: "Pickup confirmed", pickupOkBody: "Trip status has been updated.", deliveryStarted: "Delivery started", deliveryStartedBody: "The customer can now see the order is on the way.", otpCorrect: "OTP verified", otpCorrectBody: "Delivery completed successfully.", otpWrong: "Wrong OTP", otpWrongBody: "The code does not match. Ask the customer to check the 4-digit OTP again.", actionFailed: "Action failed", proofSaved: "Proof saved", proofSavedBody: "Delivery proof photo was uploaded successfully.", cameraDenied: "Camera permission required", cameraDeniedBody: "Enable camera access to capture delivery proof.", proofFailed: "Proof upload failed", navigationFailed: "Navigation could not be opened",
+    trackingTitle: "LIVE ROUTE", trackingStarting: "Acquiring GPS position...", trackingActive: "Your position is shared with the customer every few seconds during delivery.", trackingDenied: "Live tracking is off", trackingDeniedBody: "Location permission is required so the customer can track the delivery in real time.", remaining: "Remaining trip",
   };
 
   function showNotice(tone: PopupNotice["tone"], title: string, message?: string | null, durationMs?: number) {
@@ -77,6 +95,63 @@ export default function DriverOrderDetailScreen() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [c.unavailable, id, user]);
+
+  useEffect(() => {
+    if (!user || order?.status !== "on_delivery") {
+      setLivePosition(null);
+      setRouteSummary(null);
+      return;
+    }
+
+    let active = true;
+    let subscription: Location.LocationSubscription | null = null;
+
+    void (async () => {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (!active) return;
+      if (permission.status !== "granted") {
+        showNotice("warning", c.trackingDenied, c.trackingDeniedBody, 3600);
+        return;
+      }
+
+      try {
+        const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+        if (!active) return;
+        const next = {
+          latitude: current.coords.latitude,
+          longitude: current.coords.longitude,
+          accuracyMeters: current.coords.accuracy ?? null,
+        };
+        setLivePosition(next);
+        await updateDriverLocation(user, next);
+      } catch {
+        // The watcher below can still recover when a fresh GPS fix becomes available.
+      }
+
+      subscription = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          timeInterval: 5000,
+          distanceInterval: 8,
+        },
+        (position) => {
+          if (!active) return;
+          const next = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracyMeters: position.coords.accuracy ?? null,
+          };
+          setLivePosition(next);
+          void updateDriverLocation(user, next).catch(() => undefined);
+        },
+      );
+    })().catch(() => undefined);
+
+    return () => {
+      active = false;
+      subscription?.remove();
+    };
+  }, [c.trackingDenied, c.trackingDeniedBody, order?.status, user]);
 
   if (!user) return <Redirect href="/login" />;
 
@@ -152,6 +227,7 @@ export default function DriverOrderDetailScreen() {
 
   const progressText = order?.status === "driver_assigned" ? c.assigned : order?.status === "picked_up" ? c.picked : order?.status === "on_delivery" ? c.delivery : c.done;
   const hasRoute = order ? (order.pickup.latitude != null && order.pickup.longitude != null) || (order.destination.latitude != null && order.destination.longitude != null) : false;
+  const nativeRouteSummary = routeSummaryLabel(routeSummary, language);
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
@@ -188,7 +264,18 @@ export default function DriverOrderDetailScreen() {
             {order.destination.phoneNumber ? <Quick icon="phone" label={c.call} onPress={() => void Linking.openURL(`tel:${order.destination.phoneNumber}`)} /> : null}
           </View>
 
-          {hasRoute ? <><Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{c.map}</Text><View style={[styles.mapCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}><RouteMap pickup={{ latitude: order.pickup.latitude, longitude: order.pickup.longitude, label: `${order.pickup.businessName} · ${order.pickup.outletName}` }} destination={{ latitude: order.destination.latitude, longitude: order.destination.longitude, label: order.destination.recipientName }} /></View></> : null}
+          {order.status === "on_delivery" ? (
+            <View style={[styles.trackingCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+              <View style={[styles.trackingDot, { backgroundColor: livePosition ? theme.colors.success : theme.colors.warning }]} />
+              <View style={styles.trackingCopy}>
+                <Text style={[styles.trackingTitle, { color: theme.colors.text }]}>{c.trackingTitle}</Text>
+                <Text style={[styles.trackingBody, { color: theme.colors.textMuted }]}>{livePosition ? c.trackingActive : c.trackingStarting}</Text>
+                {nativeRouteSummary ? <Text style={[styles.trackingSummary, { color: theme.colors.primary }]}>{c.remaining}: {nativeRouteSummary}</Text> : null}
+              </View>
+            </View>
+          ) : null}
+
+          {hasRoute ? <><Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{c.map}</Text><View style={[styles.mapCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}><RouteMap pickup={{ latitude: order.pickup.latitude, longitude: order.pickup.longitude, label: `${order.pickup.businessName} · ${order.pickup.outletName}` }} destination={{ latitude: order.destination.latitude, longitude: order.destination.longitude, label: order.destination.recipientName }} liveOrigin={order.status === "on_delivery" && livePosition ? { latitude: livePosition.latitude, longitude: livePosition.longitude, label: language === "id" ? "Posisi kamu" : "Your position" } : null} onRouteSummary={setRouteSummary} /></View></> : null}
 
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{c.pickup}</Text>
           <InfoCard icon="store" title={order.pickup.businessName} strong={order.pickup.outletName} body={order.pickup.addressLine}><ActionLink icon="location" label={c.navigation} disabled={order.pickup.latitude == null} onPress={() => void openNavigation(order.pickup.latitude, order.pickup.longitude, order.pickup.outletName)} /></InfoCard>
@@ -232,7 +319,9 @@ export default function DriverOrderDetailScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 }, content: { paddingBottom: 38, paddingHorizontal: 20 }, hero: { marginTop: 25 }, eyebrow: { fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, orderCode: { fontSize: 28, fontWeight: "900", letterSpacing: -0.8, marginTop: 5 }, fare: { fontSize: 20, fontWeight: "900", marginTop: 12 }, fareLabel: { fontSize: 8, marginTop: 2 },
   progress: { alignItems: "center", borderRadius: 18, flexDirection: "row", marginTop: 18, padding: 14 }, progressBadge: { alignItems: "center", borderRadius: 21, height: 42, justifyContent: "center", width: 42 }, progressCopy: { flex: 1, paddingLeft: 11 }, progressLabel: { fontSize: 7, fontWeight: "900", letterSpacing: 0.7 }, progressTitle: { fontSize: 12, fontWeight: "900", marginTop: 2 }, progressBody: { fontSize: 8, lineHeight: 13, marginTop: 3 },
-  quickActions: { flexDirection: "row", gap: 8, marginTop: 12 }, quick: { alignItems: "center", borderRadius: 16, borderWidth: 1, flex: 1, flexDirection: "row", gap: 7, minHeight: 44, paddingHorizontal: 11 }, quickText: { flex: 1, fontSize: 8, fontWeight: "900" }, sectionTitle: { fontSize: 12, fontWeight: "900", marginBottom: 9, marginTop: 23 }, mapCard: { borderRadius: 20, borderWidth: 1, height: 250, overflow: "hidden" },
+  quickActions: { flexDirection: "row", gap: 8, marginTop: 12 }, quick: { alignItems: "center", borderRadius: 16, borderWidth: 1, flex: 1, flexDirection: "row", gap: 7, minHeight: 44, paddingHorizontal: 11 }, quickText: { flex: 1, fontSize: 8, fontWeight: "900" },
+  trackingCard: { alignItems: "flex-start", borderRadius: 18, borderWidth: 1, flexDirection: "row", marginTop: 14, padding: 13 }, trackingDot: { borderRadius: 5, height: 10, marginTop: 3, width: 10 }, trackingCopy: { flex: 1, paddingLeft: 10 }, trackingTitle: { fontSize: 8, fontWeight: "900", letterSpacing: 0.7 }, trackingBody: { fontSize: 8, lineHeight: 13, marginTop: 3 }, trackingSummary: { fontSize: 10, fontWeight: "900", marginTop: 6 },
+  sectionTitle: { fontSize: 12, fontWeight: "900", marginBottom: 9, marginTop: 23 }, mapCard: { borderRadius: 20, borderWidth: 1, height: 250, overflow: "hidden" },
   infoCard: { borderRadius: 18, borderWidth: 1, padding: 13 }, infoTop: { alignItems: "flex-start", flexDirection: "row" }, infoBadge: { alignItems: "center", borderRadius: 20, height: 40, justifyContent: "center", width: 40 }, infoCopy: { flex: 1, minWidth: 0, paddingLeft: 11 }, infoTitle: { fontSize: 11, fontWeight: "900" }, infoStrong: { fontSize: 8, fontWeight: "900", marginTop: 3 }, infoBody: { fontSize: 8, lineHeight: 13, marginTop: 5 }, actionLink: { alignItems: "center", alignSelf: "flex-start", borderRadius: 999, flexDirection: "row", gap: 6, marginTop: 12, paddingHorizontal: 11, paddingVertical: 9 }, actionLinkText: { fontSize: 8, fontWeight: "900" },
   note: { borderRadius: 14, marginTop: 12, padding: 11 }, noteLabel: { fontSize: 7, fontWeight: "900" }, noteText: { fontSize: 8, lineHeight: 13, marginTop: 3 }, itemRow: { alignItems: "center", flexDirection: "row", paddingVertical: 10 }, quantityBadge: { alignItems: "center", borderRadius: 10, justifyContent: "center", minHeight: 30, minWidth: 36 }, quantity: { fontSize: 9, fontWeight: "900" }, itemName: { flex: 1, fontSize: 9, fontWeight: "800", paddingLeft: 10 },
   actionCard: { borderRadius: 20, borderWidth: 1, marginTop: 22, padding: 15 }, actionTitle: { fontSize: 12, fontWeight: "900" }, actionBody: { fontSize: 9, lineHeight: 14, marginTop: 4 }, primaryButton: { alignItems: "center", borderRadius: 16, justifyContent: "center", marginTop: 14, minHeight: 50 }, primaryText: { color: "#FFFFFF", fontSize: 10, fontWeight: "900" }, fieldLabel: { fontSize: 8, fontWeight: "900", letterSpacing: 0.5, marginTop: 17 }, fieldHelp: { fontSize: 8, lineHeight: 13, marginTop: 4 }, otpInput: { borderRadius: 16, borderWidth: 1, fontSize: 24, fontWeight: "900", letterSpacing: 12, marginTop: 9, minHeight: 58, paddingHorizontal: 18, textAlign: "center" }, proofImage: { borderRadius: 16, height: 170, marginTop: 10, width: "100%" }, secondaryButton: { alignItems: "center", borderRadius: 16, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 10, minHeight: 48 }, secondaryText: { fontSize: 9, fontWeight: "900" },

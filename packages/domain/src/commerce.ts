@@ -103,6 +103,28 @@ export interface NitipOrderOperations {
   proofUploadedAt: string | null;
 }
 
+export interface NitipOrderTrackingDriver {
+  fullName: string;
+  vehicleBrandModel: string;
+  vehiclePlate: string;
+  latitude: number;
+  longitude: number;
+  accuracyMeters: number | null;
+  locationUpdatedAt: string;
+}
+
+export interface NitipOrderTracking {
+  status: OrderStatus;
+  active: boolean;
+  driver: NitipOrderTrackingDriver | null;
+  destination: {
+    recipientName: string;
+    addressLine: string;
+    latitude: number | null;
+    longitude: number | null;
+  };
+}
+
 export interface NitipOrderRating {
   id: string;
   orderId: string;
