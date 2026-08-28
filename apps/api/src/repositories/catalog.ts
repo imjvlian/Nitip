@@ -5,6 +5,7 @@ import type {
   NitipCatalogOutletSummary,
   NitipCategory,
   NitipProduct,
+  NitipProductAddon,
 } from "@nitip/domain/catalog";
 import type { WithId } from "mongodb";
 import { ObjectId } from "mongodb";
@@ -45,6 +46,13 @@ interface CategoryDocument {
   updatedAt: Date;
 }
 
+interface ProductAddonDocument {
+  id: string;
+  name: string;
+  price: number;
+  isAvailable: boolean;
+}
+
 interface ProductDocument {
   outletId: ObjectId;
   categoryId: ObjectId;
@@ -57,12 +65,17 @@ interface ProductDocument {
   isAvailable: boolean;
   isActive: boolean;
   sortOrder: number;
+  addons?: ProductAddonDocument[];
   createdAt: Date;
   updatedAt: Date;
 }
 
 function productAvailable(document: ProductDocument) {
   return document.isAvailable && document.stockQuantity !== 0;
+}
+
+function legacyDescription(name: string) {
+  return `Menu ${name}. Detail bahan dan penyajian dapat diperbarui merchant.`;
 }
 
 function serializeCategory(document: WithId<CategoryDocument>): NitipCategory {
@@ -78,13 +91,22 @@ function serializeCategory(document: WithId<CategoryDocument>): NitipCategory {
   };
 }
 
+function serializeAddons(addons: ProductAddonDocument[] | undefined): NitipProductAddon[] {
+  return (addons ?? []).map((addon) => ({
+    id: addon.id,
+    name: addon.name,
+    price: addon.price,
+    isAvailable: addon.isAvailable,
+  }));
+}
+
 function serializeProduct(document: WithId<ProductDocument>): NitipProduct {
   return {
     id: document._id.toHexString(),
     outletId: document.outletId.toHexString(),
     categoryId: document.categoryId.toHexString(),
     name: document.name,
-    description: document.description ?? null,
+    description: document.description?.trim() || legacyDescription(document.name),
     price: document.price,
     imageUrl: document.imageUrl ?? null,
     imagePublicId: document.imagePublicId ?? null,
@@ -92,6 +114,7 @@ function serializeProduct(document: WithId<ProductDocument>): NitipProduct {
     isAvailable: productAvailable(document),
     isActive: document.isActive,
     sortOrder: document.sortOrder,
+    addons: serializeAddons(document.addons),
     createdAt: document.createdAt.toISOString(),
     updatedAt: document.updatedAt.toISOString(),
   };
