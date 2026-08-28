@@ -8,6 +8,7 @@ import type {
   UpdateDriverLocationInput,
   UpdateNitipDriverInput,
 } from "@nitip/domain/driver";
+import { File, UploadType } from "expo-file-system";
 import * as Location from "expo-location";
 import type { User } from "firebase/auth";
 
@@ -64,16 +65,40 @@ export const actOnDriverOrder = (user: User | null, id: string, input: DriverDel
 export const getDeliveryProofSignature = (user: User | null, id: string) => apiRequest<CloudinaryUploadSignature>(user, `/driver/orders/${id}/proof/signature`, { method: "POST" });
 export const createDriverSupportTicket = (user: User | null, input: { category: "order" | "driver" | "other"; subject: string; message: string; orderCode?: string | null }) => apiRequest<{ id: string }>(user, "/me/support-tickets", { method: "POST", body: JSON.stringify(input) });
 
-export async function uploadDeliveryProof(user: User | null, id: string, asset: { uri: string; mimeType?: string | null; fileName?: string | null }) {
+export async function uploadDeliveryProof(
+  user: User | null,
+  id: string,
+  asset: { uri: string; mimeType?: string | null; fileName?: string | null },
+) {
   const signed = await getDeliveryProofSignature(user, id);
-  const form = new FormData();
-  form.append("file", { uri: asset.uri, type: asset.mimeType ?? "image/jpeg", name: asset.fileName ?? `delivery-${Date.now()}.jpg` } as unknown as Blob);
-  form.append("api_key", signed.apiKey);
-  form.append("timestamp", String(signed.timestamp));
-  form.append("folder", signed.folder);
-  form.append("signature", signed.signature);
-  const response = await fetch(signed.uploadUrl, { method: "POST", body: form });
-  const body = await response.json() as { secure_url?: string; error?: { message?: string } };
-  if (!response.ok || !body.secure_url) throw new Error(body.error?.message ?? "Gagal mengunggah bukti pengantaran");
+  const file = new File(asset.uri);
+  const response = await file.upload(signed.uploadUrl, {
+    httpMethod: "POST",
+    uploadType: UploadType.MULTIPART,
+    fieldName: "file",
+    mimeType: asset.mimeType ?? "image/jpeg",
+    parameters: {
+      api_key: signed.apiKey,
+      timestamp: String(signed.timestamp),
+      folder: signed.folder,
+      signature: signed.signature,
+    },
+  });
+
+  let body: {
+    secure_url?: string;
+    error?: { message?: string };
+  } = {};
+
+  try {
+    body = JSON.parse(response.body) as typeof body;
+  } catch {
+    throw new Error("Respons upload Cloudinary tidak valid");
+  }
+
+  if (response.status < 200 || response.status >= 300 || !body.secure_url) {
+    throw new Error(body.error?.message ?? "Gagal mengunggah bukti pengantaran");
+  }
+
   return body.secure_url;
 }
