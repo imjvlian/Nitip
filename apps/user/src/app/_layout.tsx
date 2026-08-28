@@ -77,7 +77,20 @@ function AppStack() {
         </BottomNavigationSuppressionProvider>
       </View>
 
-      {activeTab ? <BottomNavigation active={activeTab} root /> : null}
+      {activeTab ? (
+        <View
+          pointerEvents="box-none"
+          style={{
+            bottom: 0,
+            left: 0,
+            position: "absolute",
+            right: 0,
+            zIndex: 50,
+          }}
+        >
+          <BottomNavigation active={activeTab} root />
+        </View>
+      ) : null}
     </View>
   );
 }
