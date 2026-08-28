@@ -9,6 +9,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AlertPopupProvider } from "../components/AlertPopupProvider";
 import { BottomNavigation, type RootTab } from "../components/BottomNavigation";
 import { LiveTrackingShortcut } from "../components/LiveTrackingShortcut";
+import { NotificationShortcut } from "../components/NotificationShortcut";
 import { AuthProvider } from "../context/AuthContext";
 import { DriverThemeProvider, useDriverTheme } from "../context/ThemeContext";
 
@@ -53,6 +54,7 @@ function AppStack() {
           <Stack.Screen name="location" options={{ animation: "slide_from_right" }} />
           <Stack.Screen name="support" options={{ animation: "slide_from_right" }} />
           <Stack.Screen name="tracking" options={{ animation: "slide_from_right" }} />
+          <Stack.Screen name="notifications" options={{ animation: "slide_from_right" }} />
         </Stack>
       </View>
 
@@ -65,6 +67,7 @@ function AppStack() {
         </View>
       ) : null}
 
+      <NotificationShortcut visible={Boolean(activeTab)} />
       <LiveTrackingShortcut bottom={activeTab ? ROOT_TAB_CLEARANCE + 12 : 24} />
     </View>
   );
