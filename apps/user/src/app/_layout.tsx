@@ -31,6 +31,7 @@ function AppStack() {
             : pathname === "/profile"
               ? "profile"
               : null;
+
   const statusBarStyle = pathname === "/home" || resolvedMode === "dark" ? "light" : "dark";
   const preserveExistingPresentation =
     pathname === "/home" || pathname.startsWith("/settings");
@@ -39,12 +40,6 @@ function AppStack() {
     : resolvedMode === "dark"
       ? "#121318"
       : "#F3F3F0";
-  const navigationUnderlay =
-    resolvedMode === "dark"
-      ? screenBackground
-      : activeTab === "home"
-        ? "#EEF0F4"
-        : screenBackground;
 
   return (
     <View
@@ -83,18 +78,7 @@ function AppStack() {
         </BottomNavigationSuppressionProvider>
       </View>
 
-      {activeTab ? (
-        <View
-          style={{
-            alignSelf: "stretch",
-            backgroundColor: navigationUnderlay,
-            flexShrink: 0,
-            width: "100%",
-          }}
-        >
-          <BottomNavigation active={activeTab} root />
-        </View>
-      ) : null}
+      {activeTab ? <BottomNavigation active={activeTab} root /> : null}
     </View>
   );
 }

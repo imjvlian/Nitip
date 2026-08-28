@@ -3,7 +3,6 @@ import { useNitipLanguage } from "@nitip/i18n";
 import { router } from "expo-router";
 import { createContext, useContext, type ComponentProps, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useNitipTheme } from "../hooks/useNitipTheme";
 
@@ -50,19 +49,7 @@ const tabs = [
 }[];
 
 const styles = StyleSheet.create({
-  legacyBar: {
-    alignItems: "center",
-    alignSelf: "stretch",
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    flexDirection: "row",
-    flexShrink: 0,
-    justifyContent: "space-around",
-    paddingHorizontal: 6,
-    paddingTop: 10,
-    width: "100%",
-  },
-  referenceBar: {
+  bar: {
     alignItems: "center",
     alignSelf: "stretch",
     borderTopLeftRadius: 24,
@@ -71,29 +58,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexShrink: 0,
     justifyContent: "space-around",
+    minHeight: 68,
+    paddingBottom: 8,
     paddingHorizontal: 8,
     paddingTop: 8,
     width: "100%",
   },
-  legacyTab: {
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 58,
-    width: 66,
-  },
-  referenceTab: {
+  tab: {
     alignItems: "center",
     justifyContent: "center",
     minHeight: 52,
     width: 64,
   },
-  iconArea: {
-    alignItems: "center",
-    height: 28,
-    justifyContent: "center",
-    width: 36,
-  },
-  activeIconPill: {
+  iconPill: {
     alignItems: "center",
     borderRadius: 999,
     height: 29,
@@ -101,21 +78,18 @@ const styles = StyleSheet.create({
     width: 42,
   },
   label: {
-    fontSize: 9,
-    fontWeight: "600",
-    lineHeight: 11,
-    marginTop: 2,
-    textAlign: "center",
-  },
-  referenceLabel: {
     fontSize: 8,
     fontWeight: "700",
     lineHeight: 10,
     marginTop: 2,
     textAlign: "center",
   },
-  selectedLabel: { fontWeight: "900" },
-  pressed: { opacity: 0.55 },
+  selectedLabel: {
+    fontWeight: "900",
+  },
+  pressed: {
+    opacity: 0.55,
+  },
 });
 
 export function BottomNavigation({
@@ -128,36 +102,29 @@ export function BottomNavigation({
   const suppressed = useContext(SuppressBottomNavigationContext);
   const { language } = useNitipLanguage();
   const theme = useNitipTheme();
-  const insets = useSafeAreaInsets();
 
   if (!root || suppressed) return null;
-
-  const legacyHome = active === "home";
 
   return (
     <View
       style={[
-        legacyHome ? styles.legacyBar : styles.referenceBar,
+        styles.bar,
         {
           backgroundColor: theme.colors.surfaceRaised,
-          borderTopColor: legacyHome ? "transparent" : theme.colors.border,
-          elevation: legacyHome ? 16 : 12,
-          paddingBottom: Math.max(insets.bottom, legacyHome ? 18 : 12),
+          borderTopColor: theme.colors.border,
+          elevation: 12,
           shadowColor: theme.colors.shadow,
           shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: legacyHome
-            ? theme.mode === "dark" ? 0.3 : 0.14
-            : theme.mode === "dark" ? 0.24 : 0.08,
-          shadowRadius: legacyHome ? 18 : 14,
+          shadowOpacity: theme.mode === "dark" ? 0.24 : 0.08,
+          shadowRadius: 14,
         },
       ]}
     >
       {tabs.map((tab) => {
         const selected = tab.key === active;
         const label = labels[language][tab.key];
-        const color = legacyHome
-          ? selected ? theme.colors.text : theme.colors.textMuted
-          : selected ? theme.colors.primary : theme.colors.textMuted;
+        const iconColor = selected ? "#FFFFFF" : theme.colors.textMuted;
+        const labelColor = selected ? theme.colors.primary : theme.colors.textMuted;
 
         return (
           <Pressable
@@ -169,40 +136,29 @@ export function BottomNavigation({
             onPress={() => {
               if (!selected) router.replace(tab.href);
             }}
-            style={({ pressed }) => [
-              legacyHome ? styles.legacyTab : styles.referenceTab,
-              pressed && styles.pressed,
-            ]}
+            style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
           >
-            {legacyHome ? (
-              <View style={styles.iconArea}>
-                <Ionicons
-                  color={color}
-                  name={selected ? tab.iconFilled : tab.iconOutline}
-                  size={selected ? 21 : 20}
-                />
-              </View>
-            ) : (
-              <View
-                style={[
-                  styles.activeIconPill,
-                  { backgroundColor: selected ? theme.colors.surfaceAccent : "transparent" },
-                ]}
-              >
-                <Ionicons
-                  color={color}
-                  name={selected ? tab.iconFilled : tab.iconOutline}
-                  size={selected ? 19 : 18}
-                />
-              </View>
-            )}
+            <View
+              style={[
+                styles.iconPill,
+                {
+                  backgroundColor: selected ? theme.colors.primary : "transparent",
+                },
+              ]}
+            >
+              <Ionicons
+                color={iconColor}
+                name={selected ? tab.iconFilled : tab.iconOutline}
+                size={selected ? 19 : 18}
+              />
+            </View>
 
             <Text
               numberOfLines={1}
               style={[
-                legacyHome ? styles.label : styles.referenceLabel,
+                styles.label,
                 selected && styles.selectedLabel,
-                { color },
+                { color: labelColor },
               ]}
             >
               {label}
