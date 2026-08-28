@@ -1,11 +1,13 @@
 import { useNitipLanguage } from "@nitip/i18n";
 import { router } from "expo-router";
+import { createContext, useContext, type ReactNode } from "react";
 import {
-  createContext,
-  useContext,
-  type ReactNode,
-} from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useNitipTheme } from "../hooks/useNitipTheme";
@@ -53,41 +55,38 @@ const tabs: {
 ];
 
 const styles = StyleSheet.create({
-  shell: {
-    paddingHorizontal: 14,
-    paddingTop: 6,
-  },
-  dock: {
-    alignItems: "center",
-    borderRadius: 22,
-    borderWidth: StyleSheet.hairlineWidth,
+  bar: {
+    alignItems: "flex-start",
+    alignSelf: "stretch",
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
-    minHeight: 58,
-    overflow: "visible",
-    width: "100%",
+    paddingTop: 7,
   },
   tab: {
     alignItems: "center",
+    height: 52,
     justifyContent: "center",
-    minHeight: 52,
-    width: "20%",
   },
   iconSlot: {
     alignItems: "center",
-    height: 21,
+    height: 22,
     justifyContent: "center",
     width: 28,
   },
   label: {
-    fontSize: 8,
-    fontWeight: "800",
-    lineHeight: 10,
+    fontSize: 9,
+    fontWeight: "700",
+    lineHeight: 12,
     marginTop: 2,
     textAlign: "center",
-    width: "100%",
+  },
+  selectedLabel: {
+    fontWeight: "900",
   },
   pressed: {
-    opacity: 0.55,
+    opacity: 0.5,
   },
 });
 
@@ -96,68 +95,65 @@ export function BottomNavigation({ active }: { active: RootTab }) {
   const { language } = useNitipLanguage();
   const theme = useNitipTheme();
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
 
   if (suppressed) return null;
+
+  const tabWidth = screenWidth / tabs.length;
 
   return (
     <View
       style={[
-        styles.shell,
+        styles.bar,
         {
-          backgroundColor: theme.colors.background,
-          paddingBottom: Math.max(insets.bottom, 8),
+          backgroundColor: theme.colors.surfaceRaised,
+          borderTopColor: theme.colors.border,
+          elevation: 12,
+          paddingBottom: Math.max(insets.bottom, 7),
+          shadowColor: theme.colors.shadow,
+          shadowOffset: { width: 0, height: -3 },
+          shadowOpacity: theme.mode === "dark" ? 0.24 : 0.09,
+          shadowRadius: 12,
+          width: screenWidth,
         },
       ]}
     >
-      <View
-        style={[
-          styles.dock,
-          {
-            backgroundColor: theme.colors.surfaceRaised,
-            borderColor: theme.colors.border,
-            elevation: 10,
-            shadowColor: theme.colors.shadow,
-            shadowOffset: { width: 0, height: -2 },
-            shadowOpacity: theme.mode === "dark" ? 0.24 : 0.1,
-            shadowRadius: 12,
-          },
-        ]}
-      >
-        {tabs.map((tab) => {
-          const selected = tab.key === active;
-          const label = labels[language][tab.key];
+      {tabs.map((tab) => {
+        const selected = tab.key === active;
+        const label = labels[language][tab.key];
+        const color = selected ? theme.colors.text : theme.colors.textMuted;
 
-          return (
-            <Pressable
-              accessibilityLabel={label}
-              accessibilityRole="tab"
-              accessibilityState={{ selected }}
-              key={tab.key}
-              onPress={() => {
-                if (!selected) router.replace(tab.href);
-              }}
-              style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
+        return (
+          <Pressable
+            accessibilityLabel={label}
+            accessibilityRole="tab"
+            accessibilityState={{ selected }}
+            key={tab.key}
+            onPress={() => {
+              if (!selected) router.replace(tab.href);
+            }}
+            style={({ pressed }) => [
+              styles.tab,
+              { width: tabWidth },
+              pressed && styles.pressed,
+            ]}
+          >
+            <View style={styles.iconSlot}>
+              <NitipIcon color={color} name={tab.icon} size={18} />
+            </View>
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.label,
+                selected && styles.selectedLabel,
+                { color, maxWidth: tabWidth - 8 },
+              ]}
             >
-              <View style={styles.iconSlot}>
-                <NitipIcon
-                  color={selected ? theme.colors.text : theme.colors.textMuted}
-                  name={tab.icon}
-                  size={18}
-                />
-              </View>
-              <Text
-                numberOfLines={1}
-                style={[
-                  styles.label,
-                  { color: selected ? theme.colors.text : theme.colors.textMuted },
-                ]}
-              >
-                {label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+              {label}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
