@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { BackButton } from "../../components/BackButton";
 import { NitipIcon } from "../../components/NitipIcon";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
@@ -87,13 +88,7 @@ export default function CatalogOutletScreen() {
           </View>
         ) : error || !catalog ? (
           <>
-            <Pressable
-              className="ml-4 mt-2 h-10 w-10 items-center justify-center rounded-full"
-              onPress={() => router.back()}
-              style={{ backgroundColor: theme.colors.surfaceRaised }}
-            >
-              <NitipIcon color={theme.colors.text} name="back" size={17} />
-            </Pressable>
+            <BackButton style={{ marginLeft: 16, marginTop: 8 }} />
             <View className="mx-4 mt-5 rounded-[26px] p-5" style={{ backgroundColor: theme.colors.dangerSurface }}>
               <Text className="text-sm font-black" style={{ color: theme.colors.danger }}>
                 {t("outlet.unavailable")}
@@ -119,13 +114,7 @@ export default function CatalogOutletScreen() {
                 </View>
               )}
 
-              <Pressable
-                className="absolute left-3 top-3 h-10 w-10 items-center justify-center rounded-full"
-                onPress={() => router.back()}
-                style={{ backgroundColor: "rgba(255,255,255,0.92)" }}
-              >
-                <NitipIcon color="#111318" name="back" size={17} />
-              </Pressable>
+              <BackButton style={{ left: 12, position: "absolute", top: 12 }} />
 
               <View
                 className="absolute right-3 top-3 flex-row items-center rounded-full px-3 py-2"
