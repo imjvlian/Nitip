@@ -87,15 +87,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexShrink: 0,
     justifyContent: "space-around",
-    paddingBottom: 10,
+    paddingBottom: 14,
     paddingHorizontal: 6,
-    paddingTop: 10,
+    paddingTop: 12,
     width: "100%",
   },
   tab: {
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 62,
+    minHeight: 60,
     width: 66,
   },
   iconArea: {
@@ -105,10 +105,10 @@ const styles = StyleSheet.create({
     width: 36,
   },
   label: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: "600",
-    lineHeight: 10,
-    marginTop: 3,
+    lineHeight: 11,
+    marginTop: 2,
     textAlign: "center",
   },
   selectedLabel: {
