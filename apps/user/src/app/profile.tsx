@@ -34,60 +34,86 @@ function ProfileRow({
   const rowBackground = danger
     ? theme.colors.dangerSurface
     : theme.mode === "dark"
-      ? theme.colors.surfaceRaised
+      ? "#22242B"
       : "#FFFFFF";
   const rowBorder = danger
-    ? theme.colors.dangerSurface
+    ? theme.colors.danger
     : theme.mode === "dark"
-      ? theme.colors.border
-      : "#E7E9EE";
-  const iconBackground = danger
-    ? theme.colors.dangerSurface
-    : theme.mode === "dark"
-      ? theme.colors.surfaceAccent
-      : "#EEF1FF";
+      ? "#343842"
+      : "#DFE3EA";
 
   return (
     <Pressable
       accessibilityRole="button"
-      className="mb-2.5 flex-row items-center rounded-[20px] px-4 py-3.5"
       onPress={onPress}
       style={({ pressed }) => ({
+        alignItems: "center",
         backgroundColor: rowBackground,
         borderColor: rowBorder,
+        borderRadius: 999,
         borderWidth: 1,
-        elevation: 2,
+        elevation: 3,
+        flexDirection: "row",
+        marginBottom: 10,
+        minHeight: 64,
         opacity: pressed ? 0.72 : 1,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
         shadowColor: theme.colors.shadow,
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: theme.mode === "dark" ? 0.16 : 0.06,
+        shadowOpacity: theme.mode === "dark" ? 0.16 : 0.08,
         shadowRadius: 8,
+        width: "100%",
       })}
     >
       <View
-        className="h-10 w-10 items-center justify-center rounded-full"
-        style={{ backgroundColor: iconBackground }}
+        style={{
+          alignItems: "center",
+          justifyContent: "center",
+          width: 28,
+        }}
       >
-        <NitipIcon color={danger ? theme.colors.danger : theme.colors.primary} name={icon} size={17} />
+        <NitipIcon
+          color={danger ? theme.colors.danger : theme.colors.primary}
+          name={icon}
+          size={18}
+        />
       </View>
 
-      <View className="min-w-0 flex-1 px-3">
-        <Text className="text-[11px] font-black" numberOfLines={1} style={{ color: foreground }}>
+      <View style={{ flex: 1, minWidth: 0, paddingHorizontal: 12 }}>
+        <Text
+          className="text-[11px] font-black"
+          numberOfLines={1}
+          style={{ color: foreground }}
+        >
           {title}
         </Text>
         {subtitle ? (
-          <Text className="mt-0.5 text-[9px] leading-4" numberOfLines={2} style={{ color: theme.colors.textMuted }}>
+          <Text
+            className="mt-0.5 text-[9px] leading-4"
+            numberOfLines={2}
+            style={{ color: theme.colors.textMuted }}
+          >
             {subtitle}
           </Text>
         ) : null}
       </View>
 
       {value ? (
-        <Text className="mr-2 max-w-[92px] text-right text-[9px] font-bold" numberOfLines={1} style={{ color: theme.colors.textMuted }}>
+        <Text
+          className="mr-2 max-w-[92px] text-right text-[9px] font-bold"
+          numberOfLines={1}
+          style={{ color: theme.colors.textMuted }}
+        >
           {value}
         </Text>
       ) : null}
-      <NitipIcon color={danger ? theme.colors.danger : theme.colors.textMuted} name="next" size={14} />
+
+      <NitipIcon
+        color={danger ? theme.colors.danger : theme.colors.textMuted}
+        name="next"
+        size={14}
+      />
     </Pressable>
   );
 }
@@ -135,14 +161,21 @@ export default function ProfileScreen() {
 
   if (!user) return <Redirect href="/login" />;
 
-  const avatarLabel = profile?.displayName || profile?.email || user.displayName || user.email || "Nitip";
+  const avatarLabel =
+    profile?.displayName || profile?.email || user.displayName || user.email || "Nitip";
   const displayName = profile?.displayName || user.displayName || t("home.fallbackName");
   const email = profile?.email || user.email || "";
   const profileTitle = language === "en" ? "Profile" : "Profil";
   const editLabel = language === "en" ? "Edit Profile" : "Edit Profil";
   const orderHistory = language === "en" ? "Order History" : "Riwayat Pesanan";
-  const orderHistoryDescription = language === "en" ? "Track active and completed orders" : "Lihat pesanan aktif dan yang sudah selesai";
-  const addressDescription = language === "en" ? `${addresses.length} saved delivery locations` : `${addresses.length} alamat pengantaran tersimpan`;
+  const orderHistoryDescription =
+    language === "en"
+      ? "Track active and completed orders"
+      : "Lihat pesanan aktif dan yang sudah selesai";
+  const addressDescription =
+    language === "en"
+      ? `${addresses.length} saved delivery locations`
+      : `${addresses.length} alamat pengantaran tersimpan`;
   const languageValue = language === "id" ? t("common.indonesia") : t("common.english");
   const appearanceValue = t(`common.${preference}`);
   const pageBackground = theme.mode === "dark" ? theme.colors.background : "#F2F3F5";
@@ -175,7 +208,10 @@ export default function ProfileScreen() {
           >
             <UserAvatar label={avatarLabel} photoUrl={profile?.photoUrl} size={86} />
           </View>
-          <Text className="mt-4 text-[19px] font-black tracking-[-0.4px]" style={{ color: theme.colors.text }}>
+          <Text
+            className="mt-4 text-[19px] font-black tracking-[-0.4px]"
+            style={{ color: theme.colors.text }}
+          >
             {displayName}
           </Text>
           {email ? (
@@ -196,7 +232,10 @@ export default function ProfileScreen() {
         </View>
 
         {loading ? (
-          <View className="mt-4 items-center rounded-[22px] p-6" style={{ backgroundColor: theme.colors.surfaceRaised }}>
+          <View
+            className="mt-4 items-center rounded-[22px] p-6"
+            style={{ backgroundColor: theme.colors.surfaceRaised }}
+          >
             <ActivityIndicator color={theme.colors.primary} />
             <Text className="mt-3 text-[10px]" style={{ color: theme.colors.textMuted }}>
               {t("profile.loading")}
@@ -287,7 +326,10 @@ export default function ProfileScreen() {
         )}
 
         {error ? (
-          <View className="mt-4 rounded-[18px] p-4" style={{ backgroundColor: theme.colors.dangerSurface }}>
+          <View
+            className="mt-4 rounded-[18px] p-4"
+            style={{ backgroundColor: theme.colors.dangerSurface }}
+          >
             <Text className="text-[10px] leading-4" style={{ color: theme.colors.danger }}>
               {error}
             </Text>
