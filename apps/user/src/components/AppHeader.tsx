@@ -5,7 +5,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { useNitipTheme } from "../hooks/useNitipTheme";
 import { BackButton } from "./BackButton";
 
-const ROOT_TABS_WITH_BACK = new Set(["/orders", "/promos", "/cart", "/profile"]);
+const CLEAN_ROOT_TABS = new Set(["/orders", "/promos", "/cart", "/profile"]);
 
 export function AppHeader({
   title,
@@ -22,12 +22,12 @@ export function AppHeader({
   const theme = useNitipTheme();
   const isDark = theme.mode === "dark";
   const surface = isDark ? theme.colors.surfaceRaised : "#FFFFFF";
-  const shouldShowBack = showBack || ROOT_TABS_WITH_BACK.has(pathname);
+  const cleanRoot = CLEAN_ROOT_TABS.has(pathname);
 
   return (
     <View style={styles.root}>
       <View style={styles.side}>
-        {shouldShowBack ? <BackButton onPress={onBack} /> : null}
+        {!cleanRoot && showBack ? <BackButton onPress={onBack} /> : null}
       </View>
 
       <View style={styles.center}>
@@ -38,7 +38,7 @@ export function AppHeader({
         </View>
       </View>
 
-      <View style={[styles.side, styles.right]}>{right}</View>
+      <View style={[styles.side, styles.right]}>{cleanRoot ? null : right}</View>
     </View>
   );
 }

@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AppHeader } from "../components/AppHeader";
 import { NitipIcon, type NitipIconName } from "../components/NitipIcon";
 import { UserAvatar } from "../components/UserAvatar";
 import { SETTINGS_COPY } from "../constants/settingsCopy";
@@ -177,28 +178,7 @@ export default function ProfileScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.topBar}>
-          <Pressable
-            accessibilityLabel={t("common.back")}
-            accessibilityRole="button"
-            onPress={() => router.replace("/home")}
-            style={[
-              styles.headerButton,
-              {
-                backgroundColor: headerSurface,
-                borderColor: isDark ? theme.colors.border : "#E8E9ED",
-              },
-            ]}
-          >
-            <NitipIcon color={theme.colors.text} name="back" size={17} />
-          </Pressable>
-
-          <View style={[styles.titlePill, { backgroundColor: headerSurface }]}>
-            <Text style={[styles.titlePillText, { color: theme.colors.text }]}>{profileTitle}</Text>
-          </View>
-
-          <View style={styles.headerButtonPlaceholder} />
-        </View>
+        <AppHeader title={profileTitle} showBack={false} />
 
         <View style={styles.profileHero}>
           <View
@@ -227,9 +207,9 @@ export default function ProfileScreen() {
         </View>
 
         {loading ? (
-          <View style={[styles.loadingCard, { backgroundColor: headerSurface }]}>
+          <View style={[styles.loadingCard, { backgroundColor: headerSurface }]}> 
             <ActivityIndicator color={theme.colors.primary} />
-            <Text style={[styles.loadingText, { color: theme.colors.textMuted }]}>
+            <Text style={[styles.loadingText, { color: theme.colors.textMuted }]}> 
               {t("profile.loading")}
             </Text>
           </View>
@@ -303,7 +283,7 @@ export default function ProfileScreen() {
         )}
 
         {error ? (
-          <View style={[styles.errorCard, { backgroundColor: theme.colors.dangerSurface }]}>
+          <View style={[styles.errorCard, { backgroundColor: theme.colors.dangerSurface }]}> 
             <Text style={[styles.errorText, { color: theme.colors.danger }]}>{error}</Text>
           </View>
         ) : null}
@@ -319,35 +299,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 112,
     paddingHorizontal: 20,
-  },
-  topBar: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    minHeight: 44,
-  },
-  headerButton: {
-    alignItems: "center",
-    borderRadius: 20,
-    borderWidth: 1,
-    height: 40,
-    justifyContent: "center",
-    width: 40,
-  },
-  headerButtonPlaceholder: {
-    height: 40,
-    width: 40,
-  },
-  titlePill: {
-    alignItems: "center",
-    borderRadius: 999,
-    justifyContent: "center",
-    minHeight: 34,
-    paddingHorizontal: 18,
-  },
-  titlePillText: {
-    fontSize: 11,
-    fontWeight: "800",
   },
   profileHero: {
     alignItems: "center",
