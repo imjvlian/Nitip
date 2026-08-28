@@ -81,7 +81,31 @@ export default function MerchantOrderDetailScreen() {
         {order.status === "ready_for_pickup" ? <ActionCard title={c.orderDetail.waitingDriver} description={c.orderDetail.waitingDriverDescription}><View className="mt-3 flex-row items-center gap-2"><NitipIcon color={theme.colors.primary} name="clock" size={15} /><Text className="text-[9px] font-extrabold" style={{ color: theme.colors.primary }}>{merchantOrderStatusLabel(order.status, language)}</Text></View></ActionCard> : null}
         {order.status === "cancelled" && order.cancellationReason ? <View className="mt-4 rounded-[18px] p-4" style={{ backgroundColor: theme.colors.dangerSurface }}><Text className="text-[10px] leading-4" style={{ color: theme.colors.danger }}>{c.orderDetail.cancellationReason.replace("{{reason}}", order.cancellationReason)}</Text></View> : null}
 
-        <Section title={c.orderDetail.items}><View className="rounded-[22px] p-4" style={{ backgroundColor: theme.colors.surface }}>{order.items.map((item) => <View className="flex-row justify-between gap-4 py-2" key={item.productId}><Text className="flex-1 text-[10px]" style={{ color: theme.colors.textMuted }}>{item.quantity}× {item.name}</Text><Text className="text-[10px] font-black" style={{ color: theme.colors.text }}>{formatRupiah(item.lineTotal)}</Text></View>)}</View></Section>
+        <Section title={c.orderDetail.items}>
+          <View className="rounded-[22px] p-4" style={{ backgroundColor: theme.colors.surface }}>
+            {order.items.map((item) => (
+              <View className="border-b py-3 last:border-b-0" key={item.productId} style={{ borderBottomColor: theme.colors.border }}>
+                <View className="flex-row justify-between gap-4">
+                  <View className="flex-1">
+                    <Text className="text-[10px] font-black" style={{ color: theme.colors.text }}>
+                      {item.quantity}× {item.name}
+                    </Text>
+                    {(item.addons ?? []).length > 0 ? (
+                      <View className="mt-1.5">
+                        {(item.addons ?? []).map((addon) => (
+                          <Text key={addon.id} className="text-[9px] leading-4" style={{ color: theme.colors.primary }}>
+                            + {addon.name}{addon.price > 0 ? ` · ${formatRupiah(addon.price)}` : ""}
+                          </Text>
+                        ))}
+                      </View>
+                    ) : null}
+                  </View>
+                  <Text className="text-[10px] font-black" style={{ color: theme.colors.text }}>{formatRupiah(item.lineTotal)}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </Section>
 
         <Section title={c.orderDetail.customerDelivery}><View className="rounded-[22px] p-4" style={{ backgroundColor: theme.colors.surface }}><View className="flex-row items-start"><View className="h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surfaceRaised }}><NitipIcon color={theme.colors.primary} name="profile" size={17} /></View><View className="ml-3 flex-1"><Text className="text-[12px] font-black" style={{ color: theme.colors.text }}>{order.address.recipientName}</Text><Text className="mt-1 text-[9px] font-extrabold" style={{ color: theme.colors.primary }}>{order.address.phoneNumber}</Text><Text className="mt-2 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>{order.address.addressLine}</Text>{order.address.notes ? <Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{c.orderDetail.notes.replace("{{notes}}", order.address.notes)}</Text> : null}</View></View></View></Section>
 
