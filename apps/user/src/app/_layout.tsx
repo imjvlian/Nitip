@@ -33,6 +33,12 @@ function AppStack() {
               : null;
   const statusBarStyle =
     pathname === "/home" || resolvedMode === "dark" ? "light" : "dark";
+  const navigationUnderlay =
+    resolvedMode === "dark"
+      ? theme.colors.background
+      : activeTab === "home"
+        ? "#EEF0F4"
+        : theme.colors.surface;
 
   return (
     <View
@@ -71,7 +77,14 @@ function AppStack() {
       </View>
 
       {activeTab ? (
-        <View style={{ alignSelf: "stretch", flexShrink: 0, width: "100%" }}>
+        <View
+          style={{
+            alignSelf: "stretch",
+            backgroundColor: navigationUnderlay,
+            flexShrink: 0,
+            width: "100%",
+          }}
+        >
           <BottomNavigation active={activeTab} root />
         </View>
       ) : null}

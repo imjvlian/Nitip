@@ -80,7 +80,6 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
     flexShrink: 0,
     justifyContent: "space-around",
@@ -137,7 +136,6 @@ export function BottomNavigation({
         styles.bar,
         {
           backgroundColor: theme.colors.surfaceRaised,
-          borderTopColor: theme.colors.border,
           elevation: 16,
           paddingBottom: bottomPadding,
           shadowColor: theme.colors.shadow,
