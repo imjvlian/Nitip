@@ -186,7 +186,7 @@ export default function HomeScreen() {
   const heroSearchBackground = theme.mode === "dark" ? theme.colors.surfaceRaised : "#FFFFFF";
   const heroSearchText = theme.mode === "dark" ? theme.colors.text : "#111318";
   const heroSearchMuted = theme.mode === "dark" ? theme.colors.textMuted : "#8A8F9D";
-  const pageBackground = theme.mode === "dark" ? theme.colors.background : theme.colors.surface;
+  const pageBackground = theme.mode === "dark" ? theme.colors.background : "#EEF0F4";
   const merchantCardWidth = Math.max(174, Math.min(206, Math.floor((width - 38) / 1.82)));
   const featuredPromotion = promotions[0] ?? null;
   const promotionDestination = featuredPromotion?.outletId
