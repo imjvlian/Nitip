@@ -105,6 +105,7 @@ export interface NitipOrderOperations {
 
 export interface NitipOrderTrackingDriver {
   fullName: string;
+  photoUrl: string | null;
   vehicleBrandModel: string;
   vehiclePlate: string;
   latitude: number;

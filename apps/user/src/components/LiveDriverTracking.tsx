@@ -2,7 +2,7 @@ import type { NitipOrderTracking } from "@nitip/domain/commerce";
 import { useNitipLanguage } from "@nitip/i18n";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useAuth } from "../context/AuthContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
@@ -17,6 +17,10 @@ function ageLabel(value: string, language: "id" | "en") {
   return language === "id" ? `${minutes} mnt lalu` : `${minutes}m ago`;
 }
 
+function initials(name: string) {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "D";
+}
+
 export function LiveDriverTracking({ orderId, active }: { orderId: string; active: boolean }) {
   const { language } = useNitipLanguage();
   const { user } = useAuth();
@@ -26,101 +30,51 @@ export function LiveDriverTracking({ orderId, active }: { orderId: string; activ
   const [failed, setFailed] = useState(false);
 
   const c = language === "id" ? {
-    title: "Lacak driver realtime",
-    waiting: "Menunggu posisi driver...",
-    waitingBody: "Posisi akan muncul saat GPS driver mulai mengirim update pengantaran.",
-    live: "LIVE",
-    toward: "Driver sedang menuju lokasimu",
-    open: "Buka live tracking",
-    updated: "Update",
-    retrying: "Tracking sedang mencoba tersambung kembali.",
+    title: "Lacak driver realtime", waiting: "Menunggu posisi driver...", waitingBody: "Posisi akan muncul saat GPS driver mulai mengirim update pengantaran.", live: "LIVE", toward: "Driver sedang menuju lokasimu", open: "Buka live tracking", updated: "Update", retrying: "Tracking sedang mencoba tersambung kembali.",
   } : {
-    title: "Track driver in real time",
-    waiting: "Waiting for driver position...",
-    waitingBody: "The position appears when the driver's GPS starts sending delivery updates.",
-    live: "LIVE",
-    toward: "Driver is heading to your location",
-    open: "Open live tracking",
-    updated: "Updated",
-    retrying: "Tracking is trying to reconnect.",
+    title: "Track driver in real time", waiting: "Waiting for driver position...", waitingBody: "The position appears when the driver's GPS starts sending delivery updates.", live: "LIVE", toward: "Driver is heading to your location", open: "Open live tracking", updated: "Updated", retrying: "Tracking is trying to reconnect.",
   };
 
   useEffect(() => {
     if (!active || !user) {
-      setTracking(null);
-      setLoading(false);
-      setFailed(false);
-      return;
+      setTracking(null); setLoading(false); setFailed(false); return;
     }
-
     let mounted = true;
     const load = async (initial = false) => {
       if (initial) setLoading(true);
       try {
         const next = await getOrderTracking(user, orderId);
         if (!mounted) return;
-        setTracking(next);
-        setFailed(false);
+        setTracking(next); setFailed(false);
       } catch {
         if (mounted) setFailed(true);
       } finally {
         if (mounted && initial) setLoading(false);
       }
     };
-
     void load(true);
     const timer = setInterval(() => { void load(false); }, 5000);
-    return () => {
-      mounted = false;
-      clearInterval(timer);
-    };
+    return () => { mounted = false; clearInterval(timer); };
   }, [active, orderId, user]);
 
   if (!active) return null;
+  const driver = tracking?.driver ?? null;
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={() => router.push({ pathname: "/tracking/[id]", params: { id: orderId } })}
-      style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-    >
+    <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: "/tracking/[id]", params: { id: orderId } })} style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
       <View style={[styles.icon, { backgroundColor: theme.colors.surfaceAccent }]}>
-        <NitipIcon color={theme.colors.primary} name="location" size={19} />
+        {driver?.photoUrl ? <Image source={{ uri: driver.photoUrl }} style={styles.avatar} /> : driver ? <Text style={[styles.initials, { color: theme.colors.primary }]}>{initials(driver.fullName)}</Text> : <NitipIcon color={theme.colors.primary} name="location" size={19} />}
       </View>
 
       <View style={styles.copy}>
         <View style={styles.titleRow}>
           <Text style={[styles.title, { color: theme.colors.text }]}>{c.title}</Text>
-          {tracking?.active ? (
-            <View style={[styles.livePill, { backgroundColor: theme.colors.successSurface }]}> 
-              <View style={[styles.liveDot, { backgroundColor: theme.colors.success }]} />
-              <Text style={[styles.liveText, { color: theme.colors.success }]}>{c.live}</Text>
-            </View>
-          ) : null}
+          {tracking?.active ? <View style={[styles.livePill, { backgroundColor: theme.colors.successSurface }]}><View style={[styles.liveDot, { backgroundColor: theme.colors.success }]} /><Text style={[styles.liveText, { color: theme.colors.success }]}>{c.live}</Text></View> : null}
         </View>
 
-        {loading && !tracking ? (
-          <View style={styles.loadingRow}>
-            <ActivityIndicator color={theme.colors.primary} size="small" />
-            <Text style={[styles.body, { color: theme.colors.textMuted }]}>{c.waiting}</Text>
-          </View>
-        ) : tracking?.driver ? (
-          <>
-            <Text style={[styles.body, { color: theme.colors.textMuted }]}>{c.toward}</Text>
-            <Text style={[styles.driver, { color: theme.colors.text }]}>{tracking.driver.fullName} · {tracking.driver.vehiclePlate}</Text>
-            <Text style={[styles.updated, { color: theme.colors.textMuted }]}>{c.updated} {ageLabel(tracking.driver.locationUpdatedAt, language)}</Text>
-          </>
-        ) : (
-          <>
-            <Text style={[styles.body, { color: theme.colors.textMuted }]}>{failed ? c.retrying : c.waiting}</Text>
-            <Text style={[styles.updated, { color: theme.colors.textMuted }]}>{c.waitingBody}</Text>
-          </>
-        )}
+        {loading && !tracking ? <View style={styles.loadingRow}><ActivityIndicator color={theme.colors.primary} size="small" /><Text style={[styles.body, { color: theme.colors.textMuted }]}>{c.waiting}</Text></View> : driver ? <><Text style={[styles.body, { color: theme.colors.textMuted }]}>{c.toward}</Text><Text style={[styles.driver, { color: theme.colors.text }]}>{driver.fullName} · {driver.vehiclePlate}</Text><Text style={[styles.updated, { color: theme.colors.textMuted }]}>{c.updated} {ageLabel(driver.locationUpdatedAt, language)}</Text></> : <><Text style={[styles.body, { color: theme.colors.textMuted }]}>{failed ? c.retrying : c.waiting}</Text><Text style={[styles.updated, { color: theme.colors.textMuted }]}>{c.waitingBody}</Text></>}
 
-        <View style={styles.openRow}>
-          <Text style={[styles.openText, { color: theme.colors.primary }]}>{c.open}</Text>
-          <NitipIcon color={theme.colors.primary} name="next" size={14} />
-        </View>
+        <View style={styles.openRow}><Text style={[styles.openText, { color: theme.colors.primary }]}>{c.open}</Text><NitipIcon color={theme.colors.primary} name="next" size={14} /></View>
       </View>
     </Pressable>
   );
@@ -128,7 +82,9 @@ export function LiveDriverTracking({ orderId, active }: { orderId: string; activ
 
 const styles = StyleSheet.create({
   card: { alignItems: "flex-start", borderRadius: 20, borderWidth: 1, flexDirection: "row", marginTop: 14, padding: 14 },
-  icon: { alignItems: "center", borderRadius: 22, height: 44, justifyContent: "center", width: 44 },
+  icon: { alignItems: "center", borderRadius: 22, height: 44, justifyContent: "center", overflow: "hidden", width: 44 },
+  avatar: { height: "100%", width: "100%" },
+  initials: { fontSize: 12, fontWeight: "900" },
   copy: { flex: 1, paddingLeft: 12 },
   titleRow: { alignItems: "center", flexDirection: "row" },
   title: { flex: 1, fontSize: 11, fontWeight: "900" },

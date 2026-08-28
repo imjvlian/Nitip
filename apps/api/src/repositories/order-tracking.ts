@@ -1,6 +1,5 @@
 import type { OrderStatus } from "@nitip/domain";
 import type { NitipOrderAddressSnapshot, NitipOrderTracking } from "@nitip/domain/commerce";
-import type { Collection } from "mongodb";
 import { ObjectId } from "mongodb";
 
 import { getMongoDb } from "../lib/mongodb.js";
@@ -13,6 +12,7 @@ interface OrderDocument {
 }
 
 interface DriverDocument {
+  ownerFirebaseUid: string;
   fullName: string;
   vehicleBrandModel: string;
   vehiclePlate: string;
@@ -20,6 +20,11 @@ interface DriverDocument {
   longitude: number | null;
   locationAccuracyMeters: number | null;
   locationUpdatedAt: Date | null;
+}
+
+interface UserDocument {
+  firebaseUid: string;
+  photoUrl: string | null;
 }
 
 function parseObjectId(value: string) {
@@ -49,35 +54,26 @@ export async function getCustomerOrderTracking(
   };
 
   if (order.status !== "on_delivery" || !order.driverId) {
-    return {
-      status: order.status,
-      active: false,
-      driver: null,
-      destination,
-    };
+    return { status: order.status, active: false, driver: null, destination };
   }
 
   const drivers = db.collection<DriverDocument>("drivers");
   const driver = await drivers.findOne({ _id: order.driverId });
-  if (
-    !driver ||
-    driver.latitude == null ||
-    driver.longitude == null ||
-    !driver.locationUpdatedAt
-  ) {
-    return {
-      status: order.status,
-      active: false,
-      driver: null,
-      destination,
-    };
+  if (!driver || driver.latitude == null || driver.longitude == null || !driver.locationUpdatedAt) {
+    return { status: order.status, active: false, driver: null, destination };
   }
+
+  const account = await db.collection<UserDocument>("users").findOne(
+    { firebaseUid: driver.ownerFirebaseUid },
+    { projection: { firebaseUid: 1, photoUrl: 1 } },
+  );
 
   return {
     status: order.status,
     active: true,
     driver: {
       fullName: driver.fullName,
+      photoUrl: account?.photoUrl ?? null,
       vehicleBrandModel: driver.vehicleBrandModel,
       vehiclePlate: driver.vehiclePlate,
       latitude: driver.latitude,
