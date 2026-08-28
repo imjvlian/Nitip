@@ -358,10 +358,9 @@ export default function HomeScreen() {
   const pageBackground = theme.mode === "dark" ? theme.colors.background : "#F2F3F5";
   const cardWidth = Math.max(194, Math.min(220, Math.floor((width - 44) / 1.65)));
   const cardBorder = theme.mode === "dark" ? theme.colors.border : "#D9DEE7";
-  const activeFilterBackground = theme.mode === "dark" ? "#B8C2FF" : "#DDE4FF";
-  const activeFilterBorder = theme.mode === "dark" ? "#8092FF" : "#2448F5";
-  const activeFilterText = theme.mode === "dark" ? "#111318" : "#1836C9";
-  const activeFilterIcon = "#2448F5";
+  const activeFilterBackground = theme.colors.surfaceAccent;
+  const activeFilterBorder = theme.colors.primary;
+  const activeFilterText = theme.colors.primaryStrong;
 
   const featuredPromotion = promotions[0] ?? null;
   const promotionDestination = featuredPromotion?.outletId
@@ -658,37 +657,36 @@ export default function HomeScreen() {
                 <Pressable
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
-                  className="min-h-[54px] flex-row items-center rounded-[18px] px-4"
+                  className="min-h-[42px] flex-row items-center rounded-full py-1.5 pl-1.5 pr-3.5"
                   key={category.key}
                   onPress={() => setSelectedCategory(category.key)}
                   style={({ pressed }) => ({
                     backgroundColor: selected ? activeFilterBackground : theme.colors.surfaceRaised,
                     borderColor: selected ? activeFilterBorder : theme.colors.border,
-                    borderWidth: selected ? 1.5 : 1,
-                    elevation: selected ? 7 : 1,
-                    marginRight: index === categoryFilters.length - 1 ? 0 : 10,
-                    minWidth: 116,
-                    opacity: pressed ? 0.74 : 1,
-                    shadowColor: selected ? activeFilterBorder : theme.colors.shadow,
-                    shadowOffset: { width: 0, height: selected ? 4 : 1 },
-                    shadowOpacity: selected ? (theme.mode === "dark" ? 0.32 : 0.2) : 0.03,
-                    shadowRadius: selected ? 10 : 3,
+                    borderWidth: 1,
+                    elevation: selected ? 6 : 2,
+                    marginRight: index === categoryFilters.length - 1 ? 0 : 8,
+                    opacity: pressed ? 0.76 : 1,
+                    shadowColor: selected ? theme.colors.primary : theme.colors.shadow,
+                    shadowOffset: { width: 0, height: selected ? 4 : 2 },
+                    shadowOpacity: selected ? (theme.mode === "dark" ? 0.28 : 0.18) : 0.05,
+                    shadowRadius: selected ? 9 : 5,
                   })}
                 >
                   <View
-                    className="h-8 w-8 items-center justify-center rounded-[11px]"
+                    className="h-8 w-8 items-center justify-center rounded-full"
                     style={{
-                      backgroundColor: selected ? "#FFFFFF" : theme.colors.surfaceAccent,
+                      backgroundColor: selected ? theme.colors.primary : theme.colors.surfaceAccent,
                     }}
                   >
                     <NitipIcon
-                      color={selected ? activeFilterIcon : theme.colors.primary}
+                      color={selected ? theme.colors.onPrimary : theme.colors.primary}
                       name={category.icon}
-                      size={15}
+                      size={14}
                     />
                   </View>
                   <Text
-                    className="ml-2.5 text-[12px] font-black"
+                    className="ml-2.5 text-[11px] font-black"
                     numberOfLines={1}
                     style={{ color: selected ? activeFilterText : theme.colors.text }}
                   >
