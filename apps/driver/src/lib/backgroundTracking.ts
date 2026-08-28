@@ -10,13 +10,22 @@ const apiBaseUrl = (process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/+$/, "");
 type LocationTaskData = { locations?: Location.LocationObject[] };
 
 async function waitForUser(timeoutMs = 5000): Promise<User | null> {
-  if (firebaseAuth?.currentUser) return firebaseAuth.currentUser;
-  if (!firebaseAuth) return null;
+  const auth = firebaseAuth;
+  if (!auth) return null;
+  if (auth.currentUser) return auth.currentUser;
   return new Promise((resolve) => {
     let settled = false;
-    const finish = (user: User | null) => { if (settled) return; settled = true; clearTimeout(timer); unsubscribe(); resolve(user); };
-    const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => finish(user));
-    const timer = setTimeout(() => finish(firebaseAuth.currentUser), timeoutMs);
+    let unsubscribe = () => undefined;
+    let timer: ReturnType<typeof setTimeout>;
+    const finish = (user: User | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      unsubscribe();
+      resolve(user);
+    };
+    unsubscribe = onAuthStateChanged(auth, (user) => finish(user));
+    timer = setTimeout(() => finish(auth.currentUser), timeoutMs);
   });
 }
 
@@ -45,15 +54,12 @@ export type BackgroundTrackingResult = "started" | "already_started" | "permissi
 export async function startDriverBackgroundTracking(): Promise<BackgroundTrackingResult> {
   if (!(await TaskManager.isAvailableAsync())) return "unavailable";
   if (await Location.hasStartedLocationUpdatesAsync(DRIVER_BACKGROUND_LOCATION_TASK)) return "already_started";
-
   let foreground = await Location.getForegroundPermissionsAsync();
   if (foreground.status !== "granted") foreground = await Location.requestForegroundPermissionsAsync();
   if (foreground.status !== "granted") return "permission_denied";
-
   let background = await Location.getBackgroundPermissionsAsync();
   if (background.status !== "granted") background = await Location.requestBackgroundPermissionsAsync();
   if (background.status !== "granted") return "permission_denied";
-
   await Location.startLocationUpdatesAsync(DRIVER_BACKGROUND_LOCATION_TASK, {
     accuracy: Location.Accuracy.High,
     distanceInterval: 8,
@@ -71,9 +77,7 @@ export async function startDriverBackgroundTracking(): Promise<BackgroundTrackin
 
 export async function stopDriverBackgroundTracking() {
   if (!(await TaskManager.isAvailableAsync())) return;
-  if (await Location.hasStartedLocationUpdatesAsync(DRIVER_BACKGROUND_LOCATION_TASK)) {
-    await Location.stopLocationUpdatesAsync(DRIVER_BACKGROUND_LOCATION_TASK);
-  }
+  if (await Location.hasStartedLocationUpdatesAsync(DRIVER_BACKGROUND_LOCATION_TASK)) await Location.stopLocationUpdatesAsync(DRIVER_BACKGROUND_LOCATION_TASK);
 }
 
 export async function isDriverBackgroundTrackingActive() {
