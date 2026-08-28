@@ -4,6 +4,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { IntegrationNotConfiguredError } from "../config/env.js";
 import { authenticateRequest } from "../lib/authenticate.js";
 import { applyDriverDeliveryAction } from "../repositories/driver-deliveries.js";
+import { listDriverCompletedOrders } from "../repositories/driver-history.js";
 import { listProximityDriverOffers } from "../repositories/driver-proximity.js";
 import { getDriverProfileByOwner } from "../repositories/drivers.js";
 import {
@@ -98,6 +99,16 @@ export function registerDriverOrderRoutes(app: FastifyInstance) {
       const driver = await resolveDriver(request, reply, true);
       if (!driver) return;
       return { data: await listProximityDriverOffers(driver) };
+    } catch (error) {
+      return routeError(request, reply, error);
+    }
+  });
+
+  app.get("/driver/orders/history", async (request, reply) => {
+    try {
+      const driver = await resolveDriver(request, reply);
+      if (!driver) return;
+      return { data: await listDriverCompletedOrders(driver.id) };
     } catch (error) {
       return routeError(request, reply, error);
     }

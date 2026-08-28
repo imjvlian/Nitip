@@ -24,12 +24,12 @@ export default function DriverSettingsScreen() {
 
   const c = language === "id"
     ? {
-        title: "Pengaturan", heading: "Akun & preferensi.", subtitle: "Kelola profil driver, bahasa, tampilan, lokasi, dan sesi akun.",
-        driver: "Profil driver", driverBody: "Informasi identitas dan kendaraan", language: "Bahasa", languageBody: "Pilih bahasa aplikasi", appearance: "Tampilan", appearanceBody: "System, terang, atau gelap", location: "Lokasi driver", locationBody: "Lokasi diperbarui saat online dan dispatch dimuat", account: "Akun", signOut: "Keluar", signOutBody: "Keluar dari akun driver di perangkat ini", system: "System", light: "Terang", dark: "Gelap", notReady: "Belum ada profil",
+        title: "Pengaturan", heading: "Akun & preferensi.", subtitle: "Kelola profil driver, pendapatan, bahasa, tampilan, lokasi, dan sesi akun.",
+        driver: "Profil driver", driverBody: "Informasi identitas dan kendaraan", earnings: "Pendapatan", earningsBody: "Ringkasan fee dan riwayat perjalanan selesai", language: "Bahasa", languageBody: "Pilih bahasa aplikasi", appearance: "Tampilan", appearanceBody: "System, terang, atau gelap", location: "Lokasi driver", locationBody: "Lokasi diperbarui saat online dan dispatch dimuat", account: "Akun", signOut: "Keluar", signOutBody: "Keluar dari akun driver di perangkat ini", system: "System", light: "Terang", dark: "Gelap", notReady: "Belum ada profil",
       }
     : {
-        title: "Settings", heading: "Account & preferences.", subtitle: "Manage driver profile, language, appearance, location, and account session.",
-        driver: "Driver profile", driverBody: "Identity and vehicle information", language: "Language", languageBody: "Choose app language", appearance: "Appearance", appearanceBody: "System, light, or dark", location: "Driver location", locationBody: "Location refreshes while online and when dispatch loads", account: "Account", signOut: "Sign out", signOutBody: "Sign out of this driver account", system: "System", light: "Light", dark: "Dark", notReady: "No profile yet",
+        title: "Settings", heading: "Account & preferences.", subtitle: "Manage driver profile, earnings, language, appearance, location, and account session.",
+        driver: "Driver profile", driverBody: "Identity and vehicle information", earnings: "Earnings", earningsBody: "Delivery fee summary and completed trip history", language: "Language", languageBody: "Choose app language", appearance: "Appearance", appearanceBody: "System, light, or dark", location: "Driver location", locationBody: "Location refreshes while online and when dispatch loads", account: "Account", signOut: "Sign out", signOutBody: "Sign out of this driver account", system: "System", light: "Light", dark: "Dark", notReady: "No profile yet",
       };
 
   const load = useCallback(async () => {
@@ -83,6 +83,7 @@ export default function DriverSettingsScreen() {
 
             <View style={styles.rows}>
               <SettingsRow icon="vehicle" title={c.driver} description={c.driverBody} value={vehicleValue} onPress={() => router.replace("/home")} />
+              {profile?.status === "approved" ? <SettingsRow icon="earnings" title={c.earnings} description={c.earningsBody} onPress={() => router.push("/earnings")} /> : null}
               <SettingsRow icon="language" title={c.language} description={c.languageBody} value={languageValue} onPress={() => router.push("/language")} />
               <SettingsRow icon="theme" title={c.appearance} description={c.appearanceBody} value={appearance} onPress={() => router.push("/appearance")} />
               <SettingsRow icon="location" title={c.location} description={c.locationBody} value={locationValue} onPress={() => router.replace("/home")} />

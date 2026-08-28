@@ -38,7 +38,6 @@ export interface CreateNitipDriverInput {
 }
 
 export type UpdateNitipDriverInput = Partial<CreateNitipDriverInput>;
-
 export type DriverReviewDecision = "approve" | "reject";
 
 export interface ReviewNitipDriverInput {
@@ -112,4 +111,11 @@ export interface NitipDriverOrder extends Omit<NitipDriverOffer, "status"> {
   destination: NitipDriverDestination;
   items: NitipDriverOrderItem[];
   assignedAt: string;
+}
+
+export interface NitipDriverEarningsSummary {
+  completedTrips: number;
+  totalEarnings: number;
+  todayTrips: number;
+  todayEarnings: number;
 }
