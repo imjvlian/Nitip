@@ -12,7 +12,11 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Nitip Driver memerlukan lokasi untuk memperbarui posisi saat aplikasi digunakan."
+          "locationWhenInUsePermission": "Nitip Driver memerlukan lokasi untuk navigasi dan membagikan posisi saat pengantaran.",
+          "locationAlwaysAndWhenInUsePermission": "Nitip Driver memerlukan akses lokasi di background hanya selama pengantaran aktif agar customer dapat melacak perjalanan.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ]
     ],
