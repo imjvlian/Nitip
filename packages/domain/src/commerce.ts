@@ -3,6 +3,7 @@ import type { AddressLabel, OrderStatus } from "./index.js";
 export interface NitipCartLineInput {
   productId: string;
   quantity: number;
+  addonIds?: string[];
 }
 
 export interface NitipCheckoutRequest {
@@ -13,6 +14,12 @@ export interface NitipCheckoutRequest {
 
 export type DeliveryDistanceMethod = "haversine" | "minimum_fare_fallback";
 
+export interface NitipCheckoutAddon {
+  id: string;
+  name: string;
+  price: number;
+}
+
 export interface NitipCheckoutLine {
   productId: string;
   name: string;
@@ -20,6 +27,7 @@ export interface NitipCheckoutLine {
   unitPrice: number;
   quantity: number;
   lineTotal: number;
+  addons?: NitipCheckoutAddon[];
 }
 
 export interface NitipOrderAddressSnapshot {
