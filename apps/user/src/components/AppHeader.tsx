@@ -1,8 +1,11 @@
 import type { ReactNode } from "react";
+import { usePathname } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 
 import { useNitipTheme } from "../hooks/useNitipTheme";
 import { BackButton } from "./BackButton";
+
+const ROOT_TABS_WITH_BACK = new Set(["/orders", "/promos", "/cart", "/profile"]);
 
 export function AppHeader({
   title,
@@ -15,14 +18,16 @@ export function AppHeader({
   onBack?: () => void;
   right?: ReactNode;
 }) {
+  const pathname = usePathname();
   const theme = useNitipTheme();
   const isDark = theme.mode === "dark";
   const surface = isDark ? theme.colors.surfaceRaised : "#FFFFFF";
+  const shouldShowBack = showBack || ROOT_TABS_WITH_BACK.has(pathname);
 
   return (
     <View style={styles.root}>
       <View style={styles.side}>
-        {showBack ? <BackButton onPress={onBack} /> : null}
+        {shouldShowBack ? <BackButton onPress={onBack} /> : null}
       </View>
 
       <View style={styles.center}>

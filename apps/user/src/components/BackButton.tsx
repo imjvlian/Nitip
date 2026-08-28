@@ -1,10 +1,12 @@
 import { useNitipTranslation } from "@nitip/i18n";
-import { router } from "expo-router";
+import { router, usePathname } from "expo-router";
 import type { StyleProp, ViewStyle } from "react-native";
 import { Pressable, StyleSheet } from "react-native";
 
 import { useNitipTheme } from "../hooks/useNitipTheme";
 import { NitipIcon } from "./NitipIcon";
+
+const ROOT_TAB_PATHS = new Set(["/orders", "/promos", "/cart", "/profile"]);
 
 export function BackButton({
   onPress,
@@ -14,14 +16,29 @@ export function BackButton({
   style?: StyleProp<ViewStyle>;
 }) {
   const { t } = useNitipTranslation();
+  const pathname = usePathname();
   const theme = useNitipTheme();
   const isDark = theme.mode === "dark";
+
+  function handlePress() {
+    if (onPress) {
+      onPress();
+      return;
+    }
+
+    if (ROOT_TAB_PATHS.has(pathname)) {
+      router.replace("/home");
+      return;
+    }
+
+    router.back();
+  }
 
   return (
     <Pressable
       accessibilityLabel={t("common.back")}
       accessibilityRole="button"
-      onPress={onPress ?? (() => router.back())}
+      onPress={handlePress}
       style={[
         styles.button,
         {
