@@ -54,33 +54,29 @@ const tabs: {
 
 const styles = StyleSheet.create({
   shell: {
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 4,
-    paddingTop: 4,
+    paddingHorizontal: 14,
+    paddingTop: 6,
   },
   dock: {
-    alignItems: "stretch",
+    alignItems: "center",
+    borderRadius: 22,
+    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
-    minHeight: 54,
+    minHeight: 58,
+    overflow: "visible",
     width: "100%",
   },
   tab: {
     alignItems: "center",
-    flexBasis: 0,
-    flexGrow: 1,
-    flexShrink: 1,
     justifyContent: "center",
-    minHeight: 50,
-    minWidth: 0,
-    paddingHorizontal: 1,
+    minHeight: 52,
+    width: "20%",
   },
   iconSlot: {
     alignItems: "center",
-    height: 20,
+    height: 21,
     justifyContent: "center",
-    width: 26,
+    width: 28,
   },
   label: {
     fontSize: 8,
@@ -108,18 +104,25 @@ export function BottomNavigation({ active }: { active: RootTab }) {
       style={[
         styles.shell,
         {
-          backgroundColor: theme.colors.surfaceRaised,
-          borderTopColor: theme.colors.border,
-          elevation: 8,
-          paddingBottom: Math.max(insets.bottom, 6),
-          shadowColor: theme.colors.shadow,
-          shadowOffset: { width: 0, height: -3 },
-          shadowOpacity: theme.mode === "dark" ? 0.22 : 0.06,
-          shadowRadius: 12,
+          backgroundColor: theme.colors.background,
+          paddingBottom: Math.max(insets.bottom, 8),
         },
       ]}
     >
-      <View style={styles.dock}>
+      <View
+        style={[
+          styles.dock,
+          {
+            backgroundColor: theme.colors.surfaceRaised,
+            borderColor: theme.colors.border,
+            elevation: 10,
+            shadowColor: theme.colors.shadow,
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: theme.mode === "dark" ? 0.24 : 0.1,
+            shadowRadius: 12,
+          },
+        ]}
+      >
         {tabs.map((tab) => {
           const selected = tab.key === active;
           const label = labels[language][tab.key];
@@ -139,7 +142,7 @@ export function BottomNavigation({ active }: { active: RootTab }) {
                 <NitipIcon
                   color={selected ? theme.colors.text : theme.colors.textMuted}
                   name={tab.icon}
-                  size={17}
+                  size={18}
                 />
               </View>
               <Text

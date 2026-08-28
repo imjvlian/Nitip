@@ -194,10 +194,7 @@ export default function HomeScreen() {
       >
         <View
           className="rounded-b-[26px] px-4 pb-5"
-          style={{
-            backgroundColor: heroBackground,
-            paddingTop: insets.top + 10,
-          }}
+          style={{ backgroundColor: heroBackground, paddingTop: insets.top + 10 }}
         >
           <View className="flex-row items-center gap-2.5">
             <Pressable
@@ -454,80 +451,110 @@ export default function HomeScreen() {
           </View>
         ) : (
           <ScrollView
-            contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 10, paddingRight: 24 }}
+            contentContainerStyle={{
+              paddingBottom: 12,
+              paddingHorizontal: 16,
+              paddingRight: 24,
+              paddingTop: 12,
+            }}
             horizontal
             showsHorizontalScrollIndicator={false}
           >
             {visibleCatalog.map((outlet, index) => (
-              <Pressable
-                accessibilityRole="button"
+              <View
                 key={outlet.id}
-                onPress={() => router.push(`/outlet/${outlet.id}`)}
-                style={({ pressed }) => ({
+                style={{
                   backgroundColor: theme.colors.surfaceRaised,
-                  borderRadius: 16,
-                  marginRight: index === visibleCatalog.length - 1 ? 0 : 10,
-                  opacity: pressed ? 0.86 : 1,
-                  overflow: "hidden",
+                  borderColor: theme.colors.border,
+                  borderRadius: 18,
+                  borderWidth: 1,
+                  elevation: 5,
+                  marginRight: index === visibleCatalog.length - 1 ? 0 : 12,
+                  shadowColor: theme.colors.shadow,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: theme.mode === "dark" ? 0.2 : 0.1,
+                  shadowRadius: 9,
                   width: merchantCardWidth,
-                })}
+                }}
               >
-                <View className="h-[100px] w-full" style={{ backgroundColor: theme.colors.surfaceAccent }}>
-                  {outlet.imageUrl ? (
-                    <Image className="h-full w-full" resizeMode="cover" source={{ uri: outlet.imageUrl }} />
-                  ) : (
-                    <View className="h-full w-full items-center justify-center">
-                      <Text className="text-[34px] font-black" style={{ color: theme.colors.primary }}>
-                        {outlet.businessName.slice(0, 1).toUpperCase()}
-                      </Text>
-                    </View>
-                  )}
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => router.push(`/outlet/${outlet.id}`)}
+                  style={({ pressed }) => ({
+                    borderRadius: 18,
+                    opacity: pressed ? 0.86 : 1,
+                    overflow: "hidden",
+                  })}
+                >
                   <View
-                    className="absolute left-2 top-2 flex-row items-center rounded-full px-2 py-1"
-                    style={{
-                      backgroundColor: outlet.acceptingOrders
-                        ? theme.colors.successSurface
-                        : theme.colors.surfaceRaised,
-                    }}
+                    className="h-[104px] w-full overflow-hidden rounded-t-[18px]"
+                    style={{ backgroundColor: theme.colors.surfaceAccent }}
                   >
+                    {outlet.imageUrl ? (
+                      <Image
+                        className="h-full w-full rounded-t-[18px]"
+                        resizeMode="cover"
+                        source={{ uri: outlet.imageUrl }}
+                        style={{
+                          backgroundColor: theme.colors.surfaceAccent,
+                          borderTopLeftRadius: 18,
+                          borderTopRightRadius: 18,
+                        }}
+                      />
+                    ) : (
+                      <View className="h-full w-full items-center justify-center">
+                        <Text className="text-[34px] font-black" style={{ color: theme.colors.primary }}>
+                          {outlet.businessName.slice(0, 1).toUpperCase()}
+                        </Text>
+                      </View>
+                    )}
                     <View
-                      className="mr-1 h-1.5 w-1.5 rounded-full"
+                      className="absolute left-2 top-2 flex-row items-center rounded-full px-2 py-1"
                       style={{
                         backgroundColor: outlet.acceptingOrders
-                          ? theme.colors.success
-                          : theme.colors.textMuted,
-                      }}
-                    />
-                    <Text
-                      className="text-[7px] font-black uppercase"
-                      style={{
-                        color: outlet.acceptingOrders
-                          ? theme.colors.success
-                          : theme.colors.textMuted,
+                          ? theme.colors.successSurface
+                          : theme.colors.surfaceRaised,
                       }}
                     >
-                      {outlet.acceptingOrders ? t("common.open") : t("common.closed")}
-                    </Text>
+                      <View
+                        className="mr-1 h-1.5 w-1.5 rounded-full"
+                        style={{
+                          backgroundColor: outlet.acceptingOrders
+                            ? theme.colors.success
+                            : theme.colors.textMuted,
+                        }}
+                      />
+                      <Text
+                        className="text-[7px] font-black uppercase"
+                        style={{
+                          color: outlet.acceptingOrders
+                            ? theme.colors.success
+                            : theme.colors.textMuted,
+                        }}
+                      >
+                        {outlet.acceptingOrders ? t("common.open") : t("common.closed")}
+                      </Text>
+                    </View>
                   </View>
-                </View>
 
-                <View className="p-3">
-                  <Text className="text-[12px] font-black leading-4" numberOfLines={2} style={{ color: theme.colors.text }}>
-                    {outlet.businessName}
-                  </Text>
-                  <Text className="mt-1 text-[9px]" numberOfLines={1} style={{ color: theme.colors.textMuted }}>
-                    {outlet.name} · {t("home.productCount", { count: outlet.productCount })}
-                  </Text>
-                  <View className="mt-2 flex-row items-center justify-between gap-2">
-                    <Text className="flex-1 text-[9px] font-black" numberOfLines={1} style={{ color: theme.colors.primary }}>
-                      {outlet.minPrice == null
-                        ? t("home.menuSoon")
-                        : t("home.fromPrice", { price: formatRupiah(outlet.minPrice) })}
+                  <View className="p-3.5">
+                    <Text className="text-[12px] font-black leading-4" numberOfLines={2} style={{ color: theme.colors.text }}>
+                      {outlet.businessName}
                     </Text>
-                    <NitipIcon color={theme.colors.textMuted} name="next" size={12} />
+                    <Text className="mt-1 text-[9px]" numberOfLines={1} style={{ color: theme.colors.textMuted }}>
+                      {outlet.name} · {t("home.productCount", { count: outlet.productCount })}
+                    </Text>
+                    <View className="mt-2.5 flex-row items-center justify-between gap-2">
+                      <Text className="flex-1 text-[9px] font-black" numberOfLines={1} style={{ color: theme.colors.primary }}>
+                        {outlet.minPrice == null
+                          ? t("home.menuSoon")
+                          : t("home.fromPrice", { price: formatRupiah(outlet.minPrice) })}
+                      </Text>
+                      <NitipIcon color={theme.colors.textMuted} name="next" size={12} />
+                    </View>
                   </View>
-                </View>
-              </Pressable>
+                </Pressable>
+              </View>
             ))}
           </ScrollView>
         )}
