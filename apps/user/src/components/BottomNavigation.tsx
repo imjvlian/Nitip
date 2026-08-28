@@ -2,8 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useNitipLanguage } from "@nitip/i18n";
 import { router } from "expo-router";
 import { createContext, useContext, type ComponentProps, type ReactNode } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useNitipTheme } from "../hooks/useNitipTheme";
 
@@ -124,11 +123,8 @@ export function BottomNavigation({
   const suppressed = useContext(SuppressBottomNavigationContext);
   const { language } = useNitipLanguage();
   const theme = useNitipTheme();
-  const insets = useSafeAreaInsets();
 
   if (!root || suppressed) return null;
-
-  const bottomPadding = Platform.OS === "ios" ? Math.max(insets.bottom, 10) : 10;
 
   return (
     <View
@@ -137,7 +133,7 @@ export function BottomNavigation({
         {
           backgroundColor: theme.colors.surfaceRaised,
           elevation: 16,
-          paddingBottom: bottomPadding,
+          paddingBottom: 10,
           shadowColor: theme.colors.shadow,
           shadowOffset: { width: 0, height: -5 },
           shadowOpacity: theme.mode === "dark" ? 0.3 : 0.14,
