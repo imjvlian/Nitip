@@ -646,7 +646,12 @@ export default function HomeScreen() {
           </View>
 
           <ScrollView
-            contentContainerStyle={{ paddingHorizontal: 16, paddingRight: 26, paddingTop: 12 }}
+            contentContainerStyle={{
+              paddingBottom: 8,
+              paddingHorizontal: 16,
+              paddingRight: 26,
+              paddingTop: 12,
+            }}
             horizontal
             showsHorizontalScrollIndicator={false}
           >
@@ -760,7 +765,12 @@ export default function HomeScreen() {
                     >
                       <Pressable
                         accessibilityRole="button"
-                        onPress={() => router.push(`/outlet/${item.outlet.id}`)}
+                        onPress={() =>
+                          router.push({
+                            pathname: "/product/[id]",
+                            params: { id: item.product.id, outletId: item.outlet.id },
+                          })
+                        }
                         style={({ pressed }) => ({
                           borderRadius: 22,
                           opacity: pressed ? 0.88 : item.product.isAvailable ? 1 : 0.62,
