@@ -192,7 +192,7 @@ export function BottomNavigation({
         <View
           pointerEvents="none"
           style={{
-            backgroundColor: "transparent",
+            backgroundColor: theme.colors.surfaceRaised,
             height: insets.bottom,
           }}
         />
