@@ -1,13 +1,7 @@
 import { useNitipLanguage } from "@nitip/i18n";
 import { router } from "expo-router";
 import { createContext, useContext, type ReactNode } from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
-} from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useNitipTheme } from "../hooks/useNitipTheme";
@@ -56,18 +50,21 @@ const tabs: {
 
 const styles = StyleSheet.create({
   bar: {
-    alignItems: "flex-start",
-    alignSelf: "stretch",
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
+    alignItems: "center",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
-    paddingTop: 7,
+    paddingHorizontal: 8,
+    paddingTop: 8,
+    width: "100%",
   },
   tab: {
     alignItems: "center",
-    height: 52,
+    flex: 1,
     justifyContent: "center",
+    minWidth: 0,
+    paddingVertical: 2,
   },
   iconSlot: {
     alignItems: "center",
@@ -79,7 +76,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "700",
     lineHeight: 12,
-    marginTop: 2,
+    marginTop: 3,
     textAlign: "center",
   },
   selectedLabel: {
@@ -95,11 +92,8 @@ export function BottomNavigation({ active }: { active: RootTab }) {
   const { language } = useNitipLanguage();
   const theme = useNitipTheme();
   const insets = useSafeAreaInsets();
-  const { width: screenWidth } = useWindowDimensions();
 
   if (suppressed) return null;
-
-  const tabWidth = screenWidth / tabs.length;
 
   return (
     <View
@@ -108,13 +102,12 @@ export function BottomNavigation({ active }: { active: RootTab }) {
         {
           backgroundColor: theme.colors.surfaceRaised,
           borderTopColor: theme.colors.border,
-          elevation: 12,
-          paddingBottom: Math.max(insets.bottom, 7),
+          elevation: 10,
+          paddingBottom: Math.max(insets.bottom, 8),
           shadowColor: theme.colors.shadow,
-          shadowOffset: { width: 0, height: -3 },
-          shadowOpacity: theme.mode === "dark" ? 0.24 : 0.09,
-          shadowRadius: 12,
-          width: screenWidth,
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: theme.mode === "dark" ? 0.22 : 0.08,
+          shadowRadius: 10,
         },
       ]}
     >
@@ -132,11 +125,7 @@ export function BottomNavigation({ active }: { active: RootTab }) {
             onPress={() => {
               if (!selected) router.replace(tab.href);
             }}
-            style={({ pressed }) => [
-              styles.tab,
-              { width: tabWidth },
-              pressed && styles.pressed,
-            ]}
+            style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
           >
             <View style={styles.iconSlot}>
               <NitipIcon color={color} name={tab.icon} size={18} />
@@ -146,7 +135,7 @@ export function BottomNavigation({ active }: { active: RootTab }) {
               style={[
                 styles.label,
                 selected && styles.selectedLabel,
-                { color, maxWidth: tabWidth - 8 },
+                { color },
               ]}
             >
               {label}
