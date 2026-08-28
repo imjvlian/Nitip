@@ -6,6 +6,7 @@ import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { AlertPopupProvider } from "../components/AlertPopupProvider";
 import { BottomNavigation, type RootTab } from "../components/BottomNavigation";
 import { LiveTrackingShortcut } from "../components/LiveTrackingShortcut";
 import { AuthProvider } from "../context/AuthContext";
@@ -74,9 +75,11 @@ export default function RootLayout() {
     <NitipI18nProvider>
       <SafeAreaProvider>
         <DriverThemeProvider>
-          <AuthProvider>
-            <AppStack />
-          </AuthProvider>
+          <AlertPopupProvider>
+            <AuthProvider>
+              <AppStack />
+            </AuthProvider>
+          </AlertPopupProvider>
         </DriverThemeProvider>
       </SafeAreaProvider>
     </NitipI18nProvider>

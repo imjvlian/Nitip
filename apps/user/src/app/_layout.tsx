@@ -6,6 +6,7 @@ import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { AlertPopupProvider } from "../components/AlertPopupProvider";
 import {
   BottomNavigation,
   BottomNavigationSuppressionProvider,
@@ -110,11 +111,13 @@ export default function RootLayout() {
     <NitipI18nProvider>
       <SafeAreaProvider>
         <UserThemeProvider>
-          <AuthProvider>
-            <CartProvider>
-              <AppStack />
-            </CartProvider>
-          </AuthProvider>
+          <AlertPopupProvider>
+            <AuthProvider>
+              <CartProvider>
+                <AppStack />
+              </CartProvider>
+            </AuthProvider>
+          </AlertPopupProvider>
         </UserThemeProvider>
       </SafeAreaProvider>
     </NitipI18nProvider>

@@ -6,6 +6,7 @@ import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { AlertPopupProvider } from "../components/AlertPopupProvider";
 import { BottomNavigation, type RootTab } from "../components/BottomNavigation";
 import { AuthProvider } from "../context/AuthContext";
 import { MerchantThemeProvider, useMerchantTheme } from "../context/ThemeContext";
@@ -69,9 +70,11 @@ export default function RootLayout() {
     <NitipI18nProvider>
       <SafeAreaProvider>
         <MerchantThemeProvider>
-          <AuthProvider>
-            <AppStack />
-          </AuthProvider>
+          <AlertPopupProvider>
+            <AuthProvider>
+              <AppStack />
+            </AuthProvider>
+          </AlertPopupProvider>
         </MerchantThemeProvider>
       </SafeAreaProvider>
     </NitipI18nProvider>
