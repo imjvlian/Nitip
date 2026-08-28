@@ -1,77 +1,52 @@
 import { formatRupiah } from "@nitip/domain";
-import type {
-  DriverDeliveryAction,
-  NitipDriverOrder,
-} from "@nitip/domain/driver";
-import { Redirect, router, useLocalSearchParams } from "expo-router";
+import type { DriverDeliveryAction, NitipDriverOrder } from "@nitip/domain/driver";
+import { useNitipLanguage } from "@nitip/i18n";
+import { Redirect, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AppHeader } from "../../components/AppHeader";
+import { NitipIcon } from "../../components/NitipIcon";
 import RouteMap from "../../components/RouteMap";
 import { useAuth } from "../../context/AuthContext";
+import { useNitipTheme } from "../../hooks/useNitipTheme";
 import { actOnDriverOrder, getDriverOrder } from "../../lib/api";
 
-function statusLabel(status: NitipDriverOrder["status"]) {
-  switch (status) {
-    case "driver_assigned": return "ORDER DITUGASKAN";
-    case "picked_up": return "SUDAH DIAMBIL";
-    case "on_delivery": return "SEDANG DIANTAR";
-    case "delivered": return "SELESAI";
-  }
-}
-
-function nextAction(status: NitipDriverOrder["status"]): {
-  action: DriverDeliveryAction;
-  label: string;
-  title: string;
-  message: string;
-  helper: string;
-} | null {
-  switch (status) {
-    case "driver_assigned":
-      return {
-        action: "confirm_pickup",
-        label: "Pesanan sudah diambil",
-        title: "Konfirmasi pickup?",
-        message: "Pastikan pesanan sudah kamu terima dari merchant sebelum melanjutkan.",
-        helper: "Ambil pesanan di merchant, periksa item, lalu konfirmasi pickup.",
-      };
-    case "picked_up":
-      return {
-        action: "start_delivery",
-        label: "Mulai pengantaran",
-        title: "Mulai pengantaran?",
-        message: "Status customer dan merchant akan berubah menjadi sedang diantar.",
-        helper: "Pesanan sudah diamankan. Mulai pengantaran saat kamu siap menuju customer.",
-      };
-    case "on_delivery":
-      return {
-        action: "complete_delivery",
-        label: "Pesanan diterima customer",
-        title: "Selesaikan pesanan?",
-        message: "Gunakan tombol ini hanya setelah pesanan benar-benar diterima customer.",
-        helper: "Pastikan pesanan sudah diterima customer sebelum menyelesaikan perjalanan.",
-      };
-    case "delivered":
-      return null;
-  }
+function statusLabel(status: NitipDriverOrder["status"], language: "id" | "en") {
+  const id = { driver_assigned: "ORDER DITUGASKAN", picked_up: "SUDAH DIAMBIL", on_delivery: "SEDANG DIANTAR", delivered: "SELESAI" } as const;
+  const en = { driver_assigned: "ASSIGNED", picked_up: "PICKED UP", on_delivery: "ON DELIVERY", delivered: "COMPLETED" } as const;
+  return (language === "id" ? id : en)[status];
 }
 
 export default function DriverOrderDetailScreen() {
+  const { language } = useNitipLanguage();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
+  const theme = useNitipTheme();
+  const insets = useSafeAreaInsets();
   const [order, setOrder] = useState<NitipDriverOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const c = language === "id"
+    ? {
+        title: "Detail perjalanan", loading: "Memuat assignment...", unavailable: "Order tidak tersedia", fare: "Pendapatan delivery", status: "STATUS PERJALANAN",
+        assigned: "Ambil pesanan dari merchant sebelum menuju customer.", picked: "Pesanan sudah kamu pegang dan siap diantar.", delivery: "Pesanan sedang dalam perjalanan ke customer.", done: "Pengantaran selesai dan assignment aktif sudah dilepas.",
+        map: "Peta perjalanan", pickup: "Pickup", destination: "Antar ke", items: "Isi pesanan", note: "CATATAN CUSTOMER", next: "Langkah berikutnya", complete: "Pengantaran selesai", completeBody: "Order sudah selesai. Kamu dapat kembali menerima order berikutnya jika tetap online.",
+        cancel: "Batal", continue: "Lanjut", pickupAction: "Pesanan sudah diambil", pickupTitle: "Konfirmasi pickup?", pickupMessage: "Pastikan pesanan sudah kamu terima dari merchant sebelum melanjutkan.", pickupHelper: "Periksa item dari merchant, lalu konfirmasi pickup.",
+        startAction: "Mulai pengantaran", startTitle: "Mulai pengantaran?", startMessage: "Status customer dan merchant akan berubah menjadi sedang diantar.", startHelper: "Mulai pengantaran saat kamu siap menuju customer.",
+        doneAction: "Pesanan diterima customer", doneTitle: "Selesaikan pesanan?", doneMessage: "Gunakan tombol ini hanya setelah pesanan benar-benar diterima customer.", doneHelper: "Pastikan customer sudah menerima pesanan sebelum menyelesaikan perjalanan.",
+      }
+    : {
+        title: "Trip details", loading: "Loading assignment...", unavailable: "Order unavailable", fare: "Delivery earning", status: "TRIP STATUS",
+        assigned: "Pick up the order from the merchant before heading to the customer.", picked: "The order is secured and ready for delivery.", delivery: "The order is on its way to the customer.", done: "Delivery is complete and the active assignment has been released.",
+        map: "Trip map", pickup: "Pickup", destination: "Deliver to", items: "Order items", note: "CUSTOMER NOTE", next: "Next step", complete: "Delivery completed", completeBody: "The order is completed. You can receive another order while remaining online.",
+        cancel: "Cancel", continue: "Continue", pickupAction: "Order picked up", pickupTitle: "Confirm pickup?", pickupMessage: "Make sure you received the order from the merchant before continuing.", pickupHelper: "Check the merchant order, then confirm pickup.",
+        startAction: "Start delivery", startTitle: "Start delivery?", startMessage: "Customer and merchant status will change to on delivery.", startHelper: "Start delivery when you are ready to head to the customer.",
+        doneAction: "Customer received order", doneTitle: "Complete delivery?", doneMessage: "Use this only after the customer has received the order.", doneHelper: "Make sure the customer has received the order before completing the trip.",
+      };
 
   useEffect(() => {
     if (!user || !id) return;
@@ -79,19 +54,21 @@ export default function DriverOrderDetailScreen() {
     setLoading(true);
     setError(null);
     getDriverOrder(user, id)
-      .then((next) => {
-        if (active) setOrder(next);
-      })
-      .catch((nextError: unknown) => {
-        if (active) setError(nextError instanceof Error ? nextError.message : "Gagal memuat order");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+      .then((next) => { if (active) setOrder(next); })
+      .catch((nextError: unknown) => { if (active) setError(nextError instanceof Error ? nextError.message : c.unavailable); })
+      .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [id, user]);
+  }, [c.unavailable, id, user]);
 
   if (!user) return <Redirect href="/login" />;
+
+  const nextAction = order?.status === "driver_assigned"
+    ? { action: "confirm_pickup" as DriverDeliveryAction, label: c.pickupAction, title: c.pickupTitle, message: c.pickupMessage, helper: c.pickupHelper }
+    : order?.status === "picked_up"
+      ? { action: "start_delivery" as DriverDeliveryAction, label: c.startAction, title: c.startTitle, message: c.startMessage, helper: c.startHelper }
+      : order?.status === "on_delivery"
+        ? { action: "complete_delivery" as DriverDeliveryAction, label: c.doneAction, title: c.doneTitle, message: c.doneMessage, helper: c.doneHelper }
+        : null;
 
   async function runAction(action: DriverDeliveryAction) {
     if (!order) return;
@@ -100,206 +77,122 @@ export default function DriverOrderDetailScreen() {
     try {
       setOrder(await actOnDriverOrder(user, order.id, action));
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Gagal memperbarui perjalanan");
+      setError(nextError instanceof Error ? nextError.message : c.unavailable);
     } finally {
       setUpdating(false);
     }
   }
 
-  function confirmAction(action: DriverDeliveryAction, title: string, message: string) {
-    Alert.alert(title, message, [
-      { text: "Batal", style: "cancel" },
-      { text: "Lanjut", onPress: () => void runAction(action) },
+  function confirmAction() {
+    if (!nextAction) return;
+    Alert.alert(nextAction.title, nextAction.message, [
+      { text: c.cancel, style: "cancel" },
+      { text: c.continue, onPress: () => void runAction(nextAction.action) },
     ]);
   }
 
-  const action = order ? nextAction(order.status) : null;
-  const hasRoutePoint = order
-    ? (order.pickup.latitude != null && order.pickup.longitude != null)
-      || (order.destination.latitude != null && order.destination.longitude != null)
-    : false;
+  const progressText = order?.status === "driver_assigned" ? c.assigned : order?.status === "picked_up" ? c.picked : order?.status === "on_delivery" ? c.delivery : c.done;
+  const hasRoute = order ? (order.pickup.latitude != null && order.pickup.longitude != null) || (order.destination.latitude != null && order.destination.longitude != null) : false;
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.replace("/home")}>
-          <Text style={styles.back}>‹ Driver Center</Text>
-        </Pressable>
-        <Text style={styles.brand}>nitip driver.</Text>
-      </View>
+    <View style={[styles.screen, { backgroundColor: theme.colors.background }]}> 
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + 10 }]} showsVerticalScrollIndicator={false}>
+        <AppHeader title={c.title} />
 
-      {loading ? (
-        <View style={styles.centerCard}>
-          <ActivityIndicator color="#08349C" />
-          <Text style={styles.muted}>Memuat assignment...</Text>
-        </View>
-      ) : error && !order ? (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Order tidak tersedia</Text>
-          <Text style={styles.muted}>{error}</Text>
-        </View>
-      ) : order ? (
-        <>
-          <Text style={styles.eyebrow}>{statusLabel(order.status)}</Text>
-          <Text style={styles.title}>{order.orderCode}</Text>
-          <Text style={styles.fare}>{formatRupiah(order.deliveryFare)}</Text>
-          <Text style={styles.subtitle}>Pendapatan delivery untuk assignment ini.</Text>
-
-          {error ? (
-            <View style={styles.errorCard}>
-              <Text style={styles.errorText}>{error}</Text>
+        {loading ? (
+          <StateCard loading title={c.loading} />
+        ) : error && !order ? (
+          <StateCard title={c.unavailable} body={error} danger />
+        ) : order ? (
+          <>
+            <View style={styles.hero}>
+              <Text style={[styles.eyebrow, { color: theme.colors.primary }]}>{statusLabel(order.status, language)}</Text>
+              <Text style={[styles.orderCode, { color: theme.colors.text }]}>{order.orderCode}</Text>
+              <Text style={[styles.fare, { color: theme.colors.primary }]}>{formatRupiah(order.deliveryFare)}</Text>
+              <Text style={[styles.fareLabel, { color: theme.colors.textMuted }]}>{c.fare}</Text>
             </View>
-          ) : null}
 
-          <View style={order.status === "delivered" ? styles.completedCard : styles.progressCard}>
-            <Text style={styles.progressLabel}>STATUS PERJALANAN</Text>
-            <Text style={styles.progressTitle}>{statusLabel(order.status)}</Text>
-            <Text style={styles.progressText}>
-              {order.status === "driver_assigned"
-                ? "Ambil pesanan dari merchant sebelum menuju customer."
-                : order.status === "picked_up"
-                  ? "Pesanan sudah kamu pegang dan siap diantar."
-                  : order.status === "on_delivery"
-                    ? "Pesanan sedang dalam perjalanan ke customer."
-                    : "Pengantaran selesai dan assignment aktif sudah dilepas."}
-            </Text>
-          </View>
+            {error ? <View style={[styles.errorCard, { backgroundColor: theme.colors.dangerSurface }]}><Text style={[styles.errorText, { color: theme.colors.danger }]}>{error}</Text></View> : null}
 
-          {hasRoutePoint ? (
-            <>
-              <Text style={styles.sectionTitle}>Peta perjalanan</Text>
-              <View style={styles.mapCard}>
-                <RouteMap
-                  pickup={{
-                    latitude: order.pickup.latitude,
-                    longitude: order.pickup.longitude,
-                    label: `${order.pickup.businessName} · ${order.pickup.outletName}`,
-                  }}
-                  destination={{
-                    latitude: order.destination.latitude,
-                    longitude: order.destination.longitude,
-                    label: order.destination.recipientName,
-                  }}
-                />
+            <View style={[styles.progress, { backgroundColor: order.status === "delivered" ? theme.colors.successSurface : theme.colors.surfaceAccent }]}> 
+              <View style={[styles.progressBadge, { backgroundColor: order.status === "delivered" ? theme.colors.success : theme.colors.primary }]}> 
+                <NitipIcon color="#FFFFFF" name={order.status === "delivered" ? "check" : "delivery"} size={18} />
               </View>
-              <View style={styles.mapLegend}>
-                <View style={styles.legendItem}>
-                  <View style={[styles.legendDot, styles.pickupDot]} />
-                  <Text style={styles.legendText}>A · Pickup merchant</Text>
+              <View style={styles.progressCopy}>
+                <Text style={[styles.progressLabel, { color: order.status === "delivered" ? theme.colors.success : theme.colors.primary }]}>{c.status}</Text>
+                <Text style={[styles.progressTitle, { color: theme.colors.text }]}>{statusLabel(order.status, language)}</Text>
+                <Text style={[styles.progressBody, { color: theme.colors.textMuted }]}>{progressText}</Text>
+              </View>
+            </View>
+
+            {hasRoute ? (
+              <>
+                <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{c.map}</Text>
+                <View style={[styles.mapCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}> 
+                  <RouteMap
+                    pickup={{ latitude: order.pickup.latitude, longitude: order.pickup.longitude, label: `${order.pickup.businessName} · ${order.pickup.outletName}` }}
+                    destination={{ latitude: order.destination.latitude, longitude: order.destination.longitude, label: order.destination.recipientName }}
+                  />
                 </View>
-                <View style={styles.legendItem}>
-                  <View style={[styles.legendDot, styles.destinationDot]} />
-                  <Text style={styles.legendText}>B · Tujuan customer</Text>
-                </View>
-              </View>
-            </>
-          ) : null}
-
-          <Text style={styles.sectionTitle}>Pickup</Text>
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{order.pickup.businessName}</Text>
-            <Text style={styles.strongMeta}>{order.pickup.outletName}</Text>
-            <Text style={styles.muted}>{order.pickup.addressLine}</Text>
-          </View>
-
-          <Text style={styles.sectionTitle}>Antar ke</Text>
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>{order.destination.recipientName}</Text>
-            <Text style={styles.strongMeta}>{order.destination.phoneNumber}</Text>
-            <Text style={styles.muted}>{order.destination.addressLine}</Text>
-            {order.destination.notes ? (
-              <View style={styles.noteBox}>
-                <Text style={styles.noteLabel}>CATATAN CUSTOMER</Text>
-                <Text style={styles.noteText}>{order.destination.notes}</Text>
-              </View>
+              </>
             ) : null}
-          </View>
 
-          <Text style={styles.sectionTitle}>Isi pesanan</Text>
-          <View style={styles.card}>
-            {order.items.map((item) => (
-              <View key={item.productId} style={styles.itemRow}>
-                <Text style={styles.quantity}>{item.quantity}×</Text>
-                <Text style={styles.itemName}>{item.name}</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{c.pickup}</Text>
+            <InfoCard icon="store" title={order.pickup.businessName} strong={order.pickup.outletName} body={order.pickup.addressLine} />
+
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{c.destination}</Text>
+            <InfoCard icon="location" title={order.destination.recipientName} strong={order.destination.phoneNumber} body={order.destination.addressLine}>
+              {order.destination.notes ? (
+                <View style={[styles.note, { backgroundColor: theme.colors.surfaceAccent }]}> 
+                  <Text style={[styles.noteLabel, { color: theme.colors.primary }]}>{c.note}</Text>
+                  <Text style={[styles.noteText, { color: theme.colors.text }]}>{order.destination.notes}</Text>
+                </View>
+              ) : null}
+            </InfoCard>
+
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{c.items}</Text>
+            <View style={[styles.infoCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}> 
+              {order.items.map((item, index) => (
+                <View key={`${item.productId}-${index}`} style={[styles.itemRow, index > 0 && { borderTopColor: theme.colors.border, borderTopWidth: 1 }]}> 
+                  <View style={[styles.quantityBadge, { backgroundColor: theme.colors.surfaceAccent }]}><Text style={[styles.quantity, { color: theme.colors.primary }]}>{item.quantity}×</Text></View>
+                  <Text style={[styles.itemName, { color: theme.colors.text }]}>{item.name}</Text>
+                </View>
+              ))}
+            </View>
+
+            {nextAction ? (
+              <View style={[styles.actionCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, shadowColor: theme.colors.shadow }]}> 
+                <Text style={[styles.actionTitle, { color: theme.colors.text }]}>{c.next}</Text>
+                <Text style={[styles.actionBody, { color: theme.colors.textMuted }]}>{nextAction.helper}</Text>
+                <Pressable disabled={updating} onPress={confirmAction} style={[styles.primaryButton, { backgroundColor: theme.colors.primary, opacity: updating ? 0.55 : 1 }]}> 
+                  {updating ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryText}>{nextAction.label}</Text>}
+                </Pressable>
               </View>
-            ))}
-          </View>
-
-          {action ? (
-            <View style={styles.actionCard}>
-              <Text style={styles.actionTitle}>Langkah berikutnya</Text>
-              <Text style={styles.actionText}>{action.helper}</Text>
-              <Pressable
-                disabled={updating}
-                onPress={() => confirmAction(action.action, action.title, action.message)}
-                style={[styles.primaryButton, updating && styles.disabled]}
-              >
-                {updating ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.primaryText}>{action.label}</Text>
-                )}
-              </Pressable>
-            </View>
-          ) : (
-            <View style={styles.completedCardBottom}>
-              <Text style={styles.completedTitle}>Pengantaran selesai</Text>
-              <Text style={styles.completedText}>
-                Order sudah berstatus selesai. Kamu dapat kembali ke Driver Center dan menerima order berikutnya jika tetap online.
-              </Text>
-              <Pressable onPress={() => router.replace("/home")} style={styles.primaryButton}>
-                <Text style={styles.primaryText}>Kembali ke Driver Center</Text>
-              </Pressable>
-            </View>
-          )}
-        </>
-      ) : null}
-    </ScrollView>
+            ) : (
+              <View style={[styles.completed, { backgroundColor: theme.colors.successSurface }]}> 
+                <NitipIcon color={theme.colors.success} name="check" size={21} />
+                <Text style={[styles.completedTitle, { color: theme.colors.text }]}>{c.complete}</Text>
+                <Text style={[styles.completedBody, { color: theme.colors.textMuted }]}>{c.completeBody}</Text>
+              </View>
+            )}
+          </>
+        ) : null}
+      </ScrollView>
+    </View>
   );
+
+  function InfoCard({ icon, title, strong, body, children }: { icon: "store" | "location"; title: string; strong: string; body: string; children?: React.ReactNode }) {
+    return <View style={[styles.infoCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}><View style={styles.infoTop}><View style={[styles.infoBadge, { backgroundColor: theme.colors.surfaceAccent }]}><NitipIcon color={theme.colors.primary} name={icon} size={17} /></View><View style={styles.infoCopy}><Text style={[styles.infoTitle, { color: theme.colors.text }]}>{title}</Text><Text style={[styles.infoStrong, { color: theme.colors.primary }]}>{strong}</Text><Text style={[styles.infoBody, { color: theme.colors.textMuted }]}>{body}</Text></View></View>{children}</View>;
+  }
+
+  function StateCard({ loading = false, title, body, danger = false }: { loading?: boolean; title: string; body?: string; danger?: boolean }) {
+    return <View style={[styles.stateCard, { backgroundColor: danger ? theme.colors.dangerSurface : theme.colors.surface, borderColor: danger ? theme.colors.dangerSurface : theme.colors.border }]}>{loading ? <ActivityIndicator color={theme.colors.primary} /> : <NitipIcon color={danger ? theme.colors.danger : theme.colors.primary} name="orders" size={22} />}<Text style={[styles.stateTitle, { color: danger ? theme.colors.danger : theme.colors.text }]}>{title}</Text>{body ? <Text style={[styles.stateBody, { color: danger ? theme.colors.danger : theme.colors.textMuted }]}>{body}</Text> : null}</View>;
+  }
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, backgroundColor: "#F7FFF9", paddingHorizontal: 20, paddingTop: 56, paddingBottom: 40 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 30 },
-  back: { color: "#08349C", fontWeight: "900", fontSize: 11 },
-  brand: { color: "#14216D", fontWeight: "900", fontSize: 21, letterSpacing: -0.8 },
-  centerCard: { backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#A1DCD9", borderRadius: 18, padding: 18, alignItems: "center", gap: 8 },
-  eyebrow: { color: "#08349C", fontWeight: "900", fontSize: 10, letterSpacing: 1.2 },
-  title: { color: "#14216D", fontWeight: "900", fontSize: 30, letterSpacing: -1, marginTop: 5 },
-  fare: { color: "#08349C", fontWeight: "900", fontSize: 22, marginTop: 9 },
-  subtitle: { color: "#52607F", fontSize: 11, marginTop: 3 },
-  sectionTitle: { color: "#14216D", fontWeight: "900", fontSize: 17, marginTop: 24, marginBottom: 9 },
-  card: { backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#A1DCD9", borderRadius: 18, padding: 16 },
-  cardTitle: { color: "#14216D", fontWeight: "900", fontSize: 15 },
-  strongMeta: { color: "#08349C", fontWeight: "800", fontSize: 11, marginTop: 4 },
-  muted: { color: "#52607F", fontSize: 11, lineHeight: 17, marginTop: 4 },
-  errorCard: { backgroundColor: "#FFF1F0", borderRadius: 14, padding: 13, marginTop: 16 },
-  errorText: { color: "#B42318", fontSize: 11, lineHeight: 17 },
-  progressCard: { backgroundColor: "#CEFCD9", borderRadius: 18, padding: 16, marginTop: 18 },
-  completedCard: { backgroundColor: "#A1DCD9", borderRadius: 18, padding: 16, marginTop: 18 },
-  progressLabel: { color: "#08349C", fontWeight: "900", fontSize: 9, letterSpacing: 0.9 },
-  progressTitle: { color: "#14216D", fontWeight: "900", fontSize: 16, marginTop: 4 },
-  progressText: { color: "#52607F", fontSize: 11, lineHeight: 17, marginTop: 5 },
-  mapCard: { height: 260, overflow: "hidden", borderRadius: 18, backgroundColor: "#EEF0F3", borderWidth: 1, borderColor: "#A1DCD9" },
-  mapLegend: { flexDirection: "row", flexWrap: "wrap", gap: 14, marginTop: 9 },
-  legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
-  legendDot: { width: 8, height: 8, borderRadius: 999 },
-  pickupDot: { backgroundColor: "#2448F5" },
-  destinationDot: { backgroundColor: "#16A34A" },
-  legendText: { color: "#52607F", fontSize: 10, fontWeight: "700" },
-  noteBox: { backgroundColor: "#CEFCD9", borderRadius: 12, padding: 11, marginTop: 12 },
-  noteLabel: { color: "#08349C", fontWeight: "900", fontSize: 9, letterSpacing: 0.7 },
-  noteText: { color: "#14216D", fontSize: 11, lineHeight: 17, marginTop: 4 },
-  itemRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 6 },
-  quantity: { color: "#08349C", fontWeight: "900", width: 28 },
-  itemName: { color: "#14216D", fontWeight: "800", flex: 1 },
-  actionCard: { backgroundColor: "#14216D", borderRadius: 20, padding: 17, marginTop: 22 },
-  actionTitle: { color: "#FFFFFF", fontWeight: "900", fontSize: 15 },
-  actionText: { color: "#A1DCD9", fontSize: 11, lineHeight: 18, marginTop: 5 },
-  completedCardBottom: { backgroundColor: "#CEFCD9", borderRadius: 20, padding: 17, marginTop: 22 },
-  completedTitle: { color: "#14216D", fontWeight: "900", fontSize: 15 },
-  completedText: { color: "#52607F", fontSize: 11, lineHeight: 18, marginTop: 5 },
-  primaryButton: { backgroundColor: "#08349C", borderRadius: 14, minHeight: 48, alignItems: "center", justifyContent: "center", marginTop: 15 },
-  primaryText: { color: "#FFFFFF", fontWeight: "900" },
-  disabled: { opacity: 0.55 },
+  screen: { flex: 1 }, content: { paddingBottom: 38, paddingHorizontal: 20 }, hero: { marginTop: 25 }, eyebrow: { fontSize: 8, fontWeight: "900", letterSpacing: 0.9 }, orderCode: { fontSize: 28, fontWeight: "900", letterSpacing: -0.8, marginTop: 5 }, fare: { fontSize: 20, fontWeight: "900", marginTop: 12 }, fareLabel: { fontSize: 8, marginTop: 2 },
+  errorCard: { borderRadius: 15, marginTop: 12, padding: 12 }, errorText: { fontSize: 9, lineHeight: 14 }, progress: { alignItems: "center", borderRadius: 18, flexDirection: "row", marginTop: 18, padding: 14 }, progressBadge: { alignItems: "center", borderRadius: 21, height: 42, justifyContent: "center", width: 42 }, progressCopy: { flex: 1, paddingLeft: 11 }, progressLabel: { fontSize: 7, fontWeight: "900", letterSpacing: 0.7 }, progressTitle: { fontSize: 12, fontWeight: "900", marginTop: 2 }, progressBody: { fontSize: 8, lineHeight: 13, marginTop: 3 },
+  sectionTitle: { fontSize: 12, fontWeight: "900", marginBottom: 9, marginTop: 23 }, mapCard: { borderRadius: 20, borderWidth: 1, height: 250, overflow: "hidden" }, infoCard: { borderRadius: 18, borderWidth: 1, padding: 13 }, infoTop: { alignItems: "flex-start", flexDirection: "row" }, infoBadge: { alignItems: "center", borderRadius: 20, height: 40, justifyContent: "center", width: 40 }, infoCopy: { flex: 1, minWidth: 0, paddingLeft: 11 }, infoTitle: { fontSize: 11, fontWeight: "900" }, infoStrong: { fontSize: 9, fontWeight: "800", marginTop: 3 }, infoBody: { fontSize: 8, lineHeight: 13, marginTop: 3 }, note: { borderRadius: 14, marginTop: 12, padding: 11 }, noteLabel: { fontSize: 7, fontWeight: "900", letterSpacing: 0.7 }, noteText: { fontSize: 9, lineHeight: 14, marginTop: 4 },
+  itemRow: { alignItems: "center", flexDirection: "row", minHeight: 48, paddingVertical: 7 }, quantityBadge: { alignItems: "center", borderRadius: 15, height: 30, justifyContent: "center", width: 38 }, quantity: { fontSize: 9, fontWeight: "900" }, itemName: { flex: 1, fontSize: 10, fontWeight: "800", paddingLeft: 10 }, actionCard: { borderRadius: 20, borderWidth: 1, elevation: 2, marginTop: 22, padding: 15, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 7 }, actionTitle: { fontSize: 13, fontWeight: "900" }, actionBody: { fontSize: 9, lineHeight: 15, marginTop: 5 }, primaryButton: { alignItems: "center", borderRadius: 14, justifyContent: "center", marginTop: 14, minHeight: 48 }, primaryText: { color: "#FFFFFF", fontSize: 10, fontWeight: "900" }, completed: { alignItems: "center", borderRadius: 20, marginTop: 22, padding: 22 }, completedTitle: { fontSize: 13, fontWeight: "900", marginTop: 8 }, completedBody: { fontSize: 9, lineHeight: 15, marginTop: 5, textAlign: "center" }, stateCard: { alignItems: "center", borderRadius: 20, borderWidth: 1, marginTop: 20, padding: 27 }, stateTitle: { fontSize: 12, fontWeight: "900", marginTop: 10 }, stateBody: { fontSize: 9, lineHeight: 15, marginTop: 5, textAlign: "center" },
 });

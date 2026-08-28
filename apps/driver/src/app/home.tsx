@@ -1,23 +1,14 @@
 import { formatRupiah } from "@nitip/domain";
-import type {
-  DriverVehicleType,
-  NitipDriverOffer,
-  NitipDriverOrder,
-  NitipDriverProfile,
-} from "@nitip/domain/driver";
-import { Redirect, router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import type { DriverVehicleType, NitipDriverOffer, NitipDriverOrder, NitipDriverProfile } from "@nitip/domain/driver";
+import { useNitipLanguage } from "@nitip/i18n";
+import { Redirect, router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { NitipIcon } from "../components/NitipIcon";
 import { useAuth } from "../context/AuthContext";
+import { useNitipTheme } from "../hooks/useNitipTheme";
 import {
   acceptDriverOffer,
   apiConfigured,
@@ -30,26 +21,23 @@ import {
   updateDriver,
 } from "../lib/api";
 
-function statusLabel(status: NitipDriverProfile["status"]) {
-  switch (status) {
-    case "draft": return "DRAFT";
-    case "pending_review": return "MENUNGGU REVIEW";
-    case "approved": return "APPROVED";
-    case "rejected": return "DITOLAK";
-  }
+function statusLabel(status: NitipDriverProfile["status"], language: "id" | "en") {
+  const id = { draft: "DRAFT", pending_review: "MENUNGGU REVIEW", approved: "DISETUJUI", rejected: "DITOLAK" } as const;
+  const en = { draft: "DRAFT", pending_review: "UNDER REVIEW", approved: "APPROVED", rejected: "REJECTED" } as const;
+  return (language === "id" ? id : en)[status];
 }
 
-function deliveryStatusLabel(status: NitipDriverOrder["status"]) {
-  switch (status) {
-    case "driver_assigned": return "ORDER DITUGASKAN";
-    case "picked_up": return "SUDAH DIAMBIL";
-    case "on_delivery": return "SEDANG DIANTAR";
-    case "delivered": return "SELESAI";
-  }
+function deliveryStatusLabel(status: NitipDriverOrder["status"], language: "id" | "en") {
+  const id = { driver_assigned: "ORDER DITUGASKAN", picked_up: "SUDAH DIAMBIL", on_delivery: "SEDANG DIANTAR", delivered: "SELESAI" } as const;
+  const en = { driver_assigned: "ASSIGNED", picked_up: "PICKED UP", on_delivery: "ON DELIVERY", delivered: "COMPLETED" } as const;
+  return (language === "id" ? id : en)[status];
 }
 
 export default function DriverHomeScreen() {
-  const { signOut, user } = useAuth();
+  const { language } = useNitipLanguage();
+  const { user } = useAuth();
+  const theme = useNitipTheme();
+  const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<NitipDriverProfile | null>(null);
   const [fullName, setFullName] = useState(user?.displayName ?? "");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -65,12 +53,35 @@ export default function DriverHomeScreen() {
   const [error, setError] = useState<string | null>(null);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
 
+  const c = language === "id"
+    ? {
+        brand: "nitip driver.", center: "DRIVER CENTER", hello: "Halo", complete: "Lengkapi profilmu.",
+        subtitle: "Aktifkan status online untuk melihat order siap pickup yang paling relevan dengan lokasimu.",
+        loading: "Memuat profil driver...", api: "API belum dikonfigurasi", apiBody: "Set EXPO_PUBLIC_API_URL di apps/driver/.env.",
+        status: "STATUS DRIVER", approved: "Akun siap menerima assignment.", pending: "Data sedang direview Nitip Ops.", rejected: "Perbaiki data sesuai alasan penolakan lalu kirim ulang.", draft: "Lengkapi data dan kirim untuk review.",
+        refreshReview: "Muat ulang status", availability: "Ketersediaan", online: "ONLINE", offline: "OFFLINE", goOnline: "Mulai online", goOffline: "Jadikan offline", processing: "Memproses...",
+        onlineBody: "Kamu sedang menerima penawaran order. Lokasi diperbarui saat dispatch dimuat.", offlineBody: "Aktifkan online untuk mulai menerima penawaran order.", activeBody: "Kamu punya perjalanan aktif. Status offline hanya menghentikan penawaran baru.",
+        dispatch: "Dispatch", available: "order tersedia", active: "1 perjalanan aktif", refresh: "Refresh", finding: "Mencari order siap pickup terdekat...", noOffer: "Belum ada order tersedia", noOfferBody: "Order muncul setelah merchant menandainya siap diambil.", offlineTitle: "Kamu sedang offline", offlineOfferBody: "Order tersedia hanya ditampilkan saat driver approved sedang online.",
+        pickup: "PICKUP", destination: "ANTAR", open: "Buka detail perjalanan", ready: "SIAP DIAMBIL", items: "item", distanceMissing: "Jarak belum tersedia", take: "Ambil order", privacy: "Alamat dan kontak customer lengkap dibuka setelah assignment berhasil.",
+        profile: "Data driver", fullName: "Nama lengkap", phone: "Nomor HP", vehicle: "Jenis kendaraan", motor: "Motor", car: "Mobil", model: "Merek & model", plate: "Nomor polisi", save: "Simpan perubahan", create: "Buat profil driver", review: "Kirim untuk review", rejection: "ALASAN PENOLAKAN",
+      }
+    : {
+        brand: "nitip driver.", center: "DRIVER CENTER", hello: "Hi", complete: "Complete your profile.",
+        subtitle: "Go online to see pickup-ready orders that are most relevant to your location.",
+        loading: "Loading driver profile...", api: "API is not configured", apiBody: "Set EXPO_PUBLIC_API_URL in apps/driver/.env.",
+        status: "DRIVER STATUS", approved: "Your account is ready for assignments.", pending: "Your details are under Nitip Ops review.", rejected: "Update the rejected details and submit again.", draft: "Complete your details and submit for review.",
+        refreshReview: "Refresh review status", availability: "Availability", online: "ONLINE", offline: "OFFLINE", goOnline: "Go online", goOffline: "Go offline", processing: "Processing...",
+        onlineBody: "You are receiving order offers. Location refreshes when dispatch loads.", offlineBody: "Go online to start receiving order offers.", activeBody: "You have an active trip. Going offline only stops new offers.",
+        dispatch: "Dispatch", available: "orders available", active: "1 active trip", refresh: "Refresh", finding: "Finding nearby pickup-ready orders...", noOffer: "No orders available yet", noOfferBody: "Orders appear after a merchant marks them ready for pickup.", offlineTitle: "You are offline", offlineOfferBody: "Available orders are shown only while an approved driver is online.",
+        pickup: "PICKUP", destination: "DROP-OFF", open: "Open trip details", ready: "READY FOR PICKUP", items: "items", distanceMissing: "Distance unavailable", take: "Accept order", privacy: "Full customer address and contact are revealed after assignment.",
+        profile: "Driver details", fullName: "Full name", phone: "Phone number", vehicle: "Vehicle type", motor: "Motorcycle", car: "Car", model: "Brand & model", plate: "Plate number", save: "Save changes", create: "Create driver profile", review: "Submit for review", rejection: "REJECTION REASON",
+      };
+
   const loadProfile = useCallback(async () => {
     if (!user || !apiConfigured) {
       setLoading(false);
       return;
     }
-
     setLoading(true);
     setError(null);
     try {
@@ -84,15 +95,11 @@ export default function DriverHomeScreen() {
         setVehiclePlate(next.vehiclePlate);
       }
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Gagal memuat profil driver");
+      setError(nextError instanceof Error ? nextError.message : c.loading);
     } finally {
       setLoading(false);
     }
-  }, [user]);
-
-  useEffect(() => {
-    void loadProfile();
-  }, [loadProfile]);
+  }, [c.loading, user]);
 
   const loadDispatch = useCallback(async () => {
     if (!user || profile?.status !== "approved") {
@@ -100,47 +107,37 @@ export default function DriverHomeScreen() {
       setOffers([]);
       return;
     }
-
     setDispatchLoading(true);
     setDispatchError(null);
     try {
       const current = await getCurrentDriverOrder(user);
       setCurrentOrder(current);
-      if (current || !profile.isOnline) {
-        setOffers([]);
-      } else {
-        setOffers(await listDriverOffers(user));
-      }
+      setOffers(current || !profile.isOnline ? [] : await listDriverOffers(user));
     } catch (nextError) {
-      setDispatchError(nextError instanceof Error ? nextError.message : "Gagal memuat dispatch");
+      setDispatchError(nextError instanceof Error ? nextError.message : c.finding);
     } finally {
       setDispatchLoading(false);
     }
-  }, [profile?.isOnline, profile?.status, user]);
+  }, [c.finding, profile?.isOnline, profile?.status, user]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
+    void loadProfile();
+  }, [loadProfile]));
+  useFocusEffect(useCallback(() => {
     void loadDispatch();
-  }, [loadDispatch]);
+  }, [loadDispatch]));
 
   if (!user) return <Redirect href="/login" />;
-
   const editable = !profile || profile.status === "draft" || profile.status === "rejected";
 
   async function saveProfile() {
     setSaving(true);
     setError(null);
     try {
-      const input = {
-        fullName: fullName.trim(),
-        phoneNumber: phoneNumber.trim(),
-        vehicleType,
-        vehicleBrandModel: vehicleBrandModel.trim(),
-        vehiclePlate: vehiclePlate.trim().toUpperCase(),
-      };
-      const next = profile ? await updateDriver(user, input) : await createDriver(user, input);
-      setProfile(next);
+      const input = { fullName: fullName.trim(), phoneNumber: phoneNumber.trim(), vehicleType, vehicleBrandModel: vehicleBrandModel.trim(), vehiclePlate: vehiclePlate.trim().toUpperCase() };
+      setProfile(profile ? await updateDriver(user, input) : await createDriver(user, input));
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Gagal menyimpan profil driver");
+      setError(nextError instanceof Error ? nextError.message : c.save);
     } finally {
       setSaving(false);
     }
@@ -152,7 +149,7 @@ export default function DriverHomeScreen() {
     try {
       setProfile(await submitDriver(user));
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Gagal mengirim data driver");
+      setError(nextError instanceof Error ? nextError.message : c.review);
     } finally {
       setSaving(false);
     }
@@ -165,7 +162,7 @@ export default function DriverHomeScreen() {
     try {
       setProfile(await setDriverOnline(user, !profile.isOnline));
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Gagal mengubah status driver");
+      setError(nextError instanceof Error ? nextError.message : c.processing);
     } finally {
       setSaving(false);
     }
@@ -180,306 +177,201 @@ export default function DriverHomeScreen() {
       setOffers([]);
       router.push({ pathname: "/order/[id]", params: { id: order.id } });
     } catch (nextError) {
-      setDispatchError(nextError instanceof Error ? nextError.message : "Order gagal diambil");
+      setDispatchError(nextError instanceof Error ? nextError.message : c.take);
       await loadDispatch();
     } finally {
       setTakingId(null);
     }
   }
 
+  const profileStatusBody = profile?.status === "approved" ? c.approved : profile?.status === "pending_review" ? c.pending : profile?.status === "rejected" ? c.rejected : c.draft;
+  const availabilityBody = currentOrder ? c.activeBody : profile?.isOnline ? c.onlineBody : c.offlineBody;
+
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.brand}>nitip driver.</Text>
-          <Text style={styles.headerMeta}>{user.email ?? "Driver"}</Text>
-        </View>
-        <Pressable onPress={() => void signOut()} style={styles.outlineButton}>
-          <Text style={styles.outlineText}>Keluar</Text>
-        </Pressable>
-      </View>
-
-      <Text style={styles.eyebrow}>DRIVER CENTER</Text>
-      <Text style={styles.title}>{profile ? `Halo, ${profile.fullName.split(" ")[0]}.` : "Lengkapi profilmu."}</Text>
-      <Text style={styles.subtitle}>Online untuk melihat order siap pickup yang diurutkan dari lokasi terdekat.</Text>
-
-      {!apiConfigured ? (
-        <View style={styles.notice}>
-          <Text style={styles.noticeTitle}>API belum dikonfigurasi</Text>
-          <Text style={styles.muted}>Set EXPO_PUBLIC_API_URL di apps/driver/.env.</Text>
-        </View>
-      ) : loading ? (
-        <View style={styles.centerCard}>
-          <ActivityIndicator color="#08349C" />
-          <Text style={styles.muted}>Memuat profil driver...</Text>
-        </View>
-      ) : (
-        <>
-          {profile ? (
-            <View style={styles.statusCard}>
-              <View style={styles.statusRow}>
-                <View>
-                  <Text style={styles.statusLabel}>STATUS DRIVER</Text>
-                  <Text style={styles.statusValue}>{statusLabel(profile.status)}</Text>
-                </View>
-                <View style={[styles.onlineBadge, profile.isOnline && styles.onlineBadgeActive]}>
-                  <Text style={[styles.onlineBadgeText, profile.isOnline && styles.onlineBadgeTextActive]}>
-                    {profile.isOnline ? "● ONLINE" : "○ OFFLINE"}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.muted}>
-                {profile.status === "approved"
-                  ? "Akun sudah lolos review dan dapat menggunakan Driver Dispatch."
-                  : profile.status === "pending_review"
-                    ? "Data sedang menunggu review Nitip Ops."
-                    : profile.status === "rejected"
-                      ? "Perbaiki data sesuai alasan penolakan lalu kirim ulang."
-                      : "Lengkapi data dan kirim untuk review."}
-              </Text>
-              {profile.rejectionReason ? (
-                <View style={styles.rejectBox}>
-                  <Text style={styles.rejectLabel}>ALASAN PENOLAKAN</Text>
-                  <Text style={styles.rejectText}>{profile.rejectionReason}</Text>
-                </View>
-              ) : null}
-              {profile.status === "pending_review" ? (
-                <Pressable onPress={() => void loadProfile()} style={styles.refreshStatusButton}>
-                  <Text style={styles.refreshStatusText}>Muat ulang status review</Text>
-                </Pressable>
-              ) : null}
-            </View>
-          ) : null}
-
-          {profile?.status === "approved" ? (
-            <>
-              <View style={styles.availabilityCard}>
-                <Text style={styles.availabilityTitle}>Ketersediaan</Text>
-                <Text style={styles.availabilityText}>
-                  {currentOrder
-                    ? "Kamu punya order aktif. Offline hanya menghentikan penawaran baru; assignment tetap tersimpan."
-                    : profile.isOnline
-                      ? "Kamu sedang menerima penawaran order. Lokasi diperbarui saat daftar dispatch dimuat."
-                      : "Aktifkan online untuk melihat order tersedia."}
-                </Text>
-                <Pressable
-                  disabled={saving}
-                  onPress={() => void toggleOnline()}
-                  style={[styles.availabilityButton, profile.isOnline && styles.availabilityButtonOffline]}
-                >
-                  <Text style={styles.availabilityButtonText}>
-                    {saving ? "Memproses..." : profile.isOnline ? "Jadikan offline" : "Mulai online"}
-                  </Text>
-                </Pressable>
-              </View>
-
-              <View style={styles.dispatchHeader}>
-                <View>
-                  <Text style={styles.sectionTitle}>Driver Dispatch</Text>
-                  <Text style={styles.muted}>{currentOrder ? "1 order aktif" : `${offers.length} order tersedia`}</Text>
-                </View>
-                <Pressable disabled={dispatchLoading} onPress={() => void loadDispatch()} style={styles.refreshButton}>
-                  <Text style={styles.refreshText}>{dispatchLoading ? "..." : "Refresh"}</Text>
-                </Pressable>
-              </View>
-
-              {dispatchError ? (
-                <View style={styles.errorCard}><Text style={styles.errorText}>{dispatchError}</Text></View>
-              ) : null}
-
-              {dispatchLoading && !currentOrder ? (
-                <View style={styles.centerCard}>
-                  <ActivityIndicator color="#08349C" />
-                  <Text style={styles.muted}>Mencari order siap pickup terdekat...</Text>
-                </View>
-              ) : currentOrder ? (
-                <Pressable
-                  onPress={() => router.push({ pathname: "/order/[id]", params: { id: currentOrder.id } })}
-                  style={styles.currentOrderCard}
-                >
-                  <View style={styles.orderTop}>
-                    <View>
-                      <Text style={styles.orderEyebrow}>{deliveryStatusLabel(currentOrder.status)}</Text>
-                      <Text style={styles.orderCode}>{currentOrder.orderCode}</Text>
-                    </View>
-                    <Text style={styles.orderFare}>{formatRupiah(currentOrder.deliveryFare)}</Text>
-                  </View>
-                  <Text style={styles.routeLabel}>AMBIL</Text>
-                  <Text style={styles.routeTitle}>{currentOrder.pickup.businessName} · {currentOrder.pickup.outletName}</Text>
-                  <Text style={styles.routeMeta}>{currentOrder.pickup.addressLine}</Text>
-                  <View style={styles.routeDivider} />
-                  <Text style={styles.routeLabel}>ANTAR</Text>
-                  <Text style={styles.routeTitle}>{currentOrder.destination.recipientName}</Text>
-                  <Text style={styles.routeMeta}>{currentOrder.destination.addressLine}</Text>
-                  <Text style={styles.openOrder}>Buka detail order →</Text>
-                </Pressable>
-              ) : !profile.isOnline ? (
-                <View style={styles.emptyDispatch}>
-                  <Text style={styles.cardTitle}>Kamu sedang offline</Text>
-                  <Text style={styles.muted}>Order siap pickup hanya ditampilkan kepada driver approved yang sedang online.</Text>
-                </View>
-              ) : offers.length === 0 ? (
-                <View style={styles.emptyDispatch}>
-                  <Text style={styles.cardTitle}>Belum ada order tersedia</Text>
-                  <Text style={styles.muted}>Order akan muncul setelah merchant menandainya siap diambil driver.</Text>
-                </View>
-              ) : (
-                offers.map((offer) => {
-                  const deliveryDistanceKm = offer.deliveryDistanceKm ?? offer.distanceKm;
-                  return (
-                    <View key={offer.id} style={styles.offerCard}>
-                      <View style={styles.orderTop}>
-                        <View>
-                          <Text style={styles.offerLabel}>SIAP DIAMBIL</Text>
-                          <Text style={styles.orderCode}>{offer.orderCode}</Text>
-                        </View>
-                        <Text style={styles.orderFare}>{formatRupiah(offer.deliveryFare)}</Text>
-                      </View>
-                      <Text style={styles.routeLabel}>PICKUP</Text>
-                      <Text style={styles.routeTitle}>{offer.pickup.businessName} · {offer.pickup.outletName}</Text>
-                      <Text style={styles.routeMeta}>{offer.pickup.addressLine}</Text>
-                      <View style={styles.offerMetaRow}>
-                        <Text style={styles.offerMeta}>{offer.itemCount} item</Text>
-                        <Text style={styles.offerMeta}>
-                          {offer.pickupDistanceKm == null
-                            ? "Jarak ke pickup belum tersedia"
-                            : `${offer.pickupDistanceKm.toFixed(2)} km ke pickup`}
-                        </Text>
-                        <Text style={styles.offerMeta}>
-                          {deliveryDistanceKm == null
-                            ? "Jarak antar belum tersedia"
-                            : `${deliveryDistanceKm.toFixed(2)} km merchant → customer`}
-                        </Text>
-                      </View>
-                      <Text style={styles.privacyNote}>Alamat lengkap dan kontak customer dibuka setelah assignment berhasil.</Text>
-                      <Pressable
-                        disabled={takingId !== null}
-                        onPress={() => void takeOffer(offer)}
-                        style={[styles.takeButton, takingId !== null && styles.disabled]}
-                      >
-                        {takingId === offer.id ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.takeButtonText}>Ambil order</Text>}
-                      </Pressable>
-                    </View>
-                  );
-                })
-              )}
-            </>
-          ) : null}
-
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Data driver</Text>
-            <Text style={styles.label}>Nama lengkap</Text>
-            <TextInput editable={editable} value={fullName} onChangeText={setFullName} placeholder="Nama lengkap" placeholderTextColor="#52607F" style={[styles.input, !editable && styles.readonly]} />
-
-            <Text style={styles.label}>Nomor HP</Text>
-            <TextInput editable={editable} value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" placeholder="08xxxxxxxxxx" placeholderTextColor="#52607F" style={[styles.input, !editable && styles.readonly]} />
-
-            <Text style={styles.label}>Jenis kendaraan</Text>
-            <View style={styles.vehicleRow}>
-              <Pressable disabled={!editable} onPress={() => setVehicleType("motorcycle")} style={[styles.vehicleChoice, vehicleType === "motorcycle" && styles.vehicleChoiceActive, !editable && styles.readonly]}>
-                <Text style={[styles.vehicleChoiceText, vehicleType === "motorcycle" && styles.vehicleChoiceTextActive]}>Motor</Text>
-              </Pressable>
-              <Pressable disabled={!editable} onPress={() => setVehicleType("car")} style={[styles.vehicleChoice, vehicleType === "car" && styles.vehicleChoiceActive, !editable && styles.readonly]}>
-                <Text style={[styles.vehicleChoiceText, vehicleType === "car" && styles.vehicleChoiceTextActive]}>Mobil</Text>
-              </Pressable>
-            </View>
-
-            <Text style={styles.label}>Merek & model</Text>
-            <TextInput editable={editable} value={vehicleBrandModel} onChangeText={setVehicleBrandModel} placeholder="Honda Beat 2024" placeholderTextColor="#52607F" style={[styles.input, !editable && styles.readonly]} />
-
-            <Text style={styles.label}>Nomor polisi</Text>
-            <TextInput editable={editable} value={vehiclePlate} onChangeText={setVehiclePlate} autoCapitalize="characters" placeholder="N 1234 AB" placeholderTextColor="#52607F" style={[styles.input, !editable && styles.readonly]} />
-
-            {editable ? (
-              <Pressable disabled={saving} onPress={() => void saveProfile()} style={[styles.primaryButton, saving && styles.disabled]}>
-                <Text style={styles.primaryText}>{saving ? "Menyimpan..." : profile ? "Simpan perubahan" : "Buat profil driver"}</Text>
-              </Pressable>
-            ) : null}
-
-            {profile && (profile.status === "draft" || profile.status === "rejected") ? (
-              <Pressable disabled={saving} onPress={() => void submitForReview()} style={[styles.secondaryButton, saving && styles.disabled]}>
-                <Text style={styles.secondaryText}>Kirim untuk review</Text>
-              </Pressable>
-            ) : null}
+    <View style={[styles.screen, { backgroundColor: theme.colors.background }]}> 
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + 12 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <View style={styles.topbar}>
+          <View style={styles.brandCopy}>
+            <Text style={[styles.brand, { color: theme.colors.text }]}>{c.brand}</Text>
+            <Text numberOfLines={1} style={[styles.account, { color: theme.colors.textMuted }]}>{user.email ?? "Driver"}</Text>
           </View>
-        </>
-      )}
+          {profile?.status === "approved" ? (
+            <View style={[styles.onlinePill, { backgroundColor: profile.isOnline ? theme.colors.primary : theme.colors.surface, borderColor: theme.colors.border }]}> 
+              <View style={[styles.onlineDot, { backgroundColor: profile.isOnline ? "#FFFFFF" : theme.colors.textMuted }]} />
+              <Text style={[styles.onlinePillText, { color: profile.isOnline ? "#FFFFFF" : theme.colors.textMuted }]}>{profile.isOnline ? c.online : c.offline}</Text>
+            </View>
+          ) : null}
+        </View>
 
-      {error ? <View style={styles.errorCard}><Text style={styles.errorText}>{error}</Text></View> : null}
-    </ScrollView>
+        <View style={styles.hero}>
+          <Text style={[styles.eyebrow, { color: theme.colors.primary }]}>{c.center}</Text>
+          <Text style={[styles.heroTitle, { color: theme.colors.text }]}>{profile ? `${c.hello}, ${profile.fullName.split(" ")[0]}.` : c.complete}</Text>
+          <Text style={[styles.heroSubtitle, { color: theme.colors.textMuted }]}>{c.subtitle}</Text>
+        </View>
+
+        {!apiConfigured ? (
+          <StateCard title={c.api} body={c.apiBody} />
+        ) : loading ? (
+          <StateCard loading title={c.loading} />
+        ) : (
+          <>
+            {profile ? (
+              <View style={[styles.statusCard, { backgroundColor: profile.status === "rejected" ? theme.colors.dangerSurface : profile.status === "approved" ? theme.colors.successSurface : theme.colors.surfaceAccent }]}> 
+                <View style={styles.statusCopy}>
+                  <Text style={[styles.statusLabel, { color: profile.status === "rejected" ? theme.colors.danger : profile.status === "approved" ? theme.colors.success : theme.colors.primary }]}>{c.status}</Text>
+                  <Text style={[styles.statusValue, { color: theme.colors.text }]}>{statusLabel(profile.status, language)}</Text>
+                  <Text style={[styles.statusBody, { color: theme.colors.textMuted }]}>{profileStatusBody}</Text>
+                </View>
+                {profile.status === "approved" ? <NitipIcon color={theme.colors.success} name="check" size={18} /> : null}
+                {profile.status === "pending_review" ? (
+                  <Pressable onPress={() => void loadProfile()} style={styles.iconAction}>
+                    <NitipIcon color={theme.colors.primary} name="refresh" size={17} />
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
+
+            {profile?.rejectionReason ? (
+              <View style={[styles.errorCard, { backgroundColor: theme.colors.dangerSurface }]}> 
+                <Text style={[styles.errorLabel, { color: theme.colors.danger }]}>{c.rejection}</Text>
+                <Text style={[styles.errorText, { color: theme.colors.danger }]}>{profile.rejectionReason}</Text>
+              </View>
+            ) : null}
+
+            {profile?.status === "approved" ? (
+              <>
+                <View style={[styles.availabilityCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, shadowColor: theme.colors.shadow }]}> 
+                  <View style={[styles.largeBadge, { backgroundColor: theme.colors.surfaceAccent }]}> 
+                    <NitipIcon color={theme.colors.primary} name="power" size={21} />
+                  </View>
+                  <View style={styles.availabilityCopy}>
+                    <Text style={[styles.availabilityTitle, { color: theme.colors.text }]}>{c.availability}</Text>
+                    <Text style={[styles.availabilityBody, { color: theme.colors.textMuted }]}>{availabilityBody}</Text>
+                  </View>
+                  <Pressable disabled={saving} onPress={() => void toggleOnline()} style={[styles.onlineButton, { backgroundColor: profile.isOnline ? theme.colors.secondary : theme.colors.primary }]}> 
+                    <Text style={[styles.onlineButtonText, { color: profile.isOnline ? theme.colors.text : "#FFFFFF" }]}>{saving ? c.processing : profile.isOnline ? c.goOffline : c.goOnline}</Text>
+                  </Pressable>
+                </View>
+
+                <View style={styles.sectionHeader}>
+                  <View>
+                    <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{c.dispatch}</Text>
+                    <Text style={[styles.sectionMeta, { color: theme.colors.textMuted }]}>{currentOrder ? c.active : `${offers.length} ${c.available}`}</Text>
+                  </View>
+                  <Pressable disabled={dispatchLoading} onPress={() => void loadDispatch()} style={[styles.refreshButton, { backgroundColor: theme.colors.surfaceAccent }]}> 
+                    <NitipIcon color={theme.colors.primary} name="refresh" size={14} />
+                    <Text style={[styles.refreshText, { color: theme.colors.primary }]}>{c.refresh}</Text>
+                  </Pressable>
+                </View>
+
+                {dispatchError ? <View style={[styles.errorCard, { backgroundColor: theme.colors.dangerSurface }]}><Text style={[styles.errorText, { color: theme.colors.danger }]}>{dispatchError}</Text></View> : null}
+
+                {dispatchLoading && !currentOrder ? (
+                  <StateCard loading title={c.finding} />
+                ) : currentOrder ? (
+                  <Pressable onPress={() => router.push({ pathname: "/order/[id]", params: { id: currentOrder.id } })} style={[styles.currentOrder, { backgroundColor: theme.colors.primary, shadowColor: theme.colors.shadow }]}> 
+                    <View style={styles.orderTop}>
+                      <View style={styles.orderIdentity}>
+                        <Text style={styles.currentEyebrow}>{deliveryStatusLabel(currentOrder.status, language)}</Text>
+                        <Text style={styles.currentCode}>{currentOrder.orderCode}</Text>
+                      </View>
+                      <Text style={styles.currentFare}>{formatRupiah(currentOrder.deliveryFare)}</Text>
+                    </View>
+                    <RouteRow inverse icon="store" label={c.pickup} title={`${currentOrder.pickup.businessName} · ${currentOrder.pickup.outletName}`} body={currentOrder.pickup.addressLine} />
+                    <RouteRow inverse icon="location" label={c.destination} title={currentOrder.destination.recipientName} body={currentOrder.destination.addressLine} />
+                    <View style={styles.openRow}><Text style={styles.openText}>{c.open}</Text><NitipIcon color="#FFFFFF" name="next" size={15} /></View>
+                  </Pressable>
+                ) : !profile.isOnline ? (
+                  <StateCard title={c.offlineTitle} body={c.offlineOfferBody} />
+                ) : offers.length === 0 ? (
+                  <StateCard title={c.noOffer} body={c.noOfferBody} />
+                ) : (
+                  <View style={styles.offerList}>
+                    {offers.map((offer) => {
+                      const deliveryDistanceKm = offer.deliveryDistanceKm ?? offer.distanceKm;
+                      return (
+                        <View key={offer.id} style={[styles.offerCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, shadowColor: theme.colors.shadow }]}> 
+                          <View style={styles.orderTop}>
+                            <View style={styles.orderIdentity}>
+                              <Text style={[styles.offerEyebrow, { color: theme.colors.primary }]}>{c.ready}</Text>
+                              <Text style={[styles.offerCode, { color: theme.colors.text }]}>{offer.orderCode}</Text>
+                            </View>
+                            <Text style={[styles.offerFare, { color: theme.colors.primary }]}>{formatRupiah(offer.deliveryFare)}</Text>
+                          </View>
+                          <RouteRow icon="store" label={c.pickup} title={`${offer.pickup.businessName} · ${offer.pickup.outletName}`} body={offer.pickup.addressLine} />
+                          <View style={styles.offerMetaRow}>
+                            <InfoPill text={`${offer.itemCount} ${c.items}`} />
+                            <InfoPill text={offer.pickupDistanceKm == null ? c.distanceMissing : `${offer.pickupDistanceKm.toFixed(2)} km pickup`} />
+                            <InfoPill text={deliveryDistanceKm == null ? c.distanceMissing : `${deliveryDistanceKm.toFixed(2)} km delivery`} />
+                          </View>
+                          <Text style={[styles.privacy, { color: theme.colors.textMuted }]}>{c.privacy}</Text>
+                          <Pressable disabled={takingId !== null} onPress={() => void takeOffer(offer)} style={[styles.takeButton, { backgroundColor: theme.colors.primary, opacity: takingId !== null && takingId !== offer.id ? 0.5 : 1 }]}> 
+                            {takingId === offer.id ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.takeText}>{c.take}</Text>}
+                          </Pressable>
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
+              </>
+            ) : null}
+
+            {profile?.status !== "approved" ? (
+              <View style={[styles.profileCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, shadowColor: theme.colors.shadow }]}> 
+                <Text style={[styles.profileTitle, { color: theme.colors.text }]}>{c.profile}</Text>
+                <Field label={c.fullName}><TextInput editable={editable} onChangeText={setFullName} placeholder={c.fullName} placeholderTextColor={theme.colors.textMuted} style={[styles.input, { backgroundColor: theme.colors.background, borderColor: theme.colors.border, color: theme.colors.text }, !editable && styles.readonly]} value={fullName} /></Field>
+                <Field label={c.phone}><TextInput editable={editable} keyboardType="phone-pad" onChangeText={setPhoneNumber} placeholder="08xxxxxxxxxx" placeholderTextColor={theme.colors.textMuted} style={[styles.input, { backgroundColor: theme.colors.background, borderColor: theme.colors.border, color: theme.colors.text }, !editable && styles.readonly]} value={phoneNumber} /></Field>
+                <Field label={c.vehicle}>
+                  <View style={styles.vehicleRow}>
+                    {(["motorcycle", "car"] as DriverVehicleType[]).map((type) => {
+                      const selected = vehicleType === type;
+                      return <Pressable disabled={!editable} key={type} onPress={() => setVehicleType(type)} style={[styles.vehicleChoice, { backgroundColor: selected ? theme.colors.surfaceAccent : theme.colors.background, borderColor: selected ? theme.colors.primary : theme.colors.border }]}><Text style={[styles.vehicleText, { color: selected ? theme.colors.primary : theme.colors.textMuted }]}>{type === "motorcycle" ? c.motor : c.car}</Text></Pressable>;
+                    })}
+                  </View>
+                </Field>
+                <Field label={c.model}><TextInput editable={editable} onChangeText={setVehicleBrandModel} placeholder="Honda Beat 2024" placeholderTextColor={theme.colors.textMuted} style={[styles.input, { backgroundColor: theme.colors.background, borderColor: theme.colors.border, color: theme.colors.text }, !editable && styles.readonly]} value={vehicleBrandModel} /></Field>
+                <Field label={c.plate}><TextInput autoCapitalize="characters" editable={editable} onChangeText={setVehiclePlate} placeholder="N 1234 AB" placeholderTextColor={theme.colors.textMuted} style={[styles.input, { backgroundColor: theme.colors.background, borderColor: theme.colors.border, color: theme.colors.text }, !editable && styles.readonly]} value={vehiclePlate} /></Field>
+                {editable ? <Pressable disabled={saving} onPress={() => void saveProfile()} style={[styles.primaryButton, { backgroundColor: theme.colors.primary, opacity: saving ? 0.55 : 1 }]}><Text style={styles.primaryText}>{saving ? c.processing : profile ? c.save : c.create}</Text></Pressable> : null}
+                {profile && (profile.status === "draft" || profile.status === "rejected") ? <Pressable disabled={saving} onPress={() => void submitForReview()} style={[styles.reviewButton, { backgroundColor: theme.colors.surfaceAccent }]}><Text style={[styles.reviewText, { color: theme.colors.primary }]}>{c.review}</Text></Pressable> : null}
+              </View>
+            ) : null}
+          </>
+        )}
+
+        {error ? <View style={[styles.errorCard, { backgroundColor: theme.colors.dangerSurface }]}><Text style={[styles.errorText, { color: theme.colors.danger }]}>{error}</Text></View> : null}
+      </ScrollView>
+    </View>
   );
+
+  function RouteRow({ icon, label, title, body, inverse = false }: { icon: "store" | "location"; label: string; title: string; body: string; inverse?: boolean }) {
+    return <View style={styles.routeRow}><View style={[styles.routeBadge, { backgroundColor: inverse ? "rgba(255,255,255,0.14)" : theme.colors.surfaceAccent }]}><NitipIcon color={inverse ? "#FFFFFF" : theme.colors.primary} name={icon} size={14} /></View><View style={styles.routeCopy}><Text style={[styles.routeLabel, { color: inverse ? "rgba(255,255,255,0.65)" : theme.colors.textMuted }]}>{label}</Text><Text numberOfLines={1} style={[styles.routeTitle, { color: inverse ? "#FFFFFF" : theme.colors.text }]}>{title}</Text><Text numberOfLines={2} style={[styles.routeBody, { color: inverse ? "rgba(255,255,255,0.72)" : theme.colors.textMuted }]}>{body}</Text></View></View>;
+  }
+
+  function InfoPill({ text }: { text: string }) {
+    return <View style={[styles.infoPill, { backgroundColor: theme.colors.background }]}><Text style={[styles.infoText, { color: theme.colors.textMuted }]}>{text}</Text></View>;
+  }
+
+  function Field({ label, children }: { label: string; children: React.ReactNode }) {
+    return <View style={styles.field}><Text style={[styles.fieldLabel, { color: theme.colors.textMuted }]}>{label}</Text>{children}</View>;
+  }
+
+  function StateCard({ loading = false, title, body }: { loading?: boolean; title: string; body?: string }) {
+    return <View style={[styles.stateCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>{loading ? <ActivityIndicator color={theme.colors.primary} /> : <View style={[styles.largeBadge, { backgroundColor: theme.colors.surfaceAccent }]}><NitipIcon color={theme.colors.primary} name="delivery" size={21} /></View>}<Text style={[styles.stateTitle, { color: theme.colors.text }]}>{title}</Text>{body ? <Text style={[styles.stateBody, { color: theme.colors.textMuted }]}>{body}</Text> : null}</View>;
+  }
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, backgroundColor: "#F7FFF9", paddingHorizontal: 20, paddingTop: 56, paddingBottom: 40 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 32 },
-  brand: { color: "#14216D", fontSize: 27, fontWeight: "900", letterSpacing: -1 },
-  headerMeta: { color: "#52607F", fontSize: 11, marginTop: 3 },
-  outlineButton: { borderWidth: 1, borderColor: "#A1DCD9", borderRadius: 999, paddingHorizontal: 13, paddingVertical: 8 },
-  outlineText: { color: "#14216D", fontWeight: "800", fontSize: 11 },
-  eyebrow: { color: "#08349C", fontWeight: "900", fontSize: 10, letterSpacing: 1.4 },
-  title: { color: "#14216D", fontWeight: "900", fontSize: 32, letterSpacing: -1.1, marginTop: 5 },
-  subtitle: { color: "#52607F", lineHeight: 20, fontSize: 12, marginTop: 8, marginBottom: 20 },
-  notice: { backgroundColor: "#CEFCD9", borderRadius: 18, padding: 16, marginBottom: 12 },
-  noticeTitle: { color: "#14216D", fontWeight: "900", fontSize: 13 },
-  muted: { color: "#52607F", fontSize: 11, lineHeight: 17, marginTop: 4 },
-  centerCard: { backgroundColor: "#FFFFFF", borderColor: "#A1DCD9", borderWidth: 1, borderRadius: 18, padding: 18, alignItems: "center", gap: 8 },
-  statusCard: { backgroundColor: "#CEFCD9", borderRadius: 18, padding: 16, marginBottom: 12 },
-  statusRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12 },
-  statusLabel: { color: "#08349C", fontSize: 9, fontWeight: "900", letterSpacing: 1 },
-  statusValue: { color: "#14216D", fontSize: 17, fontWeight: "900", marginTop: 4 },
-  onlineBadge: { backgroundColor: "#FFFFFF", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 7 },
-  onlineBadgeActive: { backgroundColor: "#08349C" },
-  onlineBadgeText: { color: "#52607F", fontSize: 9, fontWeight: "900" },
-  onlineBadgeTextActive: { color: "#FFFFFF" },
-  rejectBox: { backgroundColor: "#FFF1F0", borderRadius: 12, padding: 12, marginTop: 12 },
-  rejectLabel: { color: "#B42318", fontWeight: "900", fontSize: 9, letterSpacing: 0.8 },
-  rejectText: { color: "#B42318", fontSize: 11, lineHeight: 17, marginTop: 4 },
-  refreshStatusButton: { marginTop: 12, alignSelf: "flex-start", borderWidth: 1, borderColor: "#08349C", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
-  refreshStatusText: { color: "#08349C", fontWeight: "900", fontSize: 10 },
-  availabilityCard: { backgroundColor: "#14216D", borderRadius: 20, padding: 18, marginBottom: 16 },
-  availabilityTitle: { color: "#FFFFFF", fontWeight: "900", fontSize: 17 },
-  availabilityText: { color: "#A1DCD9", fontSize: 11, lineHeight: 17, marginTop: 5 },
-  availabilityButton: { backgroundColor: "#08349C", borderRadius: 14, alignItems: "center", paddingVertical: 13, marginTop: 14 },
-  availabilityButtonOffline: { backgroundColor: "#52607F" },
-  availabilityButtonText: { color: "#FFFFFF", fontWeight: "900" },
-  dispatchHeader: { marginTop: 8, marginBottom: 11, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  sectionTitle: { color: "#14216D", fontWeight: "900", fontSize: 18 },
-  refreshButton: { backgroundColor: "#CEFCD9", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
-  refreshText: { color: "#08349C", fontWeight: "900", fontSize: 10 },
-  currentOrderCard: { backgroundColor: "#CEFCD9", borderRadius: 20, padding: 17, marginBottom: 18, borderWidth: 1, borderColor: "#A1DCD9" },
-  offerCard: { backgroundColor: "#FFFFFF", borderColor: "#A1DCD9", borderWidth: 1, borderRadius: 20, padding: 17, marginBottom: 10 },
-  orderTop: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 },
-  orderEyebrow: { color: "#08349C", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
-  offerLabel: { color: "#08349C", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
-  orderCode: { color: "#14216D", fontSize: 15, fontWeight: "900", marginTop: 3 },
-  orderFare: { color: "#08349C", fontSize: 16, fontWeight: "900" },
-  routeLabel: { color: "#08349C", fontSize: 9, fontWeight: "900", letterSpacing: 0.8, marginTop: 16 },
-  routeTitle: { color: "#14216D", fontWeight: "900", fontSize: 13, marginTop: 3 },
-  routeMeta: { color: "#52607F", fontSize: 11, lineHeight: 17, marginTop: 3 },
-  routeDivider: { height: 1, backgroundColor: "#A1DCD9", marginTop: 14 },
-  offerMetaRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 },
-  offerMeta: { backgroundColor: "#F7FFF9", color: "#52607F", borderRadius: 999, paddingHorizontal: 9, paddingVertical: 6, fontSize: 9, fontWeight: "800" },
-  privacyNote: { color: "#52607F", fontSize: 9, lineHeight: 14, marginTop: 11 },
-  takeButton: { backgroundColor: "#08349C", borderRadius: 14, minHeight: 44, alignItems: "center", justifyContent: "center", marginTop: 13 },
-  takeButtonText: { color: "#FFFFFF", fontWeight: "900" },
-  openOrder: { color: "#08349C", fontWeight: "900", fontSize: 11, marginTop: 16 },
-  emptyDispatch: { backgroundColor: "#FFFFFF", borderColor: "#A1DCD9", borderWidth: 1, borderRadius: 18, padding: 16, marginBottom: 18 },
-  card: { backgroundColor: "#FFFFFF", borderColor: "#A1DCD9", borderWidth: 1, borderRadius: 20, padding: 17, marginTop: 8 },
-  cardTitle: { color: "#14216D", fontWeight: "900", fontSize: 17 },
-  label: { color: "#52607F", fontSize: 11, fontWeight: "800", marginTop: 15, marginBottom: 7 },
-  input: { backgroundColor: "#F7FFF9", borderWidth: 1, borderColor: "#A1DCD9", borderRadius: 14, color: "#14216D", paddingHorizontal: 13, paddingVertical: 12 },
-  readonly: { opacity: 0.65 },
-  vehicleRow: { flexDirection: "row", gap: 10 },
-  vehicleChoice: { flex: 1, borderWidth: 1, borderColor: "#A1DCD9", borderRadius: 14, alignItems: "center", paddingVertical: 12 },
-  vehicleChoiceActive: { backgroundColor: "#CEFCD9", borderColor: "#08349C" },
-  vehicleChoiceText: { color: "#52607F", fontWeight: "800" },
-  vehicleChoiceTextActive: { color: "#14216D" },
-  primaryButton: { backgroundColor: "#14216D", borderRadius: 14, alignItems: "center", paddingVertical: 14, marginTop: 18 },
-  primaryText: { color: "#FFFFFF", fontWeight: "900" },
-  secondaryButton: { borderWidth: 1, borderColor: "#08349C", borderRadius: 14, alignItems: "center", paddingVertical: 13, marginTop: 9 },
-  secondaryText: { color: "#08349C", fontWeight: "900" },
-  disabled: { opacity: 0.5 },
-  errorCard: { marginBottom: 12, padding: 13, borderRadius: 14, backgroundColor: "#FFF1F0" },
-  errorText: { color: "#B42318", fontSize: 11, lineHeight: 17 },
+  screen: { flex: 1 }, content: { paddingBottom: 34, paddingHorizontal: 20 },
+  topbar: { alignItems: "center", flexDirection: "row", minHeight: 44 }, brandCopy: { flex: 1, minWidth: 0 }, brand: { fontSize: 18, fontWeight: "900", letterSpacing: -0.5 }, account: { fontSize: 8, marginTop: 2 },
+  onlinePill: { alignItems: "center", borderRadius: 999, borderWidth: 1, flexDirection: "row", gap: 6, minHeight: 34, paddingHorizontal: 11 }, onlineDot: { borderRadius: 4, height: 7, width: 7 }, onlinePillText: { fontSize: 8, fontWeight: "900" },
+  hero: { marginTop: 24 }, eyebrow: { fontSize: 8, fontWeight: "900", letterSpacing: 1.2 }, heroTitle: { fontSize: 29, fontWeight: "900", letterSpacing: -0.9, marginTop: 7 }, heroSubtitle: { fontSize: 10, lineHeight: 17, marginTop: 6, maxWidth: 340 },
+  statusCard: { alignItems: "center", borderRadius: 18, flexDirection: "row", marginTop: 20, padding: 14 }, statusCopy: { flex: 1 }, statusLabel: { fontSize: 7, fontWeight: "900", letterSpacing: 0.8 }, statusValue: { fontSize: 13, fontWeight: "900", marginTop: 3 }, statusBody: { fontSize: 9, lineHeight: 14, marginTop: 3 }, iconAction: { alignItems: "center", height: 38, justifyContent: "center", width: 38 },
+  errorCard: { borderRadius: 15, marginTop: 10, padding: 12 }, errorLabel: { fontSize: 7, fontWeight: "900", letterSpacing: 0.7 }, errorText: { fontSize: 9, lineHeight: 14, marginTop: 3 },
+  availabilityCard: { alignItems: "center", borderRadius: 20, borderWidth: 1, elevation: 2, flexDirection: "row", marginTop: 12, padding: 12, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 7 }, largeBadge: { alignItems: "center", borderRadius: 22, height: 44, justifyContent: "center", width: 44 }, availabilityCopy: { flex: 1, minWidth: 0, paddingHorizontal: 11 }, availabilityTitle: { fontSize: 11, fontWeight: "900" }, availabilityBody: { fontSize: 8, lineHeight: 12, marginTop: 2 }, onlineButton: { borderRadius: 12, justifyContent: "center", minHeight: 38, paddingHorizontal: 11 }, onlineButtonText: { fontSize: 8, fontWeight: "900" },
+  sectionHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", marginTop: 24 }, sectionTitle: { fontSize: 13, fontWeight: "900" }, sectionMeta: { fontSize: 8, marginTop: 2 }, refreshButton: { alignItems: "center", borderRadius: 999, flexDirection: "row", gap: 5, minHeight: 34, paddingHorizontal: 11 }, refreshText: { fontSize: 8, fontWeight: "900" },
+  currentOrder: { borderRadius: 20, elevation: 3, marginTop: 10, padding: 15, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.12, shadowRadius: 9 }, orderTop: { alignItems: "flex-start", flexDirection: "row", gap: 10, justifyContent: "space-between" }, orderIdentity: { flex: 1, minWidth: 0 }, currentEyebrow: { color: "rgba(255,255,255,0.65)", fontSize: 7, fontWeight: "900", letterSpacing: 0.7 }, currentCode: { color: "#FFFFFF", fontSize: 15, fontWeight: "900", marginTop: 3 }, currentFare: { color: "#FFFFFF", fontSize: 14, fontWeight: "900" }, openRow: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", marginTop: 14 }, openText: { color: "#FFFFFF", fontSize: 9, fontWeight: "900" },
+  routeRow: { alignItems: "flex-start", flexDirection: "row", marginTop: 13 }, routeBadge: { alignItems: "center", borderRadius: 17, height: 34, justifyContent: "center", width: 34 }, routeCopy: { flex: 1, minWidth: 0, paddingLeft: 9 }, routeLabel: { fontSize: 7, fontWeight: "800" }, routeTitle: { fontSize: 10, fontWeight: "900", marginTop: 2 }, routeBody: { fontSize: 8, lineHeight: 12, marginTop: 2 },
+  offerList: { gap: 10, marginTop: 10 }, offerCard: { borderRadius: 20, borderWidth: 1, elevation: 2, padding: 15, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 7 }, offerEyebrow: { fontSize: 7, fontWeight: "900", letterSpacing: 0.7 }, offerCode: { fontSize: 14, fontWeight: "900", marginTop: 3 }, offerFare: { fontSize: 13, fontWeight: "900" }, offerMetaRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 10 }, infoPill: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 5 }, infoText: { fontSize: 7, fontWeight: "700" }, privacy: { fontSize: 8, lineHeight: 12, marginTop: 9 }, takeButton: { alignItems: "center", borderRadius: 14, justifyContent: "center", marginTop: 12, minHeight: 44 }, takeText: { color: "#FFFFFF", fontSize: 9, fontWeight: "900" },
+  profileCard: { borderRadius: 20, borderWidth: 1, elevation: 2, marginTop: 20, padding: 15, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 7 }, profileTitle: { fontSize: 13, fontWeight: "900" }, field: { marginTop: 13 }, fieldLabel: { fontSize: 8, fontWeight: "800", marginBottom: 6 }, input: { borderRadius: 14, borderWidth: 1, fontSize: 11, minHeight: 46, paddingHorizontal: 12 }, readonly: { opacity: 0.55 }, vehicleRow: { flexDirection: "row", gap: 8 }, vehicleChoice: { alignItems: "center", borderRadius: 14, borderWidth: 1, flex: 1, justifyContent: "center", minHeight: 44 }, vehicleText: { fontSize: 9, fontWeight: "900" }, primaryButton: { alignItems: "center", borderRadius: 14, justifyContent: "center", marginTop: 16, minHeight: 48 }, primaryText: { color: "#FFFFFF", fontSize: 10, fontWeight: "900" }, reviewButton: { alignItems: "center", borderRadius: 14, justifyContent: "center", marginTop: 8, minHeight: 46 }, reviewText: { fontSize: 9, fontWeight: "900" },
+  stateCard: { alignItems: "center", borderRadius: 20, borderWidth: 1, marginTop: 18, padding: 25 }, stateTitle: { fontSize: 12, fontWeight: "900", marginTop: 10, textAlign: "center" }, stateBody: { fontSize: 9, lineHeight: 15, marginTop: 5, textAlign: "center" },
 });
