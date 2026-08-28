@@ -52,40 +52,54 @@ const styles = StyleSheet.create({
   bar: {
     alignItems: "center",
     alignSelf: "stretch",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
     borderTopWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
     flexShrink: 0,
     justifyContent: "space-around",
-    paddingHorizontal: 4,
-    paddingTop: 8,
+    paddingHorizontal: 8,
+    paddingTop: 7,
     width: "100%",
   },
   tab: {
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 52,
-    width: 64,
+    minHeight: 58,
+    position: "relative",
+    width: 66,
+  },
+  activeHalo: {
+    alignItems: "center",
+    borderRadius: 15,
+    height: 30,
+    justifyContent: "center",
+    width: 38,
   },
   iconSlot: {
     alignItems: "center",
-    height: 22,
+    height: 30,
     justifyContent: "center",
-    width: 28,
+    width: 38,
   },
   label: {
     fontSize: 9,
     fontWeight: "700",
     lineHeight: 12,
-    marginTop: 3,
+    marginTop: 2,
     textAlign: "center",
   },
   selectedLabel: {
     fontWeight: "900",
   },
   pressed: {
-    opacity: 0.5,
+    opacity: 0.62,
+  },
+  activeDot: {
+    borderRadius: 999,
+    height: 3,
+    marginTop: 3,
+    width: 14,
   },
 });
 
@@ -104,11 +118,11 @@ export function BottomNavigation({ active }: { active: RootTab }) {
         {
           backgroundColor: theme.colors.surfaceRaised,
           borderTopColor: theme.colors.border,
-          elevation: 12,
-          paddingBottom: Math.max(insets.bottom, 8),
+          elevation: 10,
+          paddingBottom: Math.max(insets.bottom, 7),
           shadowColor: theme.colors.shadow,
           shadowOffset: { width: 0, height: -3 },
-          shadowOpacity: theme.mode === "dark" ? 0.24 : 0.09,
+          shadowOpacity: theme.mode === "dark" ? 0.2 : 0.08,
           shadowRadius: 12,
         },
       ]}
@@ -116,32 +130,55 @@ export function BottomNavigation({ active }: { active: RootTab }) {
       {tabs.map((tab) => {
         const selected = tab.key === active;
         const label = labels[language][tab.key];
-        const color = selected ? theme.colors.text : theme.colors.textMuted;
+        const iconColor = selected ? theme.colors.primary : theme.colors.textMuted;
+        const labelColor = selected ? theme.colors.primary : theme.colors.textMuted;
 
         return (
           <Pressable
             accessibilityLabel={label}
             accessibilityRole="tab"
             accessibilityState={{ selected }}
+            hitSlop={6}
             key={tab.key}
             onPress={() => {
               if (!selected) router.replace(tab.href);
             }}
             style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
           >
-            <View style={styles.iconSlot}>
-              <NitipIcon color={color} name={tab.icon} size={18} />
+            <View
+              style={[
+                styles.iconSlot,
+                selected && styles.activeHalo,
+                selected && {
+                  backgroundColor: theme.colors.surfaceAccent,
+                  transform: [{ translateY: -2 }],
+                },
+              ]}
+            >
+              <NitipIcon color={iconColor} name={tab.icon} size={selected ? 19 : 18} />
             </View>
+
             <Text
               numberOfLines={1}
               style={[
                 styles.label,
                 selected && styles.selectedLabel,
-                { color },
+                { color: labelColor },
               ]}
             >
               {label}
             </Text>
+
+            {selected ? (
+              <View
+                style={[
+                  styles.activeDot,
+                  { backgroundColor: theme.colors.primary },
+                ]}
+              />
+            ) : (
+              <View style={{ height: 6 }} />
+            )}
           </Pressable>
         );
       })}
