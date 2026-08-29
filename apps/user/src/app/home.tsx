@@ -50,11 +50,9 @@ const HOME_COPY = {
     allCategory: "Semua",
     merchantFilter: "Merchant",
     menuSection: "Menu di Nitip",
-    menuSubtitle: "Menu nyata dari merchant yang tersedia di Nitip.",
     menuEmpty: "Belum ada menu yang cocok.",
     menuEmptyDescription: "Coba kategori atau kata pencarian lain.",
     merchantSection: "Merchant di Nitip",
-    merchantSubtitle: "Pilihan yang sedang tersedia untuk dipesan.",
     openOnly: "Buka saja",
     openOnlyActive: "Hanya yang buka",
     unrated: "Belum ada rating",
@@ -72,11 +70,9 @@ const HOME_COPY = {
     allCategory: "All",
     merchantFilter: "Merchants",
     menuSection: "Menus on Nitip",
-    menuSubtitle: "Real menu items currently available from Nitip merchants.",
     menuEmpty: "No matching menu yet.",
     menuEmptyDescription: "Try another category or search term.",
     merchantSection: "Merchants on Nitip",
-    merchantSubtitle: "Places currently available to take your order.",
     openOnly: "Open only",
     openOnlyActive: "Showing open",
     unrated: "No ratings yet",
@@ -708,9 +704,6 @@ export default function HomeScreen() {
               >
                 {copy.menuSection}
               </Text>
-              <Text className="mt-1 text-[9px] leading-[14px]" style={{ color: theme.colors.textMuted }}>
-                {copy.menuSubtitle}
-              </Text>
             </View>
 
             {menuLoading ? (
@@ -830,14 +823,6 @@ export default function HomeScreen() {
                             {item.product.name}
                           </Text>
 
-                          <Text
-                            className="mt-1 text-[9px]"
-                            numberOfLines={1}
-                            style={{ color: theme.colors.textMuted }}
-                          >
-                            {item.outlet.businessName} · {item.categoryName}
-                          </Text>
-
                           <View className="mt-3 flex-row items-center justify-between gap-2">
                             <Text
                               className="flex-1 text-[10px] font-black"
@@ -870,9 +855,6 @@ export default function HomeScreen() {
             style={{ color: theme.colors.text }}
           >
             {copy.merchantSection}
-          </Text>
-          <Text className="mt-1 text-[9px] leading-[14px]" style={{ color: theme.colors.textMuted }}>
-            {openOnly ? copy.openOnlyActive : copy.merchantSubtitle}
           </Text>
         </View>
 
@@ -1004,14 +986,6 @@ export default function HomeScreen() {
                         style={{ color: theme.colors.text }}
                       >
                         {outlet.businessName}
-                      </Text>
-
-                      <Text
-                        className="mt-1 text-[9px]"
-                        numberOfLines={1}
-                        style={{ color: theme.colors.textMuted }}
-                      >
-                        {outlet.name} · {t("home.productCount", { count: outlet.productCount })}
                       </Text>
 
                       <View className="mt-2 flex-row items-center">
