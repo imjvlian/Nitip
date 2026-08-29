@@ -12,14 +12,7 @@ import { LiveDriverTracking } from "../../components/LiveDriverTracking";
 import { NitipIcon, type NitipIconName } from "../../components/NitipIcon";
 import { useAuth } from "../../context/AuthContext";
 import { useNitipTheme } from "../../hooks/useNitipTheme";
-import { getOrder, getOrderOperations, getOrderRating, simulateOrderPayment, upsertOrderRating } from "../../lib/api";
-
-function reservationDeadline(value: string | null, language: "id" | "en") {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleTimeString(language === "en" ? "en-US" : "id-ID", { hour: "2-digit", minute: "2-digit" });
-}
+import { getOrder, getOrderOperations, getOrderRating, upsertOrderRating } from "../../lib/api";
 
 function readyTime(value: string | null, language: "id" | "en") {
   if (!value) return null;
@@ -53,7 +46,6 @@ export default function OrderDetailScreen() {
   const [order, setOrder] = useState<NitipOrder | null>(null);
   const [operations, setOperations] = useState<NitipOrderOperations | null>(null);
   const [loading, setLoading] = useState(true);
-  const [simulating, setSimulating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<PopupNotice | null>(null);
   const [rating, setRating] = useState<NitipOrderRating | null>(null);
@@ -70,14 +62,12 @@ export default function OrderDetailScreen() {
     report: "Report an order issue", reportBody: "Missing item, wrong order, delivery problem, or payment issue.",
     ratingTitle: "Rate this order", ratingDescription: "Only completed deliveries can be rated. Your score contributes to the outlet rating.", choose: "Choose 1–5 stars before submitting.", commentPlaceholder: "Optional: tell us about the food or merchant", submit: "Submit rating", update: "Update rating", saved: "Rating saved", savedBody: "Thank you for sharing your experience.", loadError: "Unable to load your rating.", saveError: "Unable to save your rating.",
     live: "LIVE STATUS", refreshing: "Status refreshes automatically while the order is active.", receipt: "View & save receipt", receiptBody: "Open the transaction receipt and save it as a PDF.",
-    paymentSuccess: "Payment confirmed", paymentSuccessBody: "The order is now waiting for the merchant.", paymentFailed: "Payment update failed",
   } : {
     prepTitle: "Persiapan merchant", prepBody: "Merchant memperkirakan pesanan ini membutuhkan {{minutes}} menit untuk disiapkan.", readyAt: "Perkiraan siap pukul",
     otpTitle: "Kode verifikasi penerimaan", otpBody: "Berikan kode 4 digit ini ke driver hanya setelah pesanan benar-benar kamu terima.", otpWarning: "Jangan berikan kode sebelum pesanan sampai kepadamu.",
     report: "Laporkan masalah pesanan", reportBody: "Item kurang, pesanan salah, masalah driver, atau kendala pembayaran.",
     ratingTitle: "Nilai pesanan ini", ratingDescription: "Hanya pesanan yang selesai diantar yang bisa dinilai. Nilaimu masuk ke rating outlet.", choose: "Pilih 1–5 bintang sebelum mengirim.", commentPlaceholder: "Opsional: ceritakan pengalaman makanan atau merchant", submit: "Kirim rating", update: "Perbarui rating", saved: "Rating tersimpan", savedBody: "Terima kasih sudah membagikan pengalamanmu.", loadError: "Rating kamu belum bisa dimuat.", saveError: "Rating belum bisa disimpan.",
     live: "STATUS LIVE", refreshing: "Status diperbarui otomatis selama pesanan masih aktif.", receipt: "Lihat & simpan receipt", receiptBody: "Buka bukti transaksi dan simpan sebagai PDF.",
-    paymentSuccess: "Pembayaran dikonfirmasi", paymentSuccessBody: "Pesanan sekarang menunggu merchant.", paymentFailed: "Pembaruan pembayaran gagal",
   };
 
   function showNotice(tone: PopupNotice["tone"], title: string, message?: string | null, durationMs?: number) {
@@ -141,23 +131,6 @@ export default function OrderDetailScreen() {
 
   if (!user) return <Redirect href="/login" />;
 
-  async function simulatePayment() {
-    if (!order) return;
-    setSimulating(true);
-    setError(null);
-    try {
-      setOrder(await simulateOrderPayment(user, order.id));
-      await loadOrder(false);
-      showNotice("success", x.paymentSuccess, x.paymentSuccessBody);
-    } catch (e) {
-      const message = e instanceof Error ? e.message : t("orderDetail.simulateError");
-      setError(message);
-      showNotice("error", x.paymentFailed, message, 3200);
-    } finally {
-      setSimulating(false);
-    }
-  }
-
   async function submitRating() {
     if (!order || order.status !== "delivered") return;
     if (ratingScore < 1 || ratingScore > 5) {
@@ -184,7 +157,6 @@ export default function OrderDetailScreen() {
     }
   }
 
-  const deadline = reservationDeadline(order?.stockReservationExpiresAt ?? null, language);
   const progress = order ? orderProgress(order.status) : 0;
   const progressSteps: { label: string; icon: NitipIconName }[] = [
     { label: t("orderDetail.progressPayment"), icon: "receipt" },
@@ -228,8 +200,6 @@ export default function OrderDetailScreen() {
               })}</View>
             </View>
           ) : null}
-
-          {__DEV__ && order.status === "pending_payment" && order.payment?.provider !== "doku" ? <View style={[styles.card, { backgroundColor: theme.colors.warningSurface, borderColor: theme.colors.warningSurface }]}><Text style={[styles.cardTitle, { color: theme.colors.warning }]}>{t("orderDetail.paymentGatewayDev")}</Text><Text style={[styles.cardBody, { color: theme.colors.textMuted }]}>{t("orderDetail.paymentGatewayDevDescription")}</Text>{order.stockReservationStatus === "reserved" ? <Text style={[styles.helper, { color: theme.colors.textMuted }]}>{deadline ? t("orderDetail.stockReservedDeadline", { deadline }) : t("orderDetail.stockReservedGeneric")}</Text> : null}<Pressable disabled={simulating} onPress={() => void simulatePayment()} style={[styles.primary, { backgroundColor: theme.colors.primary, opacity: simulating ? 0.55 : 1 }]}>{simulating ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryText}>{t("orderDetail.simulatePayment")}</Text>}</Pressable></View> : null}
 
           {operations?.preparationMinutes && ["merchant_confirmed", "preparing", "ready_for_pickup", "driver_assigned"].includes(order.status) ? <View style={[styles.card, { backgroundColor: theme.colors.surfaceAccent, borderColor: theme.colors.surfaceAccent }]}><View style={styles.rowTop}><View style={[styles.roundIcon, { backgroundColor: theme.colors.surface }]}><NitipIcon color={theme.colors.primary} name="clock" size={18} /></View><View style={styles.flex}><Text style={[styles.cardTitle, { color: theme.colors.text }]}>{x.prepTitle}</Text><Text style={[styles.cardBody, { color: theme.colors.textMuted }]}>{x.prepBody.replace("{{minutes}}", String(operations.preparationMinutes))}</Text>{estimatedReady ? <Text style={[styles.highlight, { color: theme.colors.primary }]}>{x.readyAt} {estimatedReady}</Text> : null}</View></View></View> : null}
 
