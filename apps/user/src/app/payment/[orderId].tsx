@@ -28,7 +28,6 @@ export default function PaymentScreen() {
 
   const c = language === "id" ? {
     title: "Pembayaran",
-    secure: "Pembayaran diproses aman oleh DOKU",
     loading: "Menyiapkan halaman pembayaran...",
     unavailable: "Halaman pembayaran belum tersedia",
     retry: "Coba lagi",
@@ -42,7 +41,6 @@ export default function PaymentScreen() {
     webFailed: "Halaman DOKU tidak dapat dimuat. Periksa koneksi lalu coba lagi.",
   } : {
     title: "Payment",
-    secure: "Payment is securely processed by DOKU",
     loading: "Preparing payment page...",
     unavailable: "Payment page is not available yet",
     retry: "Try again",
@@ -150,11 +148,6 @@ export default function PaymentScreen() {
         <AppHeader title={c.title} onBack={backToOrder} />
       </View>
 
-      <View style={[styles.secureBar, { backgroundColor: theme.colors.surfaceAccent, borderColor: theme.colors.border }]}>
-        <NitipIcon color={theme.colors.primary} name="check" size={15} />
-        <Text style={[styles.secureText, { color: theme.colors.primary }]}>{c.secure}</Text>
-      </View>
-
       <View style={styles.content}>
         {loading ? (
           <View style={styles.center}>
@@ -185,7 +178,7 @@ export default function PaymentScreen() {
             mixedContentMode="never"
             startInLoadingState
             renderLoading={() => (
-              <View style={[styles.webLoading, { backgroundColor: theme.colors.background }]}>
+              <View style={[styles.webLoading, { backgroundColor: theme.colors.background }]}> 
                 <ActivityIndicator color={theme.colors.primary} size="large" />
                 <Text style={[styles.centerText, { color: theme.colors.textMuted }]}>{c.loading}</Text>
               </View>
@@ -221,8 +214,6 @@ export default function PaymentScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  secureBar: { alignItems: "center", borderBottomWidth: 1, borderTopWidth: 1, flexDirection: "row", gap: 8, marginTop: 12, minHeight: 40, paddingHorizontal: 18 },
-  secureText: { fontSize: 10, fontWeight: "800" },
   content: { flex: 1 },
   webview: { flex: 1 },
   webLoading: { alignItems: "center", bottom: 0, justifyContent: "center", left: 0, position: "absolute", right: 0, top: 0 },

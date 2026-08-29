@@ -32,10 +32,8 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const c = language === "id" ? {
-    access: "DRIVER ACCESS",
     loginTitle: "Siap mulai jalan?",
     registerTitle: "Daftar jadi driver Nitip.",
-    subtitle: "Gunakan akun Firebase Nitip. Status verifikasi driver tetap dikelola Nitip Ops sebelum kamu dapat menerima order.",
     firebase: "Firebase belum dikonfigurasi",
     firebaseBody: "Isi apps/driver/.env dengan konfigurasi Firebase dan API yang sama dengan ekosistem Nitip.",
     name: "Nama lengkap",
@@ -53,10 +51,8 @@ export default function LoginScreen() {
     nameRequired: "Nama lengkap wajib diisi untuk membuat akun driver.",
     failed: "Autentikasi gagal",
   } : {
-    access: "DRIVER ACCESS",
     loginTitle: "Ready to get moving?",
     registerTitle: "Join Nitip as a driver.",
-    subtitle: "Use your Nitip Firebase account. Driver verification is still managed by Nitip Ops before you can receive orders.",
     firebase: "Firebase is not configured",
     firebaseBody: "Set apps/driver/.env with the same Firebase and API configuration used by the Nitip ecosystem.",
     name: "Full name",
@@ -115,9 +111,7 @@ export default function LoginScreen() {
         <View style={styles.language}><LanguageSwitcher /></View>
 
         <View style={styles.hero}>
-          <Text style={[styles.eyebrow, { color: theme.colors.primary }]}>{c.access}</Text>
           <Text style={[styles.title, { color: theme.colors.text }]}>{mode === "login" ? c.loginTitle : c.registerTitle}</Text>
-          <Text style={[styles.subtitle, { color: theme.colors.textMuted }]}>{c.subtitle}</Text>
         </View>
 
         {!configured ? (
@@ -171,9 +165,7 @@ const styles = StyleSheet.create({
   brand: { fontSize: 27, fontWeight: "900", letterSpacing: -1 },
   language: { marginTop: 12 },
   hero: { marginTop: 30 },
-  eyebrow: { fontSize: 8, fontWeight: "900", letterSpacing: 1.2 },
-  title: { fontSize: 32, fontWeight: "900", letterSpacing: -1, lineHeight: 37, marginTop: 7 },
-  subtitle: { fontSize: 10, lineHeight: 17, marginTop: 8, maxWidth: 350 },
+  title: { fontSize: 32, fontWeight: "900", letterSpacing: -1, lineHeight: 37 },
   notice: { borderRadius: 18, marginTop: 18, padding: 14 },
   noticeTitle: { fontSize: 10, fontWeight: "900" },
   noticeText: { fontSize: 8, lineHeight: 13, marginTop: 4 },

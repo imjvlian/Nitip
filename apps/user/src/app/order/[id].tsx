@@ -61,13 +61,13 @@ export default function OrderDetailScreen() {
     otpTitle: "Delivery verification code", otpBody: "Give this 4-digit code to the driver only after you have received your order.", otpWarning: "Do not share this code before the order reaches you.",
     report: "Report an order issue", reportBody: "Missing item, wrong order, delivery problem, or payment issue.",
     ratingTitle: "Rate this order", ratingDescription: "Only completed deliveries can be rated. Your score contributes to the outlet rating.", choose: "Choose 1–5 stars before submitting.", commentPlaceholder: "Optional: tell us about the food or merchant", submit: "Submit rating", update: "Update rating", saved: "Rating saved", savedBody: "Thank you for sharing your experience.", loadError: "Unable to load your rating.", saveError: "Unable to save your rating.",
-    live: "LIVE STATUS", refreshing: "Status refreshes automatically while the order is active.", receipt: "View & save receipt", receiptBody: "Open the transaction receipt and save it as a PDF.",
+    receipt: "View & save receipt", receiptBody: "Open the transaction receipt and save it as a PDF.",
   } : {
     prepTitle: "Persiapan merchant", prepBody: "Merchant memperkirakan pesanan ini membutuhkan {{minutes}} menit untuk disiapkan.", readyAt: "Perkiraan siap pukul",
     otpTitle: "Kode verifikasi penerimaan", otpBody: "Berikan kode 4 digit ini ke driver hanya setelah pesanan benar-benar kamu terima.", otpWarning: "Jangan berikan kode sebelum pesanan sampai kepadamu.",
     report: "Laporkan masalah pesanan", reportBody: "Item kurang, pesanan salah, masalah driver, atau kendala pembayaran.",
     ratingTitle: "Nilai pesanan ini", ratingDescription: "Hanya pesanan yang selesai diantar yang bisa dinilai. Nilaimu masuk ke rating outlet.", choose: "Pilih 1–5 bintang sebelum mengirim.", commentPlaceholder: "Opsional: ceritakan pengalaman makanan atau merchant", submit: "Kirim rating", update: "Perbarui rating", saved: "Rating tersimpan", savedBody: "Terima kasih sudah membagikan pengalamanmu.", loadError: "Rating kamu belum bisa dimuat.", saveError: "Rating belum bisa disimpan.",
-    live: "STATUS LIVE", refreshing: "Status diperbarui otomatis selama pesanan masih aktif.", receipt: "Lihat & simpan receipt", receiptBody: "Buka bukti transaksi dan simpan sebagai PDF.",
+    receipt: "Lihat & simpan receipt", receiptBody: "Buka bukti transaksi dan simpan sebagai PDF.",
   };
 
   function showNotice(tone: PopupNotice["tone"], title: string, message?: string | null, durationMs?: number) {
@@ -189,8 +189,6 @@ export default function OrderDetailScreen() {
             <Text style={[styles.outlet, { color: theme.colors.textMuted }]}>{order.outletName}</Text>
           </View>
 
-          {shouldPoll(order.status) ? <View style={[styles.live, { backgroundColor: theme.colors.surfaceAccent }]}><View style={[styles.liveDot, { backgroundColor: theme.colors.primary }]} /><View style={styles.liveCopy}><Text style={[styles.liveTitle, { color: theme.colors.primary }]}>{x.live}</Text><Text style={[styles.liveBody, { color: theme.colors.textMuted }]}>{x.refreshing}</Text></View></View> : null}
-
           {order.status !== "cancelled" && order.status !== "refunded" ? (
             <View style={[styles.card, styles.progressCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
               <View style={styles.progressRow}>{progressSteps.map((step, index) => {
@@ -240,11 +238,6 @@ const styles = StyleSheet.create({
   business: { fontSize: 26, fontWeight: "900", letterSpacing: -0.7, marginTop: 13 },
   orderCode: { fontSize: 11, fontWeight: "900", marginTop: 5 },
   outlet: { fontSize: 9, marginTop: 3 },
-  live: { alignItems: "center", borderRadius: 18, flexDirection: "row", marginTop: 16, padding: 13 },
-  liveDot: { borderRadius: 5, height: 9, width: 9 },
-  liveCopy: { flex: 1, paddingLeft: 10 },
-  liveTitle: { fontSize: 7, fontWeight: "900", letterSpacing: 0.7 },
-  liveBody: { fontSize: 8, marginTop: 2 },
   card: { borderRadius: 22, borderWidth: 1, marginTop: 14, padding: 15 },
   progressCard: { paddingHorizontal: 8 },
   progressRow: { flexDirection: "row" },

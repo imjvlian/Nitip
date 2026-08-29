@@ -115,9 +115,6 @@ export default function LoginScreen() {
           <Text className="text-[28px] font-black leading-[34px] tracking-tighter" style={{ color: theme.colors.text }}>
             {mode === "login" ? t("auth.titleLogin") : t("auth.titleRegister")}
           </Text>
-          <Text className="mt-2 max-w-[420px] text-xs leading-5" style={{ color: theme.colors.textMuted }}>
-            {mode === "login" ? t("auth.subtitleLogin") : t("auth.subtitleRegister")}
-          </Text>
         </View>
 
         {!configured ? (

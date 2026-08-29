@@ -67,9 +67,7 @@ export default function LoginScreen() {
       <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingTop: insets.top + 28, paddingBottom: Math.max(insets.bottom + 28, 40) }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <Text className="text-[27px] font-black tracking-tighter" style={{ color: theme.colors.primaryStrong }}>nitip mitra.</Text>
         <View className="mt-10">
-          <Text className="text-[9px] font-black tracking-[1.2px]" style={{ color: theme.colors.primary }}>{c.login.portal}</Text>
-          <Text className="mt-2 text-[34px] font-black leading-[38px] tracking-tighter" style={{ color: theme.colors.text }}>{mode === "login" ? c.login.titleLogin : c.login.titleRegister}</Text>
-          <Text className="mt-2 max-w-[330px] text-[11px] leading-5" style={{ color: theme.colors.textMuted }}>{c.login.subtitle}</Text>
+          <Text className="text-[34px] font-black leading-[38px] tracking-tighter" style={{ color: theme.colors.text }}>{mode === "login" ? c.login.titleLogin : c.login.titleRegister}</Text>
         </View>
 
         {!configured ? <View className="mt-5 rounded-[22px] p-4" style={{ backgroundColor: theme.colors.warningSurface }}><Text className="text-[11px] font-black" style={{ color: theme.colors.warning }}>{c.login.firebaseTitle}</Text><Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{c.login.firebaseDescription}</Text></View> : null}

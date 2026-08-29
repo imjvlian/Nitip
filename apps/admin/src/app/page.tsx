@@ -203,10 +203,7 @@ export default async function OpsHome({
           <div style={{ color: colors.navy, fontWeight: 900, fontSize: 30, letterSpacing: -1 }}>
             nitip ops.
           </div>
-          <div style={{ color: colors.blue, fontWeight: 900, fontSize: 11, letterSpacing: 1.2, marginTop: 26 }}>
-            OPERATIONS ACCESS
-          </div>
-          <h1 style={{ color: colors.navy, fontSize: 28, margin: "8px 0" }}>Masuk ke dashboard.</h1>
+          <h1 style={{ color: colors.navy, fontSize: 28, margin: "26px 0 8px" }}>Masuk ke dashboard.</h1>
           <p style={{ color: colors.muted, lineHeight: 1.6, fontSize: 14 }}>
             Gunakan akun Firebase yang email-nya tercantum di ADMIN_EMAILS pada Nitip API.
           </p>
@@ -313,9 +310,6 @@ export default async function OpsHome({
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
         <div>
           <div style={{ fontWeight: 900, fontSize: 28, letterSpacing: -1 }}>nitip ops.</div>
-          <div style={{ marginTop: 5, color: colors.muted, fontSize: 13 }}>
-            Merchant review & operations
-          </div>
         </div>
         <form action={signOut}>
           <button type="submit" style={{ border: `1px solid ${colors.aqua}`, background: colors.surface, color: colors.navy, borderRadius: 999, padding: "9px 14px", fontWeight: 800, cursor: "pointer" }}>
@@ -331,10 +325,7 @@ export default async function OpsHome({
       )}
 
       <section style={{ marginTop: 38 }}>
-        <div style={{ color: colors.blue, fontWeight: 900, fontSize: 11, letterSpacing: 1.3 }}>
-          MERCHANT ONBOARDING
-        </div>
-        <h1 style={{ margin: "6px 0 0", fontSize: 36, letterSpacing: -1.3 }}>
+        <h1 style={{ margin: "0", fontSize: 36, letterSpacing: -1.3 }}>
           Review merchant.
         </h1>
         <p style={{ color: colors.muted, lineHeight: 1.6, maxWidth: 680 }}>
