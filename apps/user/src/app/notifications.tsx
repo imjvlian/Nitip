@@ -106,13 +106,13 @@ export default function NotificationsScreen() {
 
   async function openNotification(notification: UserNotification) {
     try {
-      setReadIds(new Set(await markUserNotificationRead(user.uid, notification.id)));
+      setReadIds(new Set(await markUserNotificationRead(user!.uid, notification.id)));
     } catch {}
     router.push({ pathname: "/order/[id]", params: { id: notification.orderId } });
   }
 
   async function markAll() {
-    setReadIds(new Set(await markUserNotificationsRead(user.uid, notifications.map((n) => n.id))));
+    setReadIds(new Set(await markUserNotificationsRead(user!.uid, notifications.map((n) => n.id))));
   }
 
   function tone(n: UserNotification) {

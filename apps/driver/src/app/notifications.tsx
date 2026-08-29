@@ -86,7 +86,7 @@ export default function DriverNotificationsScreen() {
 
   async function open(n: DriverNotification) {
     try {
-      setReadIds(new Set(await markDriverNotificationRead(user.uid, n.id)));
+      setReadIds(new Set(await markDriverNotificationRead(user!.uid, n.id)));
     } catch {}
     if (n.target.type === "order") router.push({ pathname: "/order/[id]", params: { id: n.target.orderId } });
     else if (n.target.type === "profile") router.push("/settings");
@@ -94,7 +94,7 @@ export default function DriverNotificationsScreen() {
   }
 
   async function markAll() {
-    setReadIds(new Set(await markDriverNotificationsRead(user.uid, notifications.map((n) => n.id))));
+    setReadIds(new Set(await markDriverNotificationsRead(user!.uid, notifications.map((n) => n.id))));
   }
 
   function color(n: DriverNotification) {
