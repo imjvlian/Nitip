@@ -3,7 +3,7 @@
     "name": "Nitip Driver",
     "slug": "nitip-driver",
     "scheme": "nitip-driver",
-    "version": "0.1.0",
+    "version": "0.12.109",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,

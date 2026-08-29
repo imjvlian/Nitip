@@ -3,44 +3,48 @@ import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
   title: "Nitip Ops",
-  description: "Operations dashboard for Nitip",
+  description: "Dashboard operasional Nitip",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{ children: ReactNode }>) {
+const linkStyle = {
+  color: "#52607F",
+  fontSize: 13,
+  fontWeight: 800,
+  textDecoration: "none",
+  padding: "8px 10px",
+  borderRadius: 10,
+} as const;
+
+export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="id">
       <body
         style={{
           margin: 0,
-          background: "#F7FFF9",
-          color: "#14216D",
+          background: "#F7F8FB",
+          color: "#111318",
           fontFamily: "Arial, Helvetica, sans-serif",
         }}
       >
         <nav
           style={{
             display: "flex",
-            gap: 10,
+            gap: 8,
             alignItems: "center",
             padding: "12px 24px",
-            borderBottom: "1px solid #A1DCD9",
-            background: "#FFFFFF",
+            borderBottom: "1px solid #E7E9EE",
+            background: "rgba(255,255,255,0.96)",
             position: "sticky",
             top: 0,
             zIndex: 20,
           }}
         >
-          <a href="/" style={{ color: "#14216D", fontWeight: 900, textDecoration: "none" }}>
-            Merchant Review
+          <a href="/" style={{ color: "#2448F5", fontSize: 17, fontWeight: 900, marginRight: 8, textDecoration: "none" }}>
+            nitip ops.
           </a>
-          <a href="/drivers" style={{ color: "#08349C", fontWeight: 900, textDecoration: "none" }}>
-            Driver Review
-          </a>
-          <a href="/promos" style={{ color: "#2448F5", fontWeight: 900, textDecoration: "none" }}>
-            Promo
-          </a>
+          <a href="/" style={linkStyle}>Merchant</a>
+          <a href="/drivers" style={linkStyle}>Driver</a>
+          <a href="/promos" style={linkStyle}>Promo</a>
         </nav>
         {children}
       </body>

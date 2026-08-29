@@ -13,7 +13,7 @@ const COPY = {
   id: {
     title: "Lupa kata sandi",
     heading: "Pulihkan akses akun",
-    description: "Masukkan email akun Nitip. Kami akan mengirim tautan reset kata sandi melalui Firebase Authentication.",
+    description: "Masukkan email akun Nitip. Kami akan mengirim tautan reset kata sandi ke email tersebut.",
     email: "Email",
     placeholder: "nama@email.com",
     send: "Kirim tautan reset",
@@ -22,13 +22,15 @@ const COPY = {
     sentTitle: "Tautan reset dikirim",
     required: "Masukkan email terlebih dahulu.",
     requiredTitle: "Email wajib diisi",
-    error: "Gagal mengirim tautan reset",
+    error: "Tautan reset belum dapat dikirim. Coba lagi beberapa saat.",
+    serviceUnavailable: "Layanan sementara tidak tersedia",
+    serviceUnavailableBody: "Pemulihan akun belum dapat digunakan. Coba lagi beberapa saat.",
     backLogin: "Kembali ke halaman masuk",
   },
   en: {
     title: "Forgot password",
     heading: "Recover account access",
-    description: "Enter your Nitip account email. We will send a password-reset link through Firebase Authentication.",
+    description: "Enter your Nitip account email. We will send a password-reset link to that address.",
     email: "Email",
     placeholder: "name@email.com",
     send: "Send reset link",
@@ -37,7 +39,9 @@ const COPY = {
     sentTitle: "Reset link sent",
     required: "Enter your email first.",
     requiredTitle: "Email is required",
-    error: "Failed to send reset link",
+    error: "The reset link could not be sent. Please try again shortly.",
+    serviceUnavailable: "Service temporarily unavailable",
+    serviceUnavailableBody: "Account recovery is currently unavailable. Please try again shortly.",
     backLogin: "Back to sign in",
   },
 } as const;
@@ -64,13 +68,12 @@ export default function ForgotPasswordScreen() {
     setSent(false);
     setError(null);
     try {
-      await resetPassword(email);
+      await resetPassword(email.trim());
       setSent(true);
       Alert.alert(copy.sentTitle, copy.sent);
-    } catch (nextError) {
-      const message = nextError instanceof Error ? nextError.message : copy.error;
-      setError(message);
-      Alert.alert(copy.error, message);
+    } catch {
+      setError(copy.error);
+      Alert.alert(copy.error, copy.error);
     } finally {
       setSending(false);
     }
@@ -101,6 +104,13 @@ export default function ForgotPasswordScreen() {
           {copy.description}
         </Text>
       </View>
+
+      {!configured ? (
+        <View className="mt-5 rounded-[18px] p-4" style={{ backgroundColor: theme.colors.warningSurface }}>
+          <Text className="text-[11px] font-black" style={{ color: theme.colors.warning }}>{copy.serviceUnavailable}</Text>
+          <Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{copy.serviceUnavailableBody}</Text>
+        </View>
+      ) : null}
 
       <View className="mt-6 rounded-[22px] p-4" style={{ backgroundColor: theme.colors.surface }}>
         <Text className="mb-2 text-[10px] font-extrabold" style={{ color: theme.colors.textMuted }}>

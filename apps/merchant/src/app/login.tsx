@@ -26,14 +26,20 @@ export default function LoginScreen() {
     required: "Lengkapi data akun",
     requiredBody: "Email dan kata sandi wajib diisi.",
     nameRequired: "Nama pemilik wajib diisi untuk membuat akun mitra.",
-    failed: "Autentikasi gagal",
+    failed: "Belum dapat masuk",
+    failedBody: "Periksa email dan kata sandi, lalu coba lagi.",
     forgot: "Lupa kata sandi?",
+    serviceUnavailable: "Layanan sementara tidak tersedia",
+    serviceUnavailableBody: "Akses akun mitra sedang tidak dapat digunakan. Coba lagi beberapa saat.",
   } : {
     required: "Complete account details",
     requiredBody: "Email and password are required.",
     nameRequired: "Owner name is required to create a merchant account.",
-    failed: "Authentication failed",
+    failed: "Unable to sign in",
+    failedBody: "Check your email and password, then try again.",
     forgot: "Forgot password?",
+    serviceUnavailable: "Service temporarily unavailable",
+    serviceUnavailableBody: "Merchant account access is currently unavailable. Please try again shortly.",
   };
 
   if (!loading && user) return <Redirect href="/home" />;
@@ -53,10 +59,9 @@ export default function LoginScreen() {
     try {
       if (mode === "register") await signUp(displayName, email, password);
       else await signIn(email, password);
-    } catch (nextError) {
-      const message = nextError instanceof Error ? nextError.message : c.login.authError;
-      setError(message);
-      Alert.alert(authCopy.failed, message);
+    } catch {
+      setError(authCopy.failedBody);
+      Alert.alert(authCopy.failed, authCopy.failedBody);
     } finally {
       setSubmitting(false);
     }
@@ -70,7 +75,7 @@ export default function LoginScreen() {
           <Text className="text-[34px] font-black leading-[38px] tracking-tighter" style={{ color: theme.colors.text }}>{mode === "login" ? c.login.titleLogin : c.login.titleRegister}</Text>
         </View>
 
-        {!configured ? <View className="mt-5 rounded-[22px] p-4" style={{ backgroundColor: theme.colors.warningSurface }}><Text className="text-[11px] font-black" style={{ color: theme.colors.warning }}>{c.login.firebaseTitle}</Text><Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{c.login.firebaseDescription}</Text></View> : null}
+        {!configured ? <View className="mt-5 rounded-[22px] p-4" style={{ backgroundColor: theme.colors.warningSurface }}><Text className="text-[11px] font-black" style={{ color: theme.colors.warning }}>{authCopy.serviceUnavailable}</Text><Text className="mt-1 text-[9px] leading-4" style={{ color: theme.colors.textMuted }}>{authCopy.serviceUnavailableBody}</Text></View> : null}
 
         <View className="mt-6 rounded-[24px] p-4" style={{ backgroundColor: theme.colors.surface }}>
           {mode === "register" ? <Field label={c.login.ownerName}><TextInput editable={!submitting} value={displayName} onChangeText={setDisplayName} placeholder={c.login.ownerPlaceholder} placeholderTextColor={theme.colors.textMuted} className="min-h-[48px] rounded-[16px] px-4 text-[12px]" style={{ backgroundColor: theme.colors.surfaceRaised, color: theme.colors.text }} /></Field> : null}

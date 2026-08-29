@@ -17,7 +17,7 @@ const COPY = {
     sending: "Mengirim...",
     sent: "Tautan reset sudah dikirim. Periksa inbox dan folder spam emailmu.",
     unavailable: "Akun ini tidak memiliki email yang dapat digunakan untuk reset kata sandi.",
-    error: "Gagal mengirim tautan reset kata sandi",
+    error: "Tautan reset belum dapat dikirim. Coba lagi beberapa saat.",
   },
   en: {
     title: "Reset password",
@@ -26,7 +26,7 @@ const COPY = {
     sending: "Sending...",
     sent: "The reset link has been sent. Check your inbox and spam folder.",
     unavailable: "This account does not have an email that can be used for password reset.",
-    error: "Failed to send password reset link",
+    error: "The reset link could not be sent. Please try again shortly.",
   },
 } as const;
 
@@ -51,8 +51,8 @@ export default function PasswordSettingsScreen() {
     try {
       await resetPassword(accountEmail);
       setSent(true);
-    } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : copy.error);
+    } catch {
+      setError(copy.error);
     } finally {
       setSending(false);
     }

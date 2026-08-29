@@ -34,8 +34,8 @@ export default function LoginScreen() {
   const c = language === "id" ? {
     loginTitle: "Siap mulai jalan?",
     registerTitle: "Daftar jadi driver Nitip.",
-    firebase: "Firebase belum dikonfigurasi",
-    firebaseBody: "Isi apps/driver/.env dengan konfigurasi Firebase dan API yang sama dengan ekosistem Nitip.",
+    serviceUnavailable: "Layanan sementara tidak tersedia",
+    serviceUnavailableBody: "Akses akun driver sedang tidak dapat digunakan. Coba lagi beberapa saat.",
     name: "Nama lengkap",
     namePlaceholder: "Nama lengkap",
     email: "Email",
@@ -49,12 +49,13 @@ export default function LoginScreen() {
     required: "Lengkapi data akun",
     requiredBody: "Email dan kata sandi wajib diisi.",
     nameRequired: "Nama lengkap wajib diisi untuk membuat akun driver.",
-    failed: "Autentikasi gagal",
+    failed: "Belum dapat masuk",
+    failedBody: "Periksa email dan kata sandi, lalu coba lagi.",
   } : {
     loginTitle: "Ready to get moving?",
     registerTitle: "Join Nitip as a driver.",
-    firebase: "Firebase is not configured",
-    firebaseBody: "Set apps/driver/.env with the same Firebase and API configuration used by the Nitip ecosystem.",
+    serviceUnavailable: "Service temporarily unavailable",
+    serviceUnavailableBody: "Driver account access is currently unavailable. Please try again shortly.",
     name: "Full name",
     namePlaceholder: "Full name",
     email: "Email",
@@ -68,7 +69,8 @@ export default function LoginScreen() {
     required: "Complete account details",
     requiredBody: "Email and password are required.",
     nameRequired: "Full name is required to create a driver account.",
-    failed: "Authentication failed",
+    failed: "Unable to sign in",
+    failedBody: "Check your email and password, then try again.",
   };
 
   if (!loading && user) return <Redirect href="/home" />;
@@ -88,10 +90,9 @@ export default function LoginScreen() {
     try {
       if (mode === "register") await signUp(displayName, email, password);
       else await signIn(email, password);
-    } catch (nextError) {
-      const message = nextError instanceof Error ? nextError.message : c.failed;
-      setError(message);
-      Alert.alert(c.failed, message);
+    } catch {
+      setError(c.failedBody);
+      Alert.alert(c.failed, c.failedBody);
     } finally {
       setSubmitting(false);
     }
@@ -116,8 +117,8 @@ export default function LoginScreen() {
 
         {!configured ? (
           <View style={[styles.notice, { backgroundColor: theme.colors.warningSurface }]}>
-            <Text style={[styles.noticeTitle, { color: theme.colors.warning }]}>{c.firebase}</Text>
-            <Text style={[styles.noticeText, { color: theme.colors.textMuted }]}>{c.firebaseBody}</Text>
+            <Text style={[styles.noticeTitle, { color: theme.colors.warning }]}>{c.serviceUnavailable}</Text>
+            <Text style={[styles.noticeText, { color: theme.colors.textMuted }]}>{c.serviceUnavailableBody}</Text>
           </View>
         ) : null}
 

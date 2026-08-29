@@ -56,6 +56,11 @@ const HOME_COPY = {
     openOnly: "Buka saja",
     openOnlyActive: "Hanya yang buka",
     unrated: "Belum ada rating",
+    serviceUnavailable: "Layanan sementara tidak tersedia",
+    serviceUnavailableBody: "Nitip belum dapat terhubung. Coba lagi beberapa saat.",
+    profileUnavailable: "Profil belum dapat diperbarui",
+    profileUnavailableBody: "Informasi akun akan dimuat kembali saat koneksi pulih.",
+    catalogUnavailableBody: "Daftar merchant belum dapat dimuat. Coba lagi beberapa saat.",
   },
   en: {
     deliveryLocation: "Delivery location",
@@ -76,15 +81,17 @@ const HOME_COPY = {
     openOnly: "Open only",
     openOnlyActive: "Showing open",
     unrated: "No ratings yet",
+    serviceUnavailable: "Service temporarily unavailable",
+    serviceUnavailableBody: "Nitip cannot connect right now. Please try again shortly.",
+    profileUnavailable: "Profile could not be refreshed",
+    profileUnavailableBody: "Your account information will refresh when the connection recovers.",
+    catalogUnavailableBody: "Merchant listings are temporarily unavailable. Please try again shortly.",
   },
 } as const;
 
 function isPlaceholderCopy(value: string | null | undefined) {
   const normalized = value?.trim().toLowerCase();
-  return (
-    !normalized ||
-    ["test", "test promo", "promo", "dummy", "contoh", "contoh promo"].includes(normalized)
-  );
+  return !normalized || ["test", "test promo", "promo", "dummy", "contoh", "contoh promo"].includes(normalized);
 }
 
 function normalizeCategory(value: string) {
@@ -137,8 +144,8 @@ export default function HomeScreen() {
       .then((nextProfile) => {
         if (active) setProfile(nextProfile);
       })
-      .catch((error: unknown) => {
-        if (active) setProfileError(error instanceof Error ? error.message : t("home.profileLoadError"));
+      .catch(() => {
+        if (active) setProfileError(copy.profileUnavailableBody);
       })
       .finally(() => {
         if (active) setProfileLoading(false);
@@ -146,7 +153,7 @@ export default function HomeScreen() {
     return () => {
       active = false;
     };
-  }, [t, user]);
+  }, [copy.profileUnavailableBody, user]);
 
   useEffect(() => {
     if (!user || !apiConfigured) return;
@@ -172,8 +179,8 @@ export default function HomeScreen() {
       .then((items) => {
         if (active) setCatalog(items);
       })
-      .catch((error: unknown) => {
-        if (active) setCatalogError(error instanceof Error ? error.message : t("home.catalogLoadError"));
+      .catch(() => {
+        if (active) setCatalogError(copy.catalogUnavailableBody);
       })
       .finally(() => {
         if (active) setCatalogLoading(false);
@@ -181,7 +188,7 @@ export default function HomeScreen() {
     return () => {
       active = false;
     };
-  }, [t]);
+  }, [copy.catalogUnavailableBody]);
 
   useEffect(() => {
     if (!apiConfigured || catalog.length === 0) {
@@ -477,10 +484,10 @@ export default function HomeScreen() {
             style={{ backgroundColor: theme.colors.warningSurface }}
           >
             <Text className="text-[12px] font-black" style={{ color: theme.colors.warning }}>
-              {t("home.apiNotConfigured")}
+              {copy.serviceUnavailable}
             </Text>
             <Text className="mt-1 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
-              {t("home.apiDescription")}
+              {copy.serviceUnavailableBody}
             </Text>
           </View>
         ) : null}
@@ -491,7 +498,7 @@ export default function HomeScreen() {
             style={{ backgroundColor: theme.colors.dangerSurface }}
           >
             <Text className="text-[12px] font-black" style={{ color: theme.colors.danger }}>
-              {t("home.profileDisconnected")}
+              {copy.profileUnavailable}
             </Text>
             <Text className="mt-1 text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
               {profileError}

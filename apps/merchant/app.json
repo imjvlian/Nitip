@@ -3,7 +3,7 @@
     "name": "Nitip Mitra",
     "slug": "nitip-merchant",
     "scheme": "nitip-mitra",
-    "version": "0.1.0",
+    "version": "0.12.109",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,

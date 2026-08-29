@@ -19,7 +19,7 @@ export default function MerchantForgotPasswordScreen() {
   const c = language === "id" ? {
     title: "Lupa kata sandi",
     heading: "Pulihkan akun mitra.",
-    body: "Masukkan email akun Nitip Mitra. Firebase akan mengirim tautan reset kata sandi ke email tersebut.",
+    body: "Masukkan email akun Nitip Mitra. Kami akan mengirim tautan reset kata sandi ke email tersebut.",
     email: "Email akun",
     placeholder: "nama@email.com",
     send: "Kirim tautan reset",
@@ -28,11 +28,14 @@ export default function MerchantForgotPasswordScreen() {
     requiredBody: "Masukkan email akun Nitip Mitra terlebih dahulu.",
     sent: "Tautan reset dikirim",
     sentBody: "Periksa inbox dan folder spam pada email tersebut.",
-    failed: "Reset kata sandi gagal",
+    failed: "Tautan reset belum dapat dikirim",
+    failedBody: "Coba lagi beberapa saat.",
+    serviceUnavailable: "Layanan sementara tidak tersedia",
+    serviceUnavailableBody: "Pemulihan akun sedang tidak dapat digunakan. Coba lagi beberapa saat.",
   } : {
     title: "Forgot password",
     heading: "Recover merchant access.",
-    body: "Enter your Nitip Merchant email. Firebase will send a password-reset link to that address.",
+    body: "Enter your Nitip Merchant email. We will send a password-reset link to that address.",
     email: "Account email",
     placeholder: "name@email.com",
     send: "Send reset link",
@@ -41,7 +44,10 @@ export default function MerchantForgotPasswordScreen() {
     requiredBody: "Enter your Nitip Merchant account email first.",
     sent: "Reset link sent",
     sentBody: "Check the inbox and spam folder for that email address.",
-    failed: "Password reset failed",
+    failed: "Reset link could not be sent",
+    failedBody: "Please try again shortly.",
+    serviceUnavailable: "Service temporarily unavailable",
+    serviceUnavailableBody: "Account recovery is currently unavailable. Please try again shortly.",
   };
 
   async function submit() {
@@ -55,8 +61,8 @@ export default function MerchantForgotPasswordScreen() {
     try {
       await resetPassword(normalized);
       Alert.alert(c.sent, c.sentBody);
-    } catch (error) {
-      Alert.alert(c.failed, error instanceof Error ? error.message : c.failed);
+    } catch {
+      Alert.alert(c.failed, c.failedBody);
     } finally {
       setSending(false);
     }
@@ -73,6 +79,12 @@ export default function MerchantForgotPasswordScreen() {
         <Text style={[styles.heading, { color: theme.colors.text }]}>{c.heading}</Text>
         <Text style={[styles.body, { color: theme.colors.textMuted }]}>{c.body}</Text>
       </View>
+      {!configured ? (
+        <View style={[styles.notice, { backgroundColor: theme.colors.warningSurface }]}>
+          <Text style={[styles.noticeTitle, { color: theme.colors.warning }]}>{c.serviceUnavailable}</Text>
+          <Text style={[styles.noticeBody, { color: theme.colors.textMuted }]}>{c.serviceUnavailableBody}</Text>
+        </View>
+      ) : null}
       <View style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
         <Text style={[styles.label, { color: theme.colors.textMuted }]}>{c.email}</Text>
         <TextInput
@@ -103,6 +115,9 @@ const styles = StyleSheet.create({
   hero: { marginTop: 36 },
   heading: { fontSize: 29, fontWeight: "900", letterSpacing: -0.9 },
   body: { fontSize: 10, lineHeight: 17, marginTop: 8, maxWidth: 350 },
+  notice: { borderRadius: 18, marginTop: 18, padding: 14 },
+  noticeTitle: { fontSize: 10, fontWeight: "900" },
+  noticeBody: { fontSize: 8, lineHeight: 13, marginTop: 4 },
   card: { borderRadius: 22, borderWidth: 1, marginTop: 24, padding: 16 },
   label: { fontSize: 8, fontWeight: "900", letterSpacing: 0.5 },
   input: { borderRadius: 16, borderWidth: 1, fontSize: 12, marginTop: 8, minHeight: 50, paddingHorizontal: 14 },

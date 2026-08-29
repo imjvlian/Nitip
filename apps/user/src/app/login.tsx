@@ -35,7 +35,7 @@ function getErrorMessage(error: unknown, t: (key: string) => string) {
     case "auth/network-request-failed":
       return t("auth.networkError");
     default:
-      return error instanceof Error ? error.message : t("auth.genericError");
+      return t("auth.genericError");
   }
 }
 
@@ -51,6 +51,15 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const serviceCopy = language === "id"
+    ? {
+        title: "Layanan sementara tidak tersedia",
+        body: "Akses akun sedang tidak dapat digunakan. Coba lagi beberapa saat.",
+      }
+    : {
+        title: "Service temporarily unavailable",
+        body: "Account access is currently unavailable. Please try again shortly.",
+      };
 
   if (user) return <Redirect href="/home" />;
 
@@ -120,10 +129,10 @@ export default function LoginScreen() {
         {!configured ? (
           <View className="mt-5 rounded-[22px] p-4" style={{ backgroundColor: theme.colors.warningSurface }}>
             <Text className="text-sm font-black" style={{ color: theme.colors.warning }}>
-              {t("auth.firebaseNotConfigured")}
+              {serviceCopy.title}
             </Text>
             <Text className="mt-1 text-xs leading-5" style={{ color: theme.colors.textMuted }}>
-              {t("auth.firebaseSetup")}
+              {serviceCopy.body}
             </Text>
           </View>
         ) : null}
