@@ -2,7 +2,7 @@ import type { NitipOrder } from "@nitip/domain/commerce";
 import { useNitipLanguage } from "@nitip/i18n";
 import { router, usePathname } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "../context/AuthContext";
@@ -32,12 +32,12 @@ export function OrderActionDock() {
 
   const c = language === "id" ? {
     chat: "Chat driver", pay: "Bayar", opening: "Membuka...", check: "Cek status", checking: "Mengecek...",
-    paymentFailed: "Pembayaran belum dapat dibuka", paymentOpened: "Halaman pembayaran dibuka", paymentOpenedBody: "Selesaikan pembayaran di halaman DOKU, lalu kembali ke Nitip. Status pesanan akan diperbarui otomatis.",
+    paymentFailed: "Pembayaran belum dapat dibuka",
     checkFailed: "Status pembayaran belum dapat dicek", paid: "Pembayaran terkonfirmasi", paidBody: "DOKU mengonfirmasi pembayaran berhasil. Pesanan sekarang menunggu merchant.", pending: "Pembayaran masih diproses", pendingBody: "DOKU belum mengirim status final. Kamu dapat mencoba cek lagi setelah sekitar 60 detik.", expired: "Sesi pembayaran berakhir", expiredBody: "DOKU mengonfirmasi sesi sudah kedaluwarsa dan reservasi stok dilepas.",
     cancel: "Batalkan", cancelTitle: "Batalkan pesanan?", cancelBody: "Pesanan belum memiliki sesi pembayaran DOKU. Stok yang ditahan akan langsung dilepas.", keep: "Kembali", confirm: "Batalkan pesanan", cancelled: "Pesanan dibatalkan", cancelledBody: "Reservasi stok sudah dilepas dan pesanan tidak akan diproses.", failed: "Tidak dapat membatalkan",
   } : {
     chat: "Driver chat", pay: "Pay", opening: "Opening...", check: "Check status", checking: "Checking...",
-    paymentFailed: "Payment could not be opened", paymentOpened: "Payment page opened", paymentOpenedBody: "Complete payment on the DOKU page, then return to Nitip. The order status will refresh automatically.",
+    paymentFailed: "Payment could not be opened",
     checkFailed: "Payment status could not be checked", paid: "Payment confirmed", paidBody: "DOKU confirmed the payment. The order is now waiting for the merchant.", pending: "Payment is still processing", pendingBody: "DOKU has not returned a final status yet. Try checking again after about 60 seconds.", expired: "Payment session expired", expiredBody: "DOKU confirmed the checkout expired and reserved stock was released.",
     cancel: "Cancel", cancelTitle: "Cancel this order?", cancelBody: "No DOKU payment session has been created yet. Reserved stock will be released immediately.", keep: "Keep order", confirm: "Cancel order", cancelled: "Order cancelled", cancelledBody: "The stock reservation was released and the order will not be processed.", failed: "Unable to cancel",
   };
@@ -68,12 +68,8 @@ export function OrderActionDock() {
     try {
       const next = await startDokuOrderPayment(user, order.id);
       setOrder(next);
-      const checkoutUrl = next.payment?.checkoutUrl;
-      if (!checkoutUrl) throw new Error("DOKU Checkout URL tidak tersedia");
-      const supported = await Linking.canOpenURL(checkoutUrl);
-      if (!supported) throw new Error("Perangkat tidak dapat membuka DOKU Checkout URL");
-      await Linking.openURL(checkoutUrl);
-      Alert.alert(c.paymentOpened, c.paymentOpenedBody);
+      if (!next.payment?.checkoutUrl) throw new Error("DOKU Checkout URL tidak tersedia");
+      router.push({ pathname: "/payment/[orderId]", params: { orderId: order.id } });
     } catch (error) {
       Alert.alert(c.paymentFailed, error instanceof Error ? error.message : c.paymentFailed);
     } finally {
