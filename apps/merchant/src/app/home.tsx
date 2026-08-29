@@ -30,20 +30,15 @@ export default function MerchantHomeScreen() {
     ? {
         brand: "nitip mitra.",
         greeting: "Pusat operasionalmu.",
-        subtitle: "Pantau pesanan, katalog, outlet, dan performa bisnis dari satu tempat.",
         revenue: "Pendapatan selesai",
         action: "Perlu tindakan",
         outlets: "Outlet",
         accepting: "Menerima order",
         operations: "Operasional",
         orders: "Kelola pesanan",
-        ordersBody: "Proses order masuk sampai siap pickup.",
         menu: "Kelola menu",
-        menuBody: "Produk, kategori, stok, dan ketersediaan.",
         earnings: "Pendapatan",
-        earningsBody: "Lihat ringkasan penjualan dan order selesai.",
         analytics: "Analitik",
-        analyticsBody: "Pantau tren order dan produk terlaris.",
         outletsTitle: "Outlet aktif",
         addOutlet: "Tambah outlet",
         noOutlet: "Belum ada outlet. Tambahkan outlet untuk mulai berjualan.",
@@ -57,20 +52,15 @@ export default function MerchantHomeScreen() {
     : {
         brand: "nitip merchant.",
         greeting: "Your operations hub.",
-        subtitle: "Track orders, catalog, outlets, and business performance in one place.",
         revenue: "Completed revenue",
         action: "Needs action",
         outlets: "Outlets",
         accepting: "Accepting orders",
         operations: "Operations",
         orders: "Manage orders",
-        ordersBody: "Process incoming orders until pickup ready.",
         menu: "Manage menu",
-        menuBody: "Products, categories, stock, and availability.",
         earnings: "Earnings",
-        earningsBody: "Review sales summary and completed orders.",
         analytics: "Analytics",
-        analyticsBody: "Track order trends and best-selling products.",
         outletsTitle: "Active outlets",
         addOutlet: "Add outlet",
         noOutlet: "No outlet yet. Add an outlet to start selling.",
@@ -130,32 +120,28 @@ export default function MerchantHomeScreen() {
     {
       icon: "orders" as NitipIconName,
       title: labels.orders,
-      body: labels.ordersBody,
       onPress: () => router.push("/orders"),
       emphasis: actionableOrders > 0,
     },
     {
       icon: "menu" as NitipIconName,
       title: labels.menu,
-      body: labels.menuBody,
       onPress: () => router.push(firstOutlet ? { pathname: "/menu", params: { outletId: firstOutlet.id, outletName: firstOutlet.name } } : "/menu"),
     },
     {
       icon: "earnings" as NitipIconName,
       title: labels.earnings,
-      body: labels.earningsBody,
       onPress: () => router.push("/earnings"),
     },
     {
       icon: "analytics" as NitipIconName,
       title: labels.analytics,
-      body: labels.analyticsBody,
       onPress: () => router.push("/analytics"),
     },
   ], [actionableOrders, firstOutlet, labels]);
 
   return (
-    <View style={[styles.screen, { backgroundColor: theme.colors.background }]}> 
+    <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
       <ScrollView
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 12 }]}
         showsVerticalScrollIndicator={false}
@@ -178,7 +164,7 @@ export default function MerchantHomeScreen() {
           >
             <NitipIcon color={theme.colors.text} name="notification" size={18} />
             {notificationCount > 0 ? (
-              <View style={[styles.notificationBadge, { backgroundColor: theme.colors.primary }]}> 
+              <View style={[styles.notificationBadge, { backgroundColor: theme.colors.primary }]}>
                 <Text style={styles.notificationCount}>{notificationCount > 99 ? "99+" : notificationCount}</Text>
               </View>
             ) : null}
@@ -186,13 +172,11 @@ export default function MerchantHomeScreen() {
         </View>
 
         <View style={styles.hero}>
-          <Text style={[styles.eyebrow, { color: theme.colors.primary }]}>MERCHANT CENTER</Text>
           <Text style={[styles.heroTitle, { color: theme.colors.text }]}>{merchant?.businessName ?? labels.greeting}</Text>
-          <Text style={[styles.heroSubtitle, { color: theme.colors.textMuted }]}>{labels.subtitle}</Text>
         </View>
 
         {loading ? (
-          <View style={[styles.stateCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}> 
+          <View style={[styles.stateCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
             <ActivityIndicator color={theme.colors.primary} />
             <Text style={[styles.stateText, { color: theme.colors.textMuted }]}>{labels.loading}</Text>
           </View>
@@ -201,7 +185,7 @@ export default function MerchantHomeScreen() {
             onPress={() => router.push("/settings/business")}
             style={[styles.onboarding, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
           >
-            <View style={[styles.largeBadge, { backgroundColor: theme.colors.surfaceAccent }]}> 
+            <View style={[styles.largeBadge, { backgroundColor: theme.colors.surfaceAccent }]}>
               <NitipIcon color={theme.colors.primary} name="store" size={23} />
             </View>
             <View style={styles.onboardingCopy}>
@@ -261,25 +245,24 @@ export default function MerchantHomeScreen() {
                         },
                       ]}
                     >
-                      <View style={[styles.shortcutBadge, { backgroundColor: item.emphasis ? "rgba(255,255,255,0.16)" : theme.colors.surfaceAccent }]}> 
+                      <View style={[styles.shortcutBadge, { backgroundColor: item.emphasis ? "rgba(255,255,255,0.16)" : theme.colors.surfaceAccent }]}>
                         <NitipIcon color={item.emphasis ? "#FFFFFF" : theme.colors.primary} name={item.icon} size={19} />
                       </View>
                       <Text style={[styles.shortcutTitle, { color: item.emphasis ? "#FFFFFF" : theme.colors.text }]}>{item.title}</Text>
-                      <Text style={[styles.shortcutBody, { color: item.emphasis ? "rgba(255,255,255,0.75)" : theme.colors.textMuted }]}>{item.body}</Text>
                     </Pressable>
                   ))}
                 </View>
 
                 <View style={styles.sectionHeader}>
                   <Text style={[styles.sectionTitleNoMargin, { color: theme.colors.text }]}>{labels.outletsTitle}</Text>
-                  <Pressable onPress={() => router.push("/outlet/new")} style={[styles.addButton, { backgroundColor: theme.colors.surfaceAccent }]}> 
+                  <Pressable onPress={() => router.push("/outlet/new")} style={[styles.addButton, { backgroundColor: theme.colors.surfaceAccent }]}>
                     <NitipIcon color={theme.colors.primary} name="plus" size={14} />
                     <Text style={[styles.addButtonText, { color: theme.colors.primary }]}>{labels.addOutlet}</Text>
                   </Pressable>
                 </View>
 
                 {outlets.length === 0 ? (
-                  <View style={[styles.stateCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}> 
+                  <View style={[styles.stateCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
                     <Text style={[styles.stateText, { color: theme.colors.textMuted }]}>{labels.noOutlet}</Text>
                   </View>
                 ) : (
@@ -290,14 +273,14 @@ export default function MerchantHomeScreen() {
                         onPress={() => router.push({ pathname: "/outlet/[id]", params: { id: outlet.id } })}
                         style={[styles.outletCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, shadowColor: theme.colors.shadow }]}
                       >
-                        <View style={[styles.outletBadge, { backgroundColor: theme.colors.surfaceAccent }]}> 
+                        <View style={[styles.outletBadge, { backgroundColor: theme.colors.surfaceAccent }]}>
                           <NitipIcon color={theme.colors.primary} name="store" size={18} />
                         </View>
                         <View style={styles.outletCopy}>
                           <Text numberOfLines={1} style={[styles.outletName, { color: theme.colors.text }]}>{outlet.name}</Text>
                           <Text numberOfLines={2} style={[styles.outletAddress, { color: theme.colors.textMuted }]}>{outlet.addressLine}</Text>
                         </View>
-                        <View style={[styles.outletStatus, { backgroundColor: outlet.acceptingOrders ? theme.colors.successSurface : theme.colors.secondary }]}> 
+                        <View style={[styles.outletStatus, { backgroundColor: outlet.acceptingOrders ? theme.colors.successSurface : theme.colors.secondary }]}>
                           <Text style={[styles.outletStatusText, { color: outlet.acceptingOrders ? theme.colors.success : theme.colors.textMuted }]}>{outlet.acceptingOrders ? labels.open : labels.closed}</Text>
                         </View>
                       </Pressable>
@@ -310,7 +293,7 @@ export default function MerchantHomeScreen() {
         )}
 
         {error ? (
-          <View style={[styles.error, { backgroundColor: theme.colors.dangerSurface }]}> 
+          <View style={[styles.error, { backgroundColor: theme.colors.dangerSurface }]}>
             <Text style={[styles.errorText, { color: theme.colors.danger }]}>{error}</Text>
           </View>
         ) : null}
@@ -320,8 +303,8 @@ export default function MerchantHomeScreen() {
 
   function Metric({ icon, label, value, emphasized = false }: { icon: NitipIconName; label: string; value: string; emphasized?: boolean }) {
     return (
-      <View style={[styles.metric, { backgroundColor: emphasized ? theme.colors.surfaceAccent : theme.colors.surface, borderColor: theme.colors.border }]}> 
-        <View style={[styles.metricIcon, { backgroundColor: emphasized ? theme.colors.primary : theme.colors.surfaceAccent }]}> 
+      <View style={[styles.metric, { backgroundColor: emphasized ? theme.colors.surfaceAccent : theme.colors.surface, borderColor: theme.colors.border }]}>
+        <View style={[styles.metricIcon, { backgroundColor: emphasized ? theme.colors.primary : theme.colors.surfaceAccent }]}>
           <NitipIcon color={emphasized ? "#FFFFFF" : theme.colors.primary} name={icon} size={15} />
         </View>
         <Text numberOfLines={1} style={[styles.metricValue, { color: emphasized ? theme.colors.primary : theme.colors.text }]}>{value}</Text>
@@ -342,9 +325,7 @@ const styles = StyleSheet.create({
   notificationBadge: { alignItems: "center", borderRadius: 9, justifyContent: "center", minHeight: 17, minWidth: 17, paddingHorizontal: 3, position: "absolute", right: -2, top: -2 },
   notificationCount: { color: "#FFFFFF", fontSize: 7, fontWeight: "900" },
   hero: { marginTop: 24 },
-  eyebrow: { fontSize: 8, fontWeight: "900", letterSpacing: 1.2 },
-  heroTitle: { fontSize: 29, fontWeight: "900", letterSpacing: -0.9, lineHeight: 34, marginTop: 7 },
-  heroSubtitle: { fontSize: 10, lineHeight: 17, marginTop: 6, maxWidth: 340 },
+  heroTitle: { fontSize: 29, fontWeight: "900", letterSpacing: -0.9, lineHeight: 34 },
   stateCard: { alignItems: "center", borderRadius: 20, borderWidth: 1, marginTop: 20, padding: 24 },
   stateText: { fontSize: 10, lineHeight: 16, marginTop: 8, textAlign: "center" },
   onboarding: { alignItems: "center", borderRadius: 20, borderWidth: 1, flexDirection: "row", marginTop: 20, padding: 14 },
@@ -364,10 +345,9 @@ const styles = StyleSheet.create({
   metricLabel: { fontSize: 8, fontWeight: "700", lineHeight: 11, marginTop: 3 },
   sectionTitle: { fontSize: 13, fontWeight: "900", marginTop: 26 },
   shortcuts: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 10 },
-  shortcut: { borderRadius: 20, borderWidth: 1, elevation: 2, minHeight: 142, padding: 14, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 7, width: "48.5%" },
+  shortcut: { borderRadius: 20, borderWidth: 1, elevation: 2, minHeight: 112, padding: 14, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 7, width: "48.5%" },
   shortcutBadge: { alignItems: "center", borderRadius: 19, height: 38, justifyContent: "center", width: 38 },
   shortcutTitle: { fontSize: 11, fontWeight: "900", marginTop: 13 },
-  shortcutBody: { fontSize: 8, lineHeight: 13, marginTop: 4 },
   sectionHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", marginTop: 26 },
   sectionTitleNoMargin: { fontSize: 13, fontWeight: "900" },
   addButton: { alignItems: "center", borderRadius: 999, flexDirection: "row", gap: 5, minHeight: 36, paddingHorizontal: 12 },

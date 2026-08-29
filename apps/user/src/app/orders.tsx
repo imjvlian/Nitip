@@ -82,10 +82,7 @@ export default function OrdersScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
       <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          { paddingTop: insets.top + 10 },
-        ]}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 10 }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -113,11 +110,6 @@ export default function OrdersScreen() {
             </View>
           }
         />
-
-        <View style={styles.hero}>
-          <Text style={[styles.heroTitle, { color: theme.colors.text }]}>{t("orders.title")}</Text>
-          <Text style={[styles.heroSubtitle, { color: theme.colors.textMuted }]}>{t("orders.subtitle")}</Text>
-        </View>
 
         <View
           style={[
@@ -273,14 +265,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 40,
   },
-  hero: { marginTop: 26 },
-  heroTitle: { fontSize: 28, fontWeight: "900", letterSpacing: -0.8 },
-  heroSubtitle: { fontSize: 11, lineHeight: 18, marginTop: 6 },
   segment: {
     borderRadius: 18,
     borderWidth: 1,
     flexDirection: "row",
-    marginTop: 20,
+    marginTop: 18,
     padding: 4,
   },
   segmentButton: {

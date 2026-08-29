@@ -17,8 +17,6 @@ type Period = "7d" | "30d" | "all";
 const COPY = {
   id: {
     title: "Pendapatan",
-    eyebrow: "RINGKASAN PENDAPATAN",
-    subtitle: "Pantau pendapatan merchant dari pesanan yang sudah dibayar hingga selesai.",
     realized: "Terealisasi",
     processing: "Dalam proses",
     grossSales: "Penjualan kotor",
@@ -42,8 +40,6 @@ const COPY = {
   },
   en: {
     title: "Earnings",
-    eyebrow: "EARNINGS SUMMARY",
-    subtitle: "Track merchant earnings from paid orders through completed delivery.",
     realized: "Realized",
     processing: "In progress",
     grossSales: "Gross sales",
@@ -194,18 +190,6 @@ export default function MerchantEarningsScreen() {
       style={{ backgroundColor: theme.colors.background }}
     >
       <AppHeader title={copy.title} onBack={() => router.back()} />
-
-      <View className="mt-7">
-        <Text className="text-[9px] font-black tracking-[1.2px]" style={{ color: theme.colors.primary }}>
-          {copy.eyebrow}
-        </Text>
-        <Text className="mt-2 text-[30px] font-black tracking-tighter" style={{ color: theme.colors.text }}>
-          {copy.title}.
-        </Text>
-        <Text className="mt-2 max-w-[340px] text-[10px] leading-4" style={{ color: theme.colors.textMuted }}>
-          {copy.subtitle}
-        </Text>
-      </View>
 
       <View className="mt-5 flex-row gap-2">
         {([

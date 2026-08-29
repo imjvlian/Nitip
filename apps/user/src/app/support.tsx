@@ -1,7 +1,7 @@
 import type { NitipSupportTicket, SupportTicketCategory } from "@nitip/domain";
 import { useNitipLanguage } from "@nitip/i18n";
 import { Redirect, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -18,7 +18,6 @@ const COPY = {
   id: {
     title: "Bantuan & laporan",
     heading: "Ada yang bisa kami bantu?",
-    description: "Kirim laporan ke tim Nitip. Tiket disimpan di akunmu dan dapat dipakai sebagai dasar percakapan CS saat fitur chat tersedia.",
     category: "Kategori",
     categoryLabels: { order: "Pesanan", payment: "Pembayaran", driver: "Driver", merchant: "Merchant", account: "Akun", other: "Lainnya" },
     subject: "Judul laporan",
@@ -43,7 +42,6 @@ const COPY = {
   en: {
     title: "Help & reports",
     heading: "How can we help?",
-    description: "Send a report to the Nitip team. Tickets are saved to your account and can become the basis for a CS conversation when chat is available.",
     category: "Category",
     categoryLabels: { order: "Order", payment: "Payment", driver: "Driver", merchant: "Merchant", account: "Account", other: "Other" },
     subject: "Report subject",
@@ -85,7 +83,7 @@ export default function SupportScreen() {
   const theme = useNitipTheme();
   const insets = useSafeAreaInsets();
   const [tickets, setTickets] = useState<NitipSupportTicket[]>([]);
-  const [category, setCategory] = useState<SupportTicketCategory>(params.orderCode ? "order" : "order");
+  const [category, setCategory] = useState<SupportTicketCategory>("order");
   const [subject, setSubject] = useState(params.subject ?? (params.orderCode ? `${language === "id" ? "Masalah pesanan" : "Order issue"} ${params.orderCode}` : ""));
   const [orderCode, setOrderCode] = useState(params.orderCode ?? "");
   const [message, setMessage] = useState("");
@@ -103,9 +101,6 @@ export default function SupportScreen() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [copy.loadError, user]);
-
-  const selectedCategoryLabel = useMemo(() => copy.categoryLabels[category], [category, copy.categoryLabels]);
-  void selectedCategoryLabel;
 
   if (!user) return <Redirect href="/login" />;
 
@@ -154,10 +149,7 @@ export default function SupportScreen() {
       >
         <AppHeader title={copy.title} />
 
-        <View className="mt-7">
-          <Text className="text-[26px] font-black tracking-tighter" style={{ color: theme.colors.text }}>{copy.heading}</Text>
-          <Text className="mt-1.5 text-[11px] leading-5" style={{ color: theme.colors.textMuted }}>{copy.description}</Text>
-        </View>
+        <Text className="mt-7 text-[26px] font-black tracking-tighter" style={{ color: theme.colors.text }}>{copy.heading}</Text>
 
         {loadError ? (
           <View className="mt-4 rounded-[16px] p-3" style={{ backgroundColor: theme.colors.dangerSurface }}>
@@ -195,16 +187,27 @@ export default function SupportScreen() {
 
         <Text className="mt-8 text-base font-black" style={{ color: theme.colors.text }}>{copy.history}</Text>
         {loading ? (
-          <View className="mt-3 items-center rounded-[20px] p-5" style={{ backgroundColor: theme.colors.surface }}><ActivityIndicator color={theme.colors.primary} /><Text className="mt-2 text-[9px]" style={{ color: theme.colors.textMuted }}>{copy.loading}</Text></View>
+          <View className="mt-3 items-center rounded-[20px] p-5" style={{ backgroundColor: theme.colors.surface }}>
+            <ActivityIndicator color={theme.colors.primary} />
+            <Text className="mt-2 text-[9px]" style={{ color: theme.colors.textMuted }}>{copy.loading}</Text>
+          </View>
         ) : tickets.length === 0 ? (
-          <View className="mt-3 items-center rounded-[20px] p-6" style={{ backgroundColor: theme.colors.surface }}><NitipIcon color={theme.colors.textMuted} name="help" size={20} /><Text className="mt-2 text-[10px]" style={{ color: theme.colors.textMuted }}>{copy.noHistory}</Text></View>
+          <View className="mt-3 items-center rounded-[20px] p-6" style={{ backgroundColor: theme.colors.surface }}>
+            <NitipIcon color={theme.colors.textMuted} name="help" size={20} />
+            <Text className="mt-2 text-[10px]" style={{ color: theme.colors.textMuted }}>{copy.noHistory}</Text>
+          </View>
         ) : (
           <View className="mt-3 gap-2.5">
             {tickets.map((ticket) => (
               <View className="rounded-[20px] p-4" key={ticket.id} style={{ backgroundColor: theme.colors.surface }}>
                 <View className="flex-row items-start justify-between gap-3">
-                  <View className="flex-1"><Text className="text-[9px] font-black" style={{ color: theme.colors.primary }}>{copy.categoryLabels[ticket.category]}</Text><Text className="mt-1 text-[11px] font-black" style={{ color: theme.colors.text }}>{ticket.subject}</Text></View>
-                  <View className="rounded-full px-2.5 py-1.5" style={{ backgroundColor: theme.colors.surfaceRaised }}><Text className="text-[8px] font-black" style={{ color: theme.colors.textMuted }}>{copy.status[ticket.status]}</Text></View>
+                  <View className="flex-1">
+                    <Text className="text-[9px] font-black" style={{ color: theme.colors.primary }}>{copy.categoryLabels[ticket.category]}</Text>
+                    <Text className="mt-1 text-[11px] font-black" style={{ color: theme.colors.text }}>{ticket.subject}</Text>
+                  </View>
+                  <View className="rounded-full px-2.5 py-1.5" style={{ backgroundColor: theme.colors.surfaceRaised }}>
+                    <Text className="text-[8px] font-black" style={{ color: theme.colors.textMuted }}>{copy.status[ticket.status]}</Text>
+                  </View>
                 </View>
                 <Text className="mt-2 text-[9px] leading-4" numberOfLines={3} style={{ color: theme.colors.textMuted }}>{ticket.message}</Text>
                 <Text className="mt-2 text-[8px]" style={{ color: theme.colors.textMuted }}>{ticket.orderCode ? `${ticket.orderCode} · ` : ""}{formatTime(ticket.createdAt, language)}</Text>

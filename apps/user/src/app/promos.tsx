@@ -22,8 +22,6 @@ import { apiConfigured, listCatalogPromotions } from "../lib/api";
 const COPY = {
   id: {
     title: "Promo",
-    subtitle: "Campaign pilihan yang sedang aktif di Nitip.",
-    heading: "Promo untukmu.",
     loading: "Memuat promo...",
     emptyTitle: "Belum ada promo aktif",
     emptyBody: "Promo dari Nitip akan muncul di sini saat campaign sedang berlangsung.",
@@ -33,8 +31,6 @@ const COPY = {
   },
   en: {
     title: "Offers",
-    subtitle: "Featured campaigns that are currently active on Nitip.",
-    heading: "Offers for you.",
     loading: "Loading offers...",
     emptyTitle: "No active offers yet",
     emptyBody: "Nitip campaigns will appear here while they are active.",
@@ -110,11 +106,6 @@ export default function PromotionsScreen() {
           }
         />
 
-        <View style={styles.hero}>
-          <Text style={[styles.heroTitle, { color: theme.colors.text }]}>{copy.heading}</Text>
-          <Text style={[styles.heroSubtitle, { color: theme.colors.textMuted }]}>{copy.subtitle}</Text>
-        </View>
-
         {!apiConfigured ? (
           <View style={[styles.stateCard, { backgroundColor: theme.colors.warningSurface, borderColor: theme.colors.warningSurface }]}>
             <Text style={[styles.stateTitle, { color: theme.colors.warning }]}>API belum dikonfigurasi</Text>
@@ -159,10 +150,7 @@ export default function PromotionsScreen() {
                   />
                 ) : (
                   <View style={[styles.placeholder, { backgroundColor: theme.colors.surfaceAccent }]}>
-                    <View style={styles.placeholderCopy}>
-                      <Text style={[styles.eyebrow, { color: theme.colors.primary }]}>NITIP PROMO</Text>
-                      <Text numberOfLines={2} style={[styles.placeholderTitle, { color: theme.colors.text }]}>{promotion.title}</Text>
-                    </View>
+                    <Text numberOfLines={2} style={[styles.placeholderTitle, { color: theme.colors.text }]}>{promotion.title}</Text>
                     <View style={[styles.promoIcon, { backgroundColor: theme.colors.primary }]}>
                       <NitipIcon color="#FFFFFF" name="promo" size={27} />
                     </View>
@@ -199,9 +187,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 40,
   },
-  hero: { marginTop: 26 },
-  heroTitle: { fontSize: 28, fontWeight: "900", letterSpacing: -0.8 },
-  heroSubtitle: { fontSize: 11, lineHeight: 18, marginTop: 6 },
   stateCard: {
     alignItems: "center",
     borderRadius: 20,
@@ -214,7 +199,7 @@ const styles = StyleSheet.create({
   stateBody: { fontSize: 10, lineHeight: 16, marginTop: 8, textAlign: "center" },
   emptyIcon: { alignItems: "center", borderRadius: 28, height: 56, justifyContent: "center", marginBottom: 14, width: 56 },
   emptyBody: { fontSize: 10, lineHeight: 17, marginTop: 8, textAlign: "center" },
-  list: { gap: 14, marginTop: 20 },
+  list: { gap: 14, marginTop: 18 },
   promoCard: {
     borderRadius: 20,
     borderWidth: 1,
@@ -233,9 +218,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 16,
   },
-  placeholderCopy: { flex: 1, maxWidth: "70%" },
-  eyebrow: { fontSize: 8, fontWeight: "900", letterSpacing: 1.1 },
-  placeholderTitle: { fontSize: 19, fontWeight: "900", lineHeight: 23, marginTop: 7 },
+  placeholderTitle: { flex: 1, fontSize: 19, fontWeight: "900", lineHeight: 23, paddingRight: 16 },
   promoIcon: { alignItems: "center", borderRadius: 32, height: 64, justifyContent: "center", width: 64 },
   cardBody: { padding: 16 },
   cardTitle: { fontSize: 17, fontWeight: "900", lineHeight: 21 },
