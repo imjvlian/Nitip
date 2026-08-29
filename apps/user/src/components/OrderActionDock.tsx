@@ -31,13 +31,13 @@ export function OrderActionDock() {
   const [reconciling, setReconciling] = useState(false);
 
   const c = language === "id" ? {
-    chat: "Chat driver", pay: "Bayar DOKU", reopen: "Buka DOKU", opening: "Membuka...", check: "Cek status", checking: "Mengecek...",
-    paymentFailed: "DOKU belum dapat dibuka", paymentOpened: "DOKU Checkout dibuka", paymentOpenedBody: "Selesaikan pembayaran di halaman DOKU, lalu kembali ke Nitip. Status pesanan akan diperbarui otomatis.",
+    chat: "Chat driver", pay: "Bayar", opening: "Membuka...", check: "Cek status", checking: "Mengecek...",
+    paymentFailed: "Pembayaran belum dapat dibuka", paymentOpened: "Halaman pembayaran dibuka", paymentOpenedBody: "Selesaikan pembayaran di halaman DOKU, lalu kembali ke Nitip. Status pesanan akan diperbarui otomatis.",
     checkFailed: "Status pembayaran belum dapat dicek", paid: "Pembayaran terkonfirmasi", paidBody: "DOKU mengonfirmasi pembayaran berhasil. Pesanan sekarang menunggu merchant.", pending: "Pembayaran masih diproses", pendingBody: "DOKU belum mengirim status final. Kamu dapat mencoba cek lagi setelah sekitar 60 detik.", expired: "Sesi pembayaran berakhir", expiredBody: "DOKU mengonfirmasi sesi sudah kedaluwarsa dan reservasi stok dilepas.",
     cancel: "Batalkan", cancelTitle: "Batalkan pesanan?", cancelBody: "Pesanan belum memiliki sesi pembayaran DOKU. Stok yang ditahan akan langsung dilepas.", keep: "Kembali", confirm: "Batalkan pesanan", cancelled: "Pesanan dibatalkan", cancelledBody: "Reservasi stok sudah dilepas dan pesanan tidak akan diproses.", failed: "Tidak dapat membatalkan",
   } : {
-    chat: "Driver chat", pay: "Pay with DOKU", reopen: "Open DOKU", opening: "Opening...", check: "Check status", checking: "Checking...",
-    paymentFailed: "DOKU could not be opened", paymentOpened: "DOKU Checkout opened", paymentOpenedBody: "Complete payment on the DOKU page, then return to Nitip. The order status will refresh automatically.",
+    chat: "Driver chat", pay: "Pay", opening: "Opening...", check: "Check status", checking: "Checking...",
+    paymentFailed: "Payment could not be opened", paymentOpened: "Payment page opened", paymentOpenedBody: "Complete payment on the DOKU page, then return to Nitip. The order status will refresh automatically.",
     checkFailed: "Payment status could not be checked", paid: "Payment confirmed", paidBody: "DOKU confirmed the payment. The order is now waiting for the merchant.", pending: "Payment is still processing", pendingBody: "DOKU has not returned a final status yet. Try checking again after about 60 seconds.", expired: "Payment session expired", expiredBody: "DOKU confirmed the checkout expired and reserved stock was released.",
     cancel: "Cancel", cancelTitle: "Cancel this order?", cancelBody: "No DOKU payment session has been created yet. Reserved stock will be released immediately.", keep: "Keep order", confirm: "Cancel order", cancelled: "Order cancelled", cancelledBody: "The stock reservation was released and the order will not be processed.", failed: "Unable to cancel",
   };
@@ -119,21 +119,32 @@ export function OrderActionDock() {
   }
 
   return (
-    <View pointerEvents="box-none" style={[styles.wrap, { bottom: Math.max(insets.bottom + 14, 20) }]}>
-      <View style={[styles.dock, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, shadowColor: theme.colors.shadow }]}>
+    <View
+      pointerEvents="box-none"
+      style={[
+        styles.wrap,
+        {
+          backgroundColor: theme.colors.background,
+          borderTopColor: theme.colors.border,
+          paddingBottom: Math.max(insets.bottom, 12),
+        },
+      ]}
+    >
+      <View style={styles.dock}>
         {canChat ? <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: "/chat/[orderId]", params: { orderId } })} style={[styles.action, { backgroundColor: theme.colors.primary }]}><NitipIcon color="#FFFFFF" name="chat" size={16} /><Text style={styles.primaryText}>{c.chat}</Text></Pressable> : null}
-        {canPay ? <Pressable accessibilityRole="button" disabled={paying} onPress={() => void payWithDoku()} style={[styles.action, { backgroundColor: theme.colors.primary, opacity: paying ? 0.55 : 1 }]}>{paying ? <ActivityIndicator color="#FFFFFF" size="small" /> : <NitipIcon color="#FFFFFF" name="receipt" size={16} />}<Text style={styles.primaryText}>{paying ? c.opening : hasDokuSession ? c.reopen : c.pay}</Text></Pressable> : null}
-        {hasDokuSession ? <Pressable accessibilityRole="button" disabled={reconciling} onPress={() => void checkDokuStatus()} style={[styles.action, { backgroundColor: theme.colors.surfaceAccent, opacity: reconciling ? 0.55 : 1 }]}>{reconciling ? <ActivityIndicator color={theme.colors.primary} size="small" /> : <NitipIcon color={theme.colors.primary} name="refresh" size={16} />}<Text style={[styles.secondaryText, { color: theme.colors.primary }]}>{reconciling ? c.checking : c.check}</Text></Pressable> : null}
-        {canCancel ? <Pressable accessibilityRole="button" disabled={cancelling} onPress={confirmCancel} style={[styles.action, { backgroundColor: theme.colors.dangerSurface, opacity: cancelling ? 0.55 : 1 }]}>{cancelling ? <ActivityIndicator color={theme.colors.danger} size="small" /> : <NitipIcon color={theme.colors.danger} name="trash" size={16} />}<Text style={[styles.secondaryText, { color: theme.colors.danger }]}>{c.cancel}</Text></Pressable> : null}
+        {canPay ? <Pressable accessibilityRole="button" disabled={paying} onPress={() => void payWithDoku()} style={[styles.action, { backgroundColor: theme.colors.primary, opacity: paying ? 0.55 : 1 }]}>{paying ? <ActivityIndicator color="#FFFFFF" size="small" /> : <NitipIcon color="#FFFFFF" name="receipt" size={16} />}<Text style={styles.primaryText}>{paying ? c.opening : c.pay}</Text></Pressable> : null}
+        {hasDokuSession ? <Pressable accessibilityRole="button" disabled={reconciling} onPress={() => void checkDokuStatus()} style={[styles.action, styles.secondaryAction, { backgroundColor: theme.colors.surfaceAccent, borderColor: theme.colors.border, opacity: reconciling ? 0.55 : 1 }]}>{reconciling ? <ActivityIndicator color={theme.colors.primary} size="small" /> : <NitipIcon color={theme.colors.primary} name="refresh" size={16} />}<Text style={[styles.secondaryText, { color: theme.colors.primary }]}>{reconciling ? c.checking : c.check}</Text></Pressable> : null}
+        {canCancel ? <Pressable accessibilityRole="button" disabled={cancelling} onPress={confirmCancel} style={[styles.action, styles.secondaryAction, { backgroundColor: theme.colors.dangerSurface, borderColor: theme.colors.border, opacity: cancelling ? 0.55 : 1 }]}>{cancelling ? <ActivityIndicator color={theme.colors.danger} size="small" /> : <NitipIcon color={theme.colors.danger} name="trash" size={16} />}<Text style={[styles.secondaryText, { color: theme.colors.danger }]}>{c.cancel}</Text></Pressable> : null}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { left: 18, position: "absolute", right: 18, zIndex: 90 },
-  dock: { borderRadius: 19, borderWidth: 1, elevation: 8, flexDirection: "row", gap: 8, padding: 7, shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.12, shadowRadius: 12 },
-  action: { alignItems: "center", borderRadius: 14, flex: 1, flexDirection: "row", gap: 7, justifyContent: "center", minHeight: 46, paddingHorizontal: 9 },
-  primaryText: { color: "#FFFFFF", fontSize: 8, fontWeight: "900" },
-  secondaryText: { fontSize: 8, fontWeight: "900" },
+  wrap: { borderTopWidth: 1, paddingHorizontal: 18, paddingTop: 9 },
+  dock: { flexDirection: "row", gap: 8 },
+  action: { alignItems: "center", borderRadius: 14, flex: 1, flexDirection: "row", gap: 7, justifyContent: "center", minHeight: 48, paddingHorizontal: 10 },
+  secondaryAction: { borderWidth: 1 },
+  primaryText: { color: "#FFFFFF", fontSize: 10, fontWeight: "900" },
+  secondaryText: { fontSize: 10, fontWeight: "900" },
 });

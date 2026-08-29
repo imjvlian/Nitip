@@ -104,6 +104,22 @@ function parseDokuExpiry(value: string | undefined) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+function dokuErrorText(value: unknown) {
+  if (typeof value === "string") return value.trim() || null;
+  if (!value || typeof value !== "object") return value == null ? null : String(value);
+  const nested = value as { code?: unknown; message?: unknown; type?: unknown };
+  const message = typeof nested.message === "string" ? nested.message.trim() : "";
+  const code = typeof nested.code === "string" ? nested.code.trim() : "";
+  const type = typeof nested.type === "string" ? nested.type.trim() : "";
+  if (message) return [code, message].filter(Boolean).join(": ");
+  if (type) return [code, type].filter(Boolean).join(": ");
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
 async function readDokuJson<T>(response: Response, operation: string): Promise<T> {
   let parsed: unknown;
   try {
@@ -112,15 +128,37 @@ async function readDokuJson<T>(response: Response, operation: string): Promise<T
     throw new Error(`DOKU ${operation} returned an invalid JSON response`);
   }
   if (!response.ok) {
-    const body = parsed as { error_messages?: string[]; message?: string | string[] };
-    const message = Array.isArray(body.error_messages)
-      ? body.error_messages.join("; ")
-      : Array.isArray(body.message)
-        ? body.message.join("; ")
-        : typeof body.message === "string"
-          ? body.message
-          : `DOKU ${operation} failed with HTTP ${response.status}`;
-    throw new Error(message);
+    const body = parsed as {
+      error_messages?: unknown;
+      message?: unknown;
+      error?: unknown;
+    };
+    const errorMessages = Array.isArray(body.error_messages)
+      ? body.error_messages.map(dokuErrorText).filter((value): value is string => Boolean(value))
+      : [];
+    const messageValues = Array.isArray(body.message)
+      ? body.message.map(dokuErrorText).filter((value): value is string => Boolean(value))
+      : [];
+    const directMessage = !Array.isArray(body.message) ? dokuErrorText(body.message) : null;
+    const nestedError = dokuErrorText(body.error);
+    const detail =
+      errorMessages.join("; ") ||
+      messageValues.join("; ") ||
+      directMessage ||
+      nestedError;
+    let fallback = "";
+    if (!detail) {
+      try {
+        fallback = JSON.stringify(parsed).slice(0, 1200);
+      } catch {
+        fallback = String(parsed);
+      }
+    }
+    throw new Error(
+      detail
+        ? `DOKU ${operation} rejected the request: ${detail}`
+        : `DOKU ${operation} failed with HTTP ${response.status}${fallback ? `: ${fallback}` : ""}`,
+    );
   }
   return parsed as T;
 }
@@ -153,14 +191,16 @@ export async function createDokuCheckout(input: {
   dueMinutes: number;
 }) {
   const credentials = requireDokuCredentials();
+  const amount = Math.round(input.amount);
+  if (!Number.isFinite(input.amount) || amount <= 0 || amount !== input.amount) {
+    throw new Error("DOKU Checkout amount must be a positive whole IDR value");
+  }
   const requestId = randomUUID();
   const requestTimestamp = dokuTimestamp();
   const body = {
     order: {
-      amount: input.amount,
+      amount,
       invoice_number: input.invoiceNumber,
-      currency: "IDR",
-      auto_redirect: false,
     },
     payment: {
       payment_due_date: Math.max(1, Math.floor(input.dueMinutes)),
@@ -196,7 +236,7 @@ export async function createDokuCheckout(input: {
       signal: controller.signal,
     });
     const parsed = await readDokuJson<DokuCheckoutResponse>(response, "Checkout");
-    const checkoutUrl = validateCheckoutResponse(parsed, input);
+    const checkoutUrl = validateCheckoutResponse(parsed, { invoiceNumber: input.invoiceNumber, amount });
     return {
       requestId,
       checkoutUrl,
