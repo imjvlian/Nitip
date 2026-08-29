@@ -94,10 +94,8 @@ export default function DriverHomeScreen() {
   const c = language === "id"
     ? {
         brand: "nitip driver.",
-        center: "DRIVER CENTER",
         hello: "Halo",
         complete: "Lengkapi profilmu.",
-        subtitle: "Kelola status kerja, lihat ringkasan harian, dan ambil order pickup dari satu halaman.",
         loading: "Memuat profil driver...",
         api: "API belum dikonfigurasi",
         apiBody: "Set EXPO_PUBLIC_API_URL di apps/driver/.env.",
@@ -140,11 +138,8 @@ export default function DriverHomeScreen() {
         privacy: "Alamat dan kontak customer lengkap dibuka setelah assignment berhasil.",
         quickActions: "Akses cepat",
         earnings: "Pendapatan",
-        earningsDescription: "Lihat fee dan riwayat penghasilan",
         history: "Riwayat",
-        historyDescription: "Lihat perjalanan yang sudah selesai",
         settings: "Pengaturan",
-        settingsDescription: "Bahasa, tampilan, dan akun",
         driverInfo: "Kesiapan driver",
         vehicle: "Kendaraan",
         location: "Lokasi terakhir",
@@ -165,10 +160,8 @@ export default function DriverHomeScreen() {
       }
     : {
         brand: "nitip driver.",
-        center: "DRIVER CENTER",
         hello: "Hi",
         complete: "Complete your profile.",
-        subtitle: "Manage work status, check your daily summary, and take pickup orders from one screen.",
         loading: "Loading driver profile...",
         api: "API is not configured",
         apiBody: "Set EXPO_PUBLIC_API_URL in apps/driver/.env.",
@@ -211,11 +204,8 @@ export default function DriverHomeScreen() {
         privacy: "Full customer address and contact are revealed after assignment.",
         quickActions: "Quick access",
         earnings: "Earnings",
-        earningsDescription: "View fees and earning history",
         history: "History",
-        historyDescription: "Review completed trips",
         settings: "Settings",
-        settingsDescription: "Language, appearance, and account",
         driverInfo: "Driver readiness",
         vehicle: "Vehicle",
         location: "Last location",
@@ -462,11 +452,9 @@ export default function DriverHomeScreen() {
         </View>
 
         <View style={styles.hero}>
-          <Text style={[styles.eyebrow, { color: theme.colors.primary }]}>{c.center}</Text>
           <Text style={[styles.heroTitle, { color: theme.colors.text }]}>
             {profile ? `${c.hello}, ${profile.fullName.split(" ")[0]}.` : c.complete}
           </Text>
-          <Text style={[styles.heroSubtitle, { color: theme.colors.textMuted }]}>{c.subtitle}</Text>
         </View>
 
         {!apiConfigured ? (
@@ -732,19 +720,16 @@ export default function DriverHomeScreen() {
                 </Text>
                 <View style={styles.quickGrid}>
                   <QuickAction
-                    description={c.earningsDescription}
                     icon="earnings"
                     onPress={() => router.push("/earnings")}
                     title={c.earnings}
                   />
                   <QuickAction
-                    description={c.historyDescription}
                     icon="orders"
                     onPress={() => router.replace("/orders")}
                     title={c.history}
                   />
                   <QuickAction
-                    description={c.settingsDescription}
                     icon="settings"
                     onPress={() => router.replace("/settings")}
                     title={c.settings}
@@ -975,12 +960,10 @@ export default function DriverHomeScreen() {
   function QuickAction({
     icon,
     title,
-    description,
     onPress,
   }: {
     icon: NitipIconName;
     title: string;
-    description: string;
     onPress: () => void;
   }) {
     return (
@@ -995,9 +978,6 @@ export default function DriverHomeScreen() {
           <NitipIcon color={theme.colors.primary} name={icon} size={17} />
         </View>
         <Text style={[styles.quickTitle, { color: theme.colors.text }]}>{title}</Text>
-        <Text numberOfLines={2} style={[styles.quickDescription, { color: theme.colors.textMuted }]}>
-          {description}
-        </Text>
       </Pressable>
     );
   }
@@ -1145,9 +1125,7 @@ const styles = StyleSheet.create({
   onlineDot: { borderRadius: 4, height: 7, width: 7 },
   onlinePillText: { fontSize: 8, fontWeight: "900" },
   hero: { marginTop: 24 },
-  eyebrow: { fontSize: 8, fontWeight: "900", letterSpacing: 1.2 },
-  heroTitle: { fontSize: 29, fontWeight: "900", letterSpacing: -0.9, marginTop: 7 },
-  heroSubtitle: { fontSize: 10, lineHeight: 17, marginTop: 6, maxWidth: 345 },
+  heroTitle: { fontSize: 29, fontWeight: "900", letterSpacing: -0.9 },
   statusCard: {
     alignItems: "center",
     borderRadius: 18,
@@ -1253,10 +1231,9 @@ const styles = StyleSheet.create({
   takeButton: { alignItems: "center", borderRadius: 14, justifyContent: "center", marginTop: 12, minHeight: 44 },
   takeText: { color: "#FFFFFF", fontSize: 9, fontWeight: "900" },
   quickGrid: { flexDirection: "row", gap: 8 },
-  quickCard: { borderRadius: 18, borderWidth: 1, flex: 1, minHeight: 126, padding: 11 },
+  quickCard: { borderRadius: 18, borderWidth: 1, flex: 1, minHeight: 96, padding: 11 },
   quickIcon: { alignItems: "center", borderRadius: 16, height: 34, justifyContent: "center", width: 34 },
   quickTitle: { fontSize: 10, fontWeight: "900", marginTop: 11 },
-  quickDescription: { fontSize: 7, lineHeight: 11, marginTop: 4 },
   readinessCard: {
     borderRadius: 20,
     borderWidth: 1,
