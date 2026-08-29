@@ -11,7 +11,7 @@ import type { WithId } from "mongodb";
 import { ObjectId } from "mongodb";
 
 import { getMongoDb } from "../lib/mongodb.js";
-import { getOutletRatingSummaries } from "./ratings.js";
+import { getMerchantRatingSummaries, getProductRatingSummaries, type RatingSummary } from "./ratings.js";
 
 interface MerchantDocument {
   businessName: string;
@@ -100,7 +100,10 @@ function serializeAddons(addons: ProductAddonDocument[] | undefined): NitipProdu
   }));
 }
 
-function serializeProduct(document: WithId<ProductDocument>): NitipProduct {
+function serializeProduct(
+  document: WithId<ProductDocument>,
+  rating?: RatingSummary,
+): NitipProduct {
   return {
     id: document._id.toHexString(),
     outletId: document.outletId.toHexString(),
@@ -115,6 +118,8 @@ function serializeProduct(document: WithId<ProductDocument>): NitipProduct {
     isActive: document.isActive,
     sortOrder: document.sortOrder,
     addons: serializeAddons(document.addons),
+    ratingAverage: rating?.average ?? null,
+    ratingCount: rating?.count ?? 0,
     createdAt: document.createdAt.toISOString(),
     updatedAt: document.updatedAt.toISOString(),
   };
@@ -139,14 +144,12 @@ export async function listPublicCatalogOutlets(): Promise<NitipCatalogOutletSumm
   if (outlets.length === 0) return [];
 
   const outletIds = outlets.map((outlet) => outlet._id);
-  const [products, ratingsByOutlet] = await Promise.all([
-    db
-      .collection<ProductDocument>("products")
-      .find({ outletId: { $in: outletIds }, isActive: true })
-      .sort({ sortOrder: 1, createdAt: 1 })
-      .toArray(),
-    getOutletRatingSummaries(outletIds),
-  ]);
+  const products = await db
+    .collection<ProductDocument>("products")
+    .find({ outletId: { $in: outletIds }, isActive: true })
+    .sort({ sortOrder: 1, createdAt: 1 })
+    .toArray();
+  const ratingsByMerchant = await getMerchantRatingSummaries(merchants.map((merchant) => merchant._id));
 
   const byOutlet = new Map<string, WithId<ProductDocument>[]>();
   for (const product of products) {
@@ -158,15 +161,16 @@ export async function listPublicCatalogOutlets(): Promise<NitipCatalogOutletSumm
 
   return outlets.map((outlet) => {
     const outletKey = outlet._id.toHexString();
+    const merchantKey = outlet.merchantId.toHexString();
     const outletProducts = byOutlet.get(outletKey) ?? [];
     const availableProducts = outletProducts.filter(productAvailable);
     const prices = availableProducts.map((product) => product.price);
     const image = outletProducts.find((product) => product.imageUrl)?.imageUrl ?? null;
-    const rating = ratingsByOutlet.get(outletKey) ?? { average: null, count: 0 };
+    const rating = ratingsByMerchant.get(merchantKey) ?? { average: null, count: 0 };
     return {
       id: outletKey,
-      merchantId: outlet.merchantId.toHexString(),
-      businessName: merchantMap.get(outlet.merchantId.toHexString()) ?? "Merchant Nitip",
+      merchantId: merchantKey,
+      businessName: merchantMap.get(merchantKey) ?? "Merchant Nitip",
       name: outlet.name,
       addressLine: outlet.addressLine,
       acceptingOrders: outlet.acceptingOrders,
@@ -194,7 +198,7 @@ export async function getPublicCatalogOutlet(id: string): Promise<NitipCatalogOu
   });
   if (!merchant) return null;
 
-  const [categories, products, ratingsByOutlet] = await Promise.all([
+  const [categories, products] = await Promise.all([
     db
       .collection<CategoryDocument>("categories")
       .find({ outletId: outlet._id, isActive: true })
@@ -205,7 +209,10 @@ export async function getPublicCatalogOutlet(id: string): Promise<NitipCatalogOu
       .find({ outletId: outlet._id, isActive: true })
       .sort({ sortOrder: 1, createdAt: 1 })
       .toArray(),
-    getOutletRatingSummaries([outlet._id]),
+  ]);
+  const [ratingsByMerchant, ratingsByProduct] = await Promise.all([
+    getMerchantRatingSummaries([outlet.merchantId]),
+    getProductRatingSummaries(products.map((product) => product._id)),
   ]);
 
   const productsByCategory = new Map<string, WithId<ProductDocument>[]>();
@@ -218,13 +225,12 @@ export async function getPublicCatalogOutlet(id: string): Promise<NitipCatalogOu
 
   const catalogCategories: NitipCatalogCategory[] = categories.map((category) => ({
     ...serializeCategory(category),
-    products: (productsByCategory.get(category._id.toHexString()) ?? []).map(serializeProduct),
+    products: (productsByCategory.get(category._id.toHexString()) ?? []).map((product) =>
+      serializeProduct(product, ratingsByProduct.get(product._id.toHexString())),
+    ),
   }));
   const coordinates = outlet.location?.coordinates;
-  const rating = ratingsByOutlet.get(outlet._id.toHexString()) ?? {
-    average: null,
-    count: 0,
-  };
+  const rating = ratingsByMerchant.get(outlet.merchantId.toHexString()) ?? { average: null, count: 0 };
 
   return {
     id: outlet._id.toHexString(),

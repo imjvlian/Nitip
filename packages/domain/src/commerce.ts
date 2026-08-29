@@ -126,6 +126,38 @@ export interface NitipOrderTracking {
   };
 }
 
+export type NitipReviewTargetType = "product" | "driver";
+
+export interface NitipReview {
+  id: string;
+  orderId: string;
+  outletId: string;
+  targetType: NitipReviewTargetType;
+  targetId: string;
+  targetName: string;
+  score: number;
+  comment: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NitipDriverReviewSlot {
+  driverId: string;
+  driverName: string;
+  review: NitipReview | null;
+}
+
+export interface NitipOrderReviews {
+  products: NitipReview[];
+  driver: NitipDriverReviewSlot | null;
+}
+
+export interface UpsertNitipReviewInput {
+  score: number;
+  comment?: string | null;
+}
+
+/** @deprecated Order-level merchant ratings are replaced by product and driver reviews. */
 export interface NitipOrderRating {
   id: string;
   orderId: string;
@@ -136,10 +168,8 @@ export interface NitipOrderRating {
   updatedAt: string;
 }
 
-export interface UpsertNitipOrderRatingInput {
-  score: number;
-  comment?: string | null;
-}
+/** @deprecated Use UpsertNitipReviewInput. */
+export type UpsertNitipOrderRatingInput = UpsertNitipReviewInput;
 
 export type OrderChatSenderRole = "customer" | "driver";
 

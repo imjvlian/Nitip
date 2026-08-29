@@ -48,6 +48,8 @@ export interface NitipProduct {
   isActive: boolean;
   sortOrder: number;
   addons: NitipProductAddon[];
+  ratingAverage?: number | null;
+  ratingCount?: number;
   createdAt: string;
   updatedAt: string;
 }

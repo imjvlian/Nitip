@@ -1,4 +1,4 @@
-import type { UpsertNitipOrderRatingInput } from "@nitip/domain/commerce";
+import type { UpsertNitipReviewInput } from "@nitip/domain/commerce";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import { env, IntegrationNotConfiguredError } from "../config/env.js";
@@ -8,7 +8,12 @@ import { autoDisableSoldOutProducts } from "../repositories/inventory-guard.js";
 import { getCustomerOrderOperations } from "../repositories/order-operations.js";
 import { getCustomerOrderTracking } from "../repositories/order-tracking.js";
 import { CheckoutError, createCustomerOrder, getCustomerOrder, listCustomerOrders, quoteCheckout, simulateCustomerPayment } from "../repositories/orders.js";
-import { getCustomerOrderRating, RatingError, upsertCustomerOrderRating } from "../repositories/ratings.js";
+import {
+  getCustomerOrderReviews,
+  RatingError,
+  upsertCustomerDriverReview,
+  upsertCustomerProductReview,
+} from "../repositories/ratings.js";
 import { parseCheckoutRequest } from "./checkout-validation.js";
 import { ValidationError } from "./validation.js";
 
@@ -32,15 +37,15 @@ function parseIdempotencyKey(request: FastifyRequest) {
   return key;
 }
 
-function parseRatingInput(value: unknown): UpsertNitipOrderRatingInput {
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new ValidationError("Rating body must be an object");
+function parseReviewInput(value: unknown): UpsertNitipReviewInput {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new ValidationError("Review body must be an object");
   const body = value as Record<string, unknown>;
   const score = body.score;
-  if (typeof score !== "number" || !Number.isInteger(score) || score < 1 || score > 5) throw new ValidationError("Rating score must be an integer from 1 to 5");
+  if (typeof score !== "number" || !Number.isInteger(score) || score < 1 || score > 5) throw new ValidationError("Review score must be an integer from 1 to 5");
   const rawComment = body.comment;
-  if (rawComment !== undefined && rawComment !== null && typeof rawComment !== "string") throw new ValidationError("Rating comment must be a string");
+  if (rawComment !== undefined && rawComment !== null && typeof rawComment !== "string") throw new ValidationError("Review comment must be a string");
   const comment = typeof rawComment === "string" ? rawComment.trim() : null;
-  if (comment && comment.length > 500) throw new ValidationError("Rating comment must not exceed 500 characters");
+  if (comment && comment.length > 500) throw new ValidationError("Review comment must not exceed 500 characters");
   return { score, comment: comment || null };
 }
 
@@ -97,14 +102,22 @@ export function registerOrderRoutes(app: FastifyInstance) {
     catch (error) { return handleOrderError(request, reply, error); }
   });
 
-  app.get<{ Params: { id: string } }>("/orders/:id/rating", async (request, reply) => {
+  app.get<{ Params: { id: string } }>("/orders/:id/reviews", async (request, reply) => {
     const identity = await authenticateRequest(request, reply); if (!identity) return;
-    try { return { data: await getCustomerOrderRating(identity.uid, request.params.id) }; } catch (error) { return handleOrderError(request, reply, error); }
+    try { return { data: await getCustomerOrderReviews(identity.uid, request.params.id) }; }
+    catch (error) { return handleOrderError(request, reply, error); }
   });
 
-  app.put<{ Params: { id: string } }>("/orders/:id/rating", async (request, reply) => {
+  app.put<{ Params: { id: string; productId: string } }>("/orders/:id/reviews/products/:productId", async (request, reply) => {
     const identity = await authenticateRequest(request, reply); if (!identity) return;
-    try { return { data: await upsertCustomerOrderRating(identity.uid, request.params.id, parseRatingInput(request.body)) }; } catch (error) { return handleOrderError(request, reply, error); }
+    try { return { data: await upsertCustomerProductReview(identity.uid, request.params.id, request.params.productId, parseReviewInput(request.body)) }; }
+    catch (error) { return handleOrderError(request, reply, error); }
+  });
+
+  app.put<{ Params: { id: string } }>("/orders/:id/reviews/driver", async (request, reply) => {
+    const identity = await authenticateRequest(request, reply); if (!identity) return;
+    try { return { data: await upsertCustomerDriverReview(identity.uid, request.params.id, parseReviewInput(request.body)) }; }
+    catch (error) { return handleOrderError(request, reply, error); }
   });
 
   app.post<{ Params: { id: string } }>("/orders/:id/simulate-payment", async (request, reply) => {

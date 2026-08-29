@@ -12,8 +12,6 @@ import { useNitipTheme } from "../../hooks/useNitipTheme";
 const COPY = {
   id: {
     title: "Reset kata sandi",
-    heading: "Amankan akses akunmu",
-    description: "Nitip akan mengirim tautan reset kata sandi melalui Firebase Authentication ke email akunmu.",
     email: "Email akun",
     send: "Kirim tautan reset",
     sending: "Mengirim...",
@@ -23,8 +21,6 @@ const COPY = {
   },
   en: {
     title: "Reset password",
-    heading: "Secure your account access",
-    description: "Nitip will send a password-reset link through Firebase Authentication to your account email.",
     email: "Account email",
     send: "Send reset link",
     sending: "Sending...",
@@ -75,27 +71,14 @@ export default function PasswordSettingsScreen() {
     >
       <AppHeader title={copy.title} />
 
-      <View className="mt-7">
-        <Text className="text-[26px] font-black tracking-tighter" style={{ color: theme.colors.text }}>
-          {copy.heading}
-        </Text>
-        <Text className="mt-1.5 text-[11px] leading-5" style={{ color: theme.colors.textMuted }}>
-          {copy.description}
-        </Text>
-      </View>
-
       <View className="mt-5 rounded-[22px] p-4" style={{ backgroundColor: theme.colors.surface }}>
         <View className="flex-row items-center rounded-[18px] p-4" style={{ backgroundColor: theme.colors.surfaceRaised }}>
           <View className="h-9 w-9 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surface }}>
             <NitipIcon color={theme.colors.primary} name="password" size={17} />
           </View>
           <View className="ml-3 flex-1">
-            <Text className="text-[9px] font-extrabold" style={{ color: theme.colors.textMuted }}>
-              {copy.email}
-            </Text>
-            <Text className="mt-0.5 text-[11px] font-black" style={{ color: theme.colors.text }}>
-              {accountEmail ?? copy.unavailable}
-            </Text>
+            <Text className="text-[9px] font-extrabold" style={{ color: theme.colors.textMuted }}>{copy.email}</Text>
+            <Text className="mt-0.5 text-[11px] font-black" style={{ color: theme.colors.text }}>{accountEmail ?? copy.unavailable}</Text>
           </View>
         </View>
 

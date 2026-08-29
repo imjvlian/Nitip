@@ -15,9 +15,10 @@ import type {
   NitipOrderChatMessage,
   NitipOrderChatThread,
   NitipOrderOperations,
-  NitipOrderRating,
+  NitipOrderReviews,
   NitipOrderTracking,
-  UpsertNitipOrderRatingInput,
+  NitipReview,
+  UpsertNitipReviewInput,
 } from "@nitip/domain/commerce";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { File, UploadType } from "expo-file-system";
@@ -121,8 +122,9 @@ export const getOrderTracking = (user: User | null, id: string) => apiRequest<Ni
 export const getOrderChat = (user: User | null, id: string) => apiRequest<NitipOrderChatThread>(user, `/orders/${id}/chat`);
 export const sendOrderChatMessage = (user: User | null, id: string, text: string) => apiRequest<NitipOrderChatMessage>(user, `/orders/${id}/chat`, { method: "POST", body: JSON.stringify({ text }) });
 export const listOrders = (user: User | null) => apiRequest<NitipOrder[]>(user, "/me/orders");
-export const getOrderRating = (user: User | null, id: string) => apiRequest<NitipOrderRating | null>(user, `/orders/${id}/rating`);
-export const upsertOrderRating = (user: User | null, id: string, input: UpsertNitipOrderRatingInput) => apiRequest<NitipOrderRating>(user, `/orders/${id}/rating`, { method: "PUT", body: JSON.stringify(input) });
+export const getOrderReviews = (user: User | null, id: string) => apiRequest<NitipOrderReviews>(user, `/orders/${id}/reviews`);
+export const upsertProductReview = (user: User | null, id: string, productId: string, input: UpsertNitipReviewInput) => apiRequest<NitipReview>(user, `/orders/${id}/reviews/products/${productId}`, { method: "PUT", body: JSON.stringify(input) });
+export const upsertDriverReview = (user: User | null, id: string, input: UpsertNitipReviewInput) => apiRequest<NitipReview>(user, `/orders/${id}/reviews/driver`, { method: "PUT", body: JSON.stringify(input) });
 export const simulateOrderPayment = (user: User | null, id: string) => apiRequest<NitipOrder>(user, `/orders/${id}/simulate-payment`, { method: "POST" });
 export const startDokuOrderPayment = (user: User | null, id: string) => apiRequest<NitipOrder>(user, `/orders/${id}/payment/doku`, { method: "POST" });
 export const reconcileDokuOrderPayment = (user: User | null, id: string) => apiRequest<NitipOrder>(user, `/orders/${id}/payment/doku/reconcile`, { method: "POST" });

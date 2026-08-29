@@ -1,6 +1,6 @@
 import { useNitipLanguage } from "@nitip/i18n";
 import { Redirect } from "expo-router";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppHeader } from "../../components/AppHeader";
@@ -30,14 +30,6 @@ export default function AppearanceSettingsScreen() {
       showsVerticalScrollIndicator={false}
     >
       <AppHeader title={copy.appearance} />
-      <View className="mt-7">
-        <Text className="text-[26px] font-black tracking-tighter" style={{ color: theme.colors.text }}>
-          {copy.appearance}
-        </Text>
-        <Text className="mt-1.5 text-[11px] leading-5" style={{ color: theme.colors.textMuted }}>
-          {copy.appearancePageDescription}
-        </Text>
-      </View>
       <View className="mt-5 rounded-[22px] p-4" style={{ backgroundColor: theme.colors.surface }}>
         <ThemeSwitcher />
       </View>

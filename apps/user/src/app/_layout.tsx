@@ -17,8 +17,6 @@ import { AuthProvider } from "../context/AuthContext";
 import { CartProvider } from "../context/CartContext";
 import { UserThemeProvider, useUserTheme } from "../context/ThemeContext";
 
-const ROOT_TAB_CLEARANCE = 82;
-
 function AppStack() {
   const { resolvedMode, theme } = useUserTheme();
   const pathname = usePathname();
@@ -43,7 +41,6 @@ function AppStack() {
     : resolvedMode === "dark"
       ? "#121318"
       : "#F3F3F0";
-  const rootTabClearance = activeTab && activeTab !== "home" ? ROOT_TAB_CLEARANCE : 0;
 
   return (
     <View
@@ -60,7 +57,6 @@ function AppStack() {
         style={{
           alignSelf: "stretch",
           flex: 1,
-          paddingBottom: rootTabClearance,
           width: "100%",
         }}
       >
