@@ -3,6 +3,7 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 
 import { env, integrationStatus, IntegrationNotConfiguredError } from "../config/env.js";
 import {
+  cancelMidtransTransaction,
   MidtransApiError,
   type MidtransResponse,
   verifyMidtransNotificationSignature,
@@ -38,6 +39,20 @@ function parseMethod(body: unknown): MidtransNativeMethod {
     );
   }
   return value as MidtransNativeMethod;
+}
+
+function shouldReplacePayment(body: unknown) {
+  return (
+    typeof body === "object" &&
+    body !== null &&
+    "replace" in body &&
+    (body as { replace?: unknown }).replace === true
+  );
+}
+
+function isTerminalRetryStatus(status: string) {
+  const value = status.trim().toLowerCase();
+  return value === "cancel" || value === "deny";
 }
 
 function handleError(reply: FastifyReply, error: unknown) {
@@ -84,10 +99,51 @@ export function registerMidtransRoutes(app: FastifyInstance) {
       const identity = await authenticateRequest(request, reply);
       if (!identity) return;
       try {
+        const method = parseMethod(request.body);
+
+        if (shouldReplacePayment(request.body)) {
+          const current = await reconcileCustomerMidtransPayment(
+            identity.uid,
+            request.params.id,
+          );
+          if (!current) return reply.code(404).send({ error: "order_not_found" });
+          if (current.order.status !== "pending_payment") return { data: current };
+          if (current.instruction.method === method) return { data: current };
+
+          if (!isTerminalRetryStatus(current.instruction.transactionStatus)) {
+            try {
+              await cancelMidtransTransaction(current.instruction.reference);
+            } catch (cancelError) {
+              const latest = await reconcileCustomerMidtransPayment(
+                identity.uid,
+                request.params.id,
+              ).catch(() => null);
+              if (latest && latest.order.status !== "pending_payment") {
+                return { data: latest };
+              }
+              throw cancelError;
+            }
+
+            const cancelled = await reconcileCustomerMidtransPayment(
+              identity.uid,
+              request.params.id,
+            );
+            if (!cancelled) return reply.code(404).send({ error: "order_not_found" });
+            if (cancelled.order.status !== "pending_payment") return { data: cancelled };
+            if (!isTerminalRetryStatus(cancelled.instruction.transactionStatus)) {
+              throw new MidtransPaymentError(
+                "payment_method_change_failed",
+                409,
+                "Metode pembayaran belum dapat diubah. Coba lagi beberapa saat.",
+              );
+            }
+          }
+        }
+
         const result = await startCustomerMidtransPayment(
           identity.uid,
           request.params.id,
-          parseMethod(request.body),
+          method,
         );
         if (!result) return reply.code(404).send({ error: "order_not_found" });
         return { data: result };

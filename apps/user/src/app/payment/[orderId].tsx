@@ -32,6 +32,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useNitipTheme } from "../../hooks/useNitipTheme";
 import {
+  changeMidtransOrderPayment,
   getOrder,
   getPaymentConfig,
   reconcileDokuOrderPayment,
@@ -66,6 +67,7 @@ export default function PaymentScreen() {
   const [provider, setProvider] = useState<PaymentProvider | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [instruction, setInstruction] = useState<NitipMidtransInstruction | null>(null);
+  const [changingMethod, setChangingMethod] = useState(false);
   const [loading, setLoading] = useState(true);
   const [startingMethod, setStartingMethod] = useState<MidtransNativeMethod | null>(null);
   const [reconciling, setReconciling] = useState(false);
@@ -90,6 +92,11 @@ export default function PaymentScreen() {
     total: "Total pembayaran",
     choose: "Pilih metode pembayaran",
     chooseBody: "Pilih metode yang ingin digunakan untuk menyelesaikan pesanan.",
+    changeMethod: "Ubah metode pembayaran",
+    changeTitle: "Pilih metode lain",
+    changeBody: "Metode sebelumnya akan dibatalkan saat metode baru berhasil disiapkan.",
+    keepMethod: "Kembali ke pembayaran saat ini",
+    currentMethod: "SAAT INI",
     waiting: "Menunggu pembayaran",
     expires: "Berlaku sampai",
     openApp: "Buka aplikasi pembayaran",
@@ -141,6 +148,11 @@ export default function PaymentScreen() {
     total: "Payment total",
     choose: "Choose payment method",
     chooseBody: "Choose how you want to complete this order.",
+    changeMethod: "Change payment method",
+    changeTitle: "Choose another method",
+    changeBody: "The previous payment instruction will be cancelled when the new method is ready.",
+    keepMethod: "Back to current payment",
+    currentMethod: "CURRENT",
     waiting: "Awaiting payment",
     expires: "Valid until",
     openApp: "Open payment app",
@@ -197,6 +209,7 @@ export default function PaymentScreen() {
   const handleOrderStatus = useCallback((next: NitipOrder) => {
     setOrder(next);
     if (next.status === "paid") {
+      setChangingMethod(false);
       setStatusMessage(c.paid);
       setCheckoutUrl(null);
       setInstruction(null);
@@ -204,6 +217,7 @@ export default function PaymentScreen() {
       return true;
     }
     if (next.status === "cancelled" || next.payment?.status === "expired") {
+      setChangingMethod(false);
       setStatusMessage(c.expired);
       setCheckoutUrl(null);
       setInstruction(null);
@@ -217,6 +231,7 @@ export default function PaymentScreen() {
     setProvider("midtrans");
     if (isMidtransAttemptFailed(result.instruction.transactionStatus)) {
       setInstruction(null);
+      setChangingMethod(false);
       if (!silent) setStatusMessage(c.failed);
       return;
     }
@@ -229,6 +244,7 @@ export default function PaymentScreen() {
     setLoading(true);
     setFatalError(null);
     setStatusMessage(null);
+    setChangingMethod(false);
     try {
       let next = await getOrder(user, orderId);
       if (handleOrderStatus(next)) return;
@@ -323,14 +339,29 @@ export default function PaymentScreen() {
 
   async function startMethod(method: MidtransNativeMethod) {
     if (!user || !orderId || startingMethod) return;
+    if (changingMethod && instruction?.method === method) {
+      setChangingMethod(false);
+      setStatusMessage(null);
+      return;
+    }
+
     setStartingMethod(method);
     setFatalError(null);
     setStatusMessage(null);
     try {
-      const result = await startMidtransOrderPayment(user, orderId, method);
+      const result = changingMethod
+        ? await changeMidtransOrderPayment(user, orderId, method)
+        : await startMidtransOrderPayment(user, orderId, method);
       applyMidtransResult(result);
+      setChangingMethod(false);
     } catch (error) {
-      setFatalError(error instanceof Error ? error.message : c.unavailableBody);
+      const message = error instanceof Error ? error.message : c.unavailableBody;
+      if (changingMethod && instruction) {
+        setStatusMessage(message);
+        setChangingMethod(false);
+      } else {
+        setFatalError(message);
+      }
     } finally {
       setStartingMethod(null);
     }
@@ -365,7 +396,7 @@ export default function PaymentScreen() {
 
   function renderMidtransContent() {
     if (!order) return null;
-    if (!instruction) {
+    if (!instruction || changingMethod) {
       return (
         <ScrollView contentContainerStyle={styles.nativeContent} showsVerticalScrollIndicator={false}>
           <View style={[styles.totalCard, { backgroundColor: theme.colors.surface }]}>
@@ -380,11 +411,12 @@ export default function PaymentScreen() {
             </View>
           ) : null}
 
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{c.choose}</Text>
-          <Text style={[styles.sectionBody, { color: theme.colors.textMuted }]}>{c.chooseBody}</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{changingMethod ? c.changeTitle : c.choose}</Text>
+          <Text style={[styles.sectionBody, { color: theme.colors.textMuted }]}>{changingMethod ? c.changeBody : c.chooseBody}</Text>
           <View style={styles.methodList}>
             {methods.map((item) => {
               const starting = startingMethod === item.method;
+              const current = Boolean(changingMethod && instruction?.method === item.method);
               return (
                 <Pressable
                   key={item.method}
@@ -393,8 +425,8 @@ export default function PaymentScreen() {
                   style={({ pressed }) => [
                     styles.methodCard,
                     {
-                      backgroundColor: theme.colors.surface,
-                      borderColor: theme.colors.border,
+                      backgroundColor: current ? theme.colors.surfaceAccent : theme.colors.surface,
+                      borderColor: current ? theme.colors.primary : theme.colors.border,
                       opacity: pressed || (startingMethod !== null && !starting) ? 0.58 : 1,
                     },
                   ]}
@@ -409,9 +441,9 @@ export default function PaymentScreen() {
                   <View style={styles.methodCopy}>
                     <View style={styles.methodTitleRow}>
                       <Text style={[styles.methodTitle, { color: theme.colors.text }]}>{item.title}</Text>
-                      {item.badge ? (
-                        <View style={[styles.badge, { backgroundColor: theme.colors.surfaceAccent }]}>
-                          <Text style={[styles.badgeText, { color: theme.colors.primary }]}>{item.badge}</Text>
+                      {current || item.badge ? (
+                        <View style={[styles.badge, { backgroundColor: current ? theme.colors.primary : theme.colors.surfaceAccent }]}>
+                          <Text style={[styles.badgeText, { color: current ? "#FFFFFF" : theme.colors.primary }]}>{current ? c.currentMethod : item.badge}</Text>
                         </View>
                       ) : null}
                     </View>
@@ -422,6 +454,19 @@ export default function PaymentScreen() {
               );
             })}
           </View>
+
+          {changingMethod && instruction ? (
+            <Pressable
+              disabled={startingMethod !== null}
+              onPress={() => {
+                setChangingMethod(false);
+                setStatusMessage(null);
+              }}
+              style={[styles.keepMethodButton, { borderColor: theme.colors.border }]}
+            >
+              <Text style={[styles.keepMethodText, { color: theme.colors.text }]}>{c.keepMethod}</Text>
+            </Pressable>
+          ) : null}
         </ScrollView>
       );
     }
@@ -521,6 +566,18 @@ export default function PaymentScreen() {
             </View>
           ) : null}
         </View>
+
+        <Pressable
+          disabled={reconciling || startingMethod !== null}
+          onPress={() => {
+            setChangingMethod(true);
+            setStatusMessage(null);
+          }}
+          style={[styles.changeMethodButton, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+        >
+          <NitipIcon color={theme.colors.primary} name="refresh" size={14} />
+          <Text style={[styles.changeMethodText, { color: theme.colors.primary }]}>{c.changeMethod}</Text>
+        </Pressable>
 
         {statusMessage ? <Text style={[styles.nativeStatus, { color: theme.colors.textMuted }]}>{statusMessage}</Text> : null}
         <Pressable
@@ -672,6 +729,10 @@ const styles = StyleSheet.create({
   openAppButton: { alignItems: "center", borderRadius: 15, flexDirection: "row", gap: 8, justifyContent: "center", marginTop: 18, minHeight: 50 },
   expiryRow: { alignItems: "center", borderTopWidth: StyleSheet.hairlineWidth, flexDirection: "row", gap: 7, marginTop: 18, paddingTop: 13 },
   expiryText: { fontSize: 8, fontWeight: "700" },
+  changeMethodButton: { alignItems: "center", borderRadius: 15, borderWidth: 1, flexDirection: "row", gap: 7, justifyContent: "center", marginTop: 12, minHeight: 48 },
+  changeMethodText: { fontSize: 10, fontWeight: "900" },
+  keepMethodButton: { alignItems: "center", borderRadius: 15, borderWidth: 1, justifyContent: "center", marginTop: 14, minHeight: 48 },
+  keepMethodText: { fontSize: 10, fontWeight: "900" },
   nativeStatus: { fontSize: 9, lineHeight: 14, marginTop: 12, textAlign: "center" },
   checkButton: { alignItems: "center", borderRadius: 15, flexDirection: "row", gap: 7, justifyContent: "center", marginTop: 12, minHeight: 50 },
 });

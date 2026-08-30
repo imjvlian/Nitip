@@ -134,4 +134,5 @@ export const getPaymentConfig = (user: User | null) => apiRequest<NitipPaymentCo
 export const startDokuOrderPayment = (user: User | null, id: string) => apiRequest<NitipOrder>(user, `/orders/${id}/payment/doku`, { method: "POST" });
 export const reconcileDokuOrderPayment = (user: User | null, id: string) => apiRequest<NitipOrder>(user, `/orders/${id}/payment/doku/reconcile`, { method: "POST" });
 export const startMidtransOrderPayment = (user: User | null, id: string, method: MidtransNativeMethod) => apiRequest<NitipMidtransChargeResult>(user, `/orders/${id}/payment/midtrans`, { method: "POST", body: JSON.stringify({ method }) });
+export const changeMidtransOrderPayment = (user: User | null, id: string, method: MidtransNativeMethod) => apiRequest<NitipMidtransChargeResult>(user, `/orders/${id}/payment/midtrans`, { method: "POST", body: JSON.stringify({ method, replace: true }) });
 export const reconcileMidtransOrderPayment = (user: User | null, id: string) => apiRequest<NitipMidtransChargeResult>(user, `/orders/${id}/payment/midtrans/reconcile`, { method: "POST" });

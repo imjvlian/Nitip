@@ -135,6 +135,12 @@ export function getMidtransTransactionStatus(reference: string) {
   return midtransRequest(`/v2/${encodeURIComponent(reference)}/status`);
 }
 
+export function cancelMidtransTransaction(reference: string) {
+  return midtransRequest(`/v2/${encodeURIComponent(reference)}/cancel`, {
+    method: "POST",
+  });
+}
+
 export function verifyMidtransNotificationSignature(body: MidtransResponse) {
   if (!env.midtransServerKey) {
     throw new IntegrationNotConfiguredError("midtrans");
