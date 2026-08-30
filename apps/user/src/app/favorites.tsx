@@ -1,3 +1,4 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { formatRupiah } from "@nitip/domain";
 import { useNitipLanguage } from "@nitip/i18n";
 import { Redirect, router } from "expo-router";
@@ -129,7 +130,7 @@ export default function FavoritesScreen() {
                       }}
                       style={[styles.favoriteButton, { backgroundColor: theme.colors.dangerSurface }]}
                     >
-                      <NitipIcon color={theme.colors.danger} name="favorite" size={18} variant="filled" />
+                      <Ionicons color={theme.colors.danger} name="heart" size={18} />
                     </Pressable>
                   </View>
 
