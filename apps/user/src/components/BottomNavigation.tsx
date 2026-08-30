@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useUserTheme } from "../context/ThemeContext";
 
 export type RootTab = "home" | "orders" | "promos" | "cart" | "profile";
+export const ROOT_BOTTOM_NAV_HEIGHT = 74;
 
 const SuppressBottomNavigationContext = createContext(false);
 
@@ -53,7 +54,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexShrink: 0,
     justifyContent: "space-around",
-    minHeight: 74,
+    minHeight: ROOT_BOTTOM_NAV_HEIGHT,
     overflow: "hidden",
     paddingBottom: 14,
     paddingHorizontal: 8,
