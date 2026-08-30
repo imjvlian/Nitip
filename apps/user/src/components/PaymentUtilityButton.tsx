@@ -47,7 +47,7 @@ export function CopyPaymentValueButton({
         },
       ]}
     >
-      <NitipIcon color={theme.colors.primary} name="document" size={14} />
+      <NitipIcon color={theme.colors.primary} name="document" size={17} />
       <Text style={[styles.secondaryText, { color: theme.colors.primary }]}>{label}</Text>
     </Pressable>
   );
@@ -114,7 +114,7 @@ export function SaveQrImageButton({
         },
       ]}
     >
-      <NitipIcon color="#FFFFFF" name="receipt" size={14} />
+      <NitipIcon color="#FFFFFF" name="receipt" size={17} />
       <Text style={styles.primaryText}>{saving ? savingLabel : label}</Text>
     </Pressable>
   );
@@ -123,33 +123,34 @@ export function SaveQrImageButton({
 const styles = StyleSheet.create({
   primaryButton: {
     alignItems: "center",
-    borderRadius: 14,
+    alignSelf: "stretch",
+    borderRadius: 16,
     flexDirection: "row",
-    gap: 7,
+    gap: 9,
     justifyContent: "center",
-    marginTop: 12,
-    minHeight: 46,
-    paddingHorizontal: 14,
+    marginTop: 14,
+    minHeight: 52,
+    paddingHorizontal: 18,
   },
   primaryText: {
     color: "#FFFFFF",
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "900",
   },
   secondaryButton: {
     alignItems: "center",
-    alignSelf: "flex-start",
-    borderRadius: 13,
+    alignSelf: "stretch",
+    borderRadius: 16,
     borderWidth: 1,
     flexDirection: "row",
-    gap: 7,
+    gap: 9,
     justifyContent: "center",
-    marginTop: 10,
-    minHeight: 42,
-    paddingHorizontal: 14,
+    marginTop: 12,
+    minHeight: 52,
+    paddingHorizontal: 18,
   },
   secondaryText: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: "900",
   },
 });
