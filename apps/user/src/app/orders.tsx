@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppHeader } from "../components/AppHeader";
+import { ROOT_BOTTOM_NAV_HEIGHT } from "../components/BottomNavigation";
 import { NitipIcon } from "../components/NitipIcon";
 import { useAuth } from "../context/AuthContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
@@ -27,6 +28,8 @@ const HISTORY_STATUSES = new Set<NitipOrder["status"]>([
   "cancelled",
   "refunded",
 ]);
+
+const ROOT_TAB_SCROLL_CLEARANCE = ROOT_BOTTOM_NAV_HEIGHT + 28;
 
 function formatOrderTime(value: string, language: "id" | "en") {
   return new Date(value).toLocaleString(language === "en" ? "en-US" : "id-ID", {
@@ -82,7 +85,13 @@ export default function OrdersScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + 10 }]}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: insets.top + 10,
+            paddingBottom: ROOT_TAB_SCROLL_CLEARANCE,
+          },
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -256,7 +265,7 @@ export default function OrdersScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { paddingBottom: 32, paddingHorizontal: 20 },
+  content: { paddingHorizontal: 20 },
   headerIcon: {
     alignItems: "center",
     borderRadius: 20,
