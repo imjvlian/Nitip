@@ -39,7 +39,7 @@ const labels = {
 const tabs = [
   { key: "home", href: "/home", outline: "home-outline", filled: "home" },
   { key: "orders", href: "/orders", outline: "receipt-outline", filled: "receipt" },
-  { key: "favorites", href: "/favorites", outline: "heart", filled: "heart" },
+  { key: "favorites", href: "/favorites", outline: "heart-outline", filled: "heart" },
   { key: "promos", href: "/promos", outline: "pricetag-outline", filled: "pricetag" },
   { key: "profile", href: "/profile", outline: "person-outline", filled: "person" },
 ] as const;

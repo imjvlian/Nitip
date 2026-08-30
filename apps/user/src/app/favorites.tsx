@@ -1,7 +1,7 @@
 import { formatRupiah } from "@nitip/domain";
 import { useNitipLanguage } from "@nitip/i18n";
 import { Redirect, router } from "expo-router";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppHeader } from "../components/AppHeader";
@@ -101,6 +101,18 @@ export default function FavoritesScreen() {
                   ]}
                 >
                   <View style={styles.cardTop}>
+                    {item.imageUrl ? (
+                      <Image
+                        resizeMode="cover"
+                        source={{ uri: item.imageUrl }}
+                        style={[styles.productImage, { backgroundColor: theme.colors.surfaceAccent }]}
+                      />
+                    ) : (
+                      <View style={[styles.productImageFallback, { backgroundColor: theme.colors.surfaceAccent }]}>
+                        <NitipIcon color={theme.colors.primary} name="food" size={24} />
+                      </View>
+                    )}
+
                     <View style={styles.cardIdentity}>
                       <Text numberOfLines={2} style={[styles.productName, { color: theme.colors.text }]}>{item.name}</Text>
                       <Text numberOfLines={1} style={[styles.businessName, { color: theme.colors.textMuted }]}>{item.businessName}</Text>
@@ -190,13 +202,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 7,
   },
-  cardTop: { alignItems: "flex-start", flexDirection: "row", gap: 12, justifyContent: "space-between" },
+  cardTop: { alignItems: "center", flexDirection: "row", gap: 12 },
+  productImage: { borderRadius: 15, height: 72, width: 72 },
+  productImageFallback: { alignItems: "center", borderRadius: 15, height: 72, justifyContent: "center", width: 72 },
   cardIdentity: { flex: 1, minWidth: 0 },
   productName: { fontSize: 13, fontWeight: "900", lineHeight: 18 },
   businessName: { fontSize: 10, fontWeight: "800", marginTop: 5 },
   outletName: { fontSize: 9, marginTop: 2 },
   favoriteButton: {
     alignItems: "center",
+    alignSelf: "flex-start",
     borderRadius: 18,
     height: 36,
     justifyContent: "center",
