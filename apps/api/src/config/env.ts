@@ -26,13 +26,13 @@ function readCsv(name: string) {
 
 const parsedPort = Number(process.env.PORT ?? "3001");
 const nodeEnv = process.env.NODE_ENV ?? "development";
-const paymentProviderValue = read("PAYMENT_PROVIDER") ?? "doku";
+
+// New Nitip payment sessions are routed through DOKU again.
+// Midtrans configuration is retained temporarily so existing Midtrans orders can still reconcile.
+const paymentProviderValue = "doku" as const;
 
 if (!Number.isInteger(parsedPort) || parsedPort <= 0 || parsedPort > 65535) {
   throw new Error("PORT must be a valid TCP port");
-}
-if (paymentProviderValue !== "doku" && paymentProviderValue !== "midtrans") {
-  throw new Error("PAYMENT_PROVIDER must be either doku or midtrans");
 }
 
 export const env = {
@@ -48,7 +48,7 @@ export const env = {
   cloudinaryCloudName: read("CLOUDINARY_CLOUD_NAME"),
   cloudinaryApiKey: read("CLOUDINARY_API_KEY"),
   cloudinaryApiSecret: read("CLOUDINARY_API_SECRET"),
-  paymentProvider: paymentProviderValue as "doku" | "midtrans",
+  paymentProvider: paymentProviderValue,
   dokuBaseUrl:
     read("DOKU_BASE_URL") ??
     (nodeEnv === "production"
