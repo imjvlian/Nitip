@@ -127,7 +127,11 @@ export function BottomNavigation({
       {tabs.map((tab) => {
         const selected = tab.key === active;
         const label = labels[language][tab.key];
-        const iconColor = selected ? "#111318" : theme.colors.textMuted;
+        const iconColor = selected
+          ? resolvedMode === "dark"
+            ? "#FFFFFF"
+            : "#111318"
+          : theme.colors.textMuted;
         const labelColor = selected ? theme.colors.text : theme.colors.textMuted;
 
         return (

@@ -2,6 +2,7 @@ import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { Linking, Pressable, StyleSheet, Text } from "react-native";
+import { useState } from "react";
 
 import { useNitipTheme } from "../hooks/useNitipTheme";
 import { NitipIcon } from "./NitipIcon";
@@ -70,14 +71,13 @@ export function SaveQrImageButton({
   onStatus: (message: string) => void;
 }) {
   const theme = useNitipTheme();
+  const [saving, setSaving] = useState(false);
 
   if (!url) return null;
 
-  let saving = false;
-
   async function saveImage() {
     if (saving) return;
-    saving = true;
+    setSaving(true);
     try {
       const safeStem = fileStem.replace(/[^a-z0-9_-]/gi, "-") || "payment";
       const target = `${FileSystem.cacheDirectory ?? ""}nitip-qris-${safeStem}-${Date.now()}.png`;
@@ -96,7 +96,7 @@ export function SaveQrImageButton({
     } catch {
       onStatus(failedMessage);
     } finally {
-      saving = false;
+      setSaving(false);
     }
   }
 
@@ -104,12 +104,13 @@ export function SaveQrImageButton({
     <Pressable
       accessibilityLabel={label}
       accessibilityRole="button"
+      disabled={saving}
       onPress={() => void saveImage()}
       style={({ pressed }) => [
         styles.primaryButton,
         {
           backgroundColor: theme.colors.primary,
-          opacity: pressed ? 0.72 : 1,
+          opacity: saving ? 0.55 : pressed ? 0.72 : 1,
         },
       ]}
     >

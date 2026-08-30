@@ -25,6 +25,10 @@ import { WebView } from "react-native-webview";
 
 import { AppHeader } from "../../components/AppHeader";
 import { NitipIcon } from "../../components/NitipIcon";
+import {
+  CopyPaymentValueButton,
+  SaveQrImageButton,
+} from "../../components/PaymentUtilityButton";
 import { useAuth } from "../../context/AuthContext";
 import { useNitipTheme } from "../../hooks/useNitipTheme";
 import {
@@ -91,8 +95,15 @@ export default function PaymentScreen() {
     openApp: "Buka aplikasi pembayaran",
     qrTitle: "Scan QRIS",
     qrBody: "Scan kode ini dari aplikasi bank atau e-wallet yang mendukung QRIS.",
+    saveQr: "Simpan QR",
+    savingQr: "Menyiapkan QR...",
+    qrReady: "QRIS siap disimpan atau dibagikan.",
+    qrSaveFailed: "Gambar QRIS belum dapat disimpan. Coba lagi.",
     vaTitle: "Nomor Virtual Account",
     vaBody: "Transfer sesuai total pembayaran ke nomor Virtual Account berikut.",
+    copyVa: "Salin nomor VA",
+    vaCopied: "Nomor Virtual Account berhasil disalin.",
+    copyFailed: "Nomor belum dapat disalin. Coba lagi.",
     mandiriTitle: "Mandiri Bill Payment",
     biller: "Biller Code",
     billKey: "Bill Key",
@@ -135,8 +146,15 @@ export default function PaymentScreen() {
     openApp: "Open payment app",
     qrTitle: "Scan QRIS",
     qrBody: "Scan this code with a bank or e-wallet app that supports QRIS.",
+    saveQr: "Save QR",
+    savingQr: "Preparing QR...",
+    qrReady: "QRIS is ready to save or share.",
+    qrSaveFailed: "The QRIS image could not be saved. Try again.",
     vaTitle: "Virtual Account number",
     vaBody: "Transfer the exact payment total to this Virtual Account number.",
+    copyVa: "Copy VA number",
+    vaCopied: "Virtual Account number copied.",
+    copyFailed: "The number could not be copied. Try again.",
     mandiriTitle: "Mandiri Bill Payment",
     biller: "Biller Code",
     billKey: "Bill Key",
@@ -431,9 +449,20 @@ export default function PaymentScreen() {
               <Text style={[styles.instructionTitle, { color: theme.colors.text }]}>{c.qrTitle}</Text>
               <Text style={[styles.instructionBody, { color: theme.colors.textMuted }]}>{c.qrBody}</Text>
               {instruction.qrCodeUrl ? (
-                <View style={styles.qrWrap}>
-                  <Image source={{ uri: instruction.qrCodeUrl }} style={styles.qrImage} resizeMode="contain" />
-                </View>
+                <>
+                  <View style={styles.qrWrap}>
+                    <Image source={{ uri: instruction.qrCodeUrl }} style={styles.qrImage} resizeMode="contain" />
+                  </View>
+                  <SaveQrImageButton
+                    url={instruction.qrCodeUrl}
+                    fileStem={order.orderCode}
+                    label={c.saveQr}
+                    savingLabel={c.savingQr}
+                    readyMessage={c.qrReady}
+                    failedMessage={c.qrSaveFailed}
+                    onStatus={setStatusMessage}
+                  />
+                </>
               ) : null}
             </>
           ) : null}
@@ -444,7 +473,13 @@ export default function PaymentScreen() {
               <Text style={[styles.instructionBody, { color: theme.colors.textMuted }]}>{c.vaBody}</Text>
               <Text style={[styles.bankName, { color: theme.colors.primary }]}>{instruction.bank?.toUpperCase()}</Text>
               <Text selectable style={[styles.paymentNumber, { color: theme.colors.text }]}>{instruction.vaNumber ?? "—"}</Text>
-              <Text style={[styles.selectableHint, { color: theme.colors.textMuted }]}>{c.selectable}</Text>
+              <CopyPaymentValueButton
+                value={instruction.vaNumber}
+                label={c.copyVa}
+                copiedMessage={c.vaCopied}
+                failedMessage={c.copyFailed}
+                onStatus={setStatusMessage}
+              />
             </>
           ) : null}
 
@@ -508,6 +543,8 @@ export default function PaymentScreen() {
       </View>
     );
   }
+
+  void config;
 
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
