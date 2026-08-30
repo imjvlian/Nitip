@@ -147,6 +147,7 @@ export default function CheckoutScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: theme.colors.background }]}>
       <ScrollView
+        style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 10 }]}
         showsVerticalScrollIndicator={false}
       >
@@ -308,7 +309,8 @@ export default function CheckoutScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { paddingBottom: 166, paddingHorizontal: 20 },
+  scroll: { flex: 1 },
+  content: { paddingBottom: 24, paddingHorizontal: 20 },
   hero: { marginTop: 26 },
   heroTitle: { fontSize: 27, fontWeight: "900", letterSpacing: -0.7 },
   heroSubtitle: { fontSize: 11, marginTop: 5 },
@@ -351,15 +353,12 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
     borderTopWidth: 1,
-    bottom: 0,
     elevation: 10,
     flexDirection: "row",
+    flexShrink: 0,
     gap: 14,
-    left: 0,
     paddingHorizontal: 20,
     paddingTop: 12,
-    position: "absolute",
-    right: 0,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.07,
     shadowRadius: 12,
