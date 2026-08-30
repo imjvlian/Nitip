@@ -1,7 +1,7 @@
 import { formatRupiah } from "@nitip/domain";
 import { useNitipLanguage } from "@nitip/i18n";
 import { Redirect, router } from "expo-router";
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppHeader } from "../components/AppHeader";
@@ -20,9 +20,9 @@ const COPY = {
     emptyTitle: "Belum ada menu favorit",
     emptyBody: "Simpan menu yang kamu suka dari halaman detail agar mudah ditemukan lagi.",
     browse: "Cari menu",
-    savedMenus: "Menu tersimpan",
     remove: "Hapus dari favorit",
     unrated: "Belum ada rating",
+    details: "Lihat detail",
   },
   en: {
     title: "Favorites",
@@ -30,9 +30,9 @@ const COPY = {
     emptyTitle: "No favorite menus yet",
     emptyBody: "Save menus from their detail pages so you can find them quickly later.",
     browse: "Browse menus",
-    savedMenus: "Saved menus",
     remove: "Remove from favorites",
     unrated: "No ratings yet",
+    details: "View details",
   },
 } as const;
 
@@ -58,15 +58,7 @@ export default function FavoritesScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <AppHeader
-          title={copy.title}
-          showBack={false}
-          right={
-            <View style={[styles.headerIcon, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-              <NitipIcon color={theme.colors.primary} name="favorite" size={18} variant="filled" />
-            </View>
-          }
-        />
+        <AppHeader title={copy.title} showBack={false} />
 
         {!favorites.ready ? (
           <View style={[styles.stateCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
@@ -76,7 +68,7 @@ export default function FavoritesScreen() {
         ) : favorites.favorites.length === 0 ? (
           <View style={[styles.stateCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
             <View style={[styles.emptyIcon, { backgroundColor: theme.colors.surfaceAccent }]}>
-              <NitipIcon color={theme.colors.primary} name="favorite" size={24} variant="outline" />
+              <NitipIcon color={theme.colors.primary} name="favorite" size={22} variant="filled" />
             </View>
             <Text style={[styles.stateTitle, { color: theme.colors.text }]}>{copy.emptyTitle}</Text>
             <Text style={[styles.stateBodyCentered, { color: theme.colors.textMuted }]}>{copy.emptyBody}</Text>
@@ -86,53 +78,33 @@ export default function FavoritesScreen() {
             </Pressable>
           </View>
         ) : (
-          <View style={styles.listSection}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{copy.savedMenus}</Text>
-            <View style={styles.list}>
-              {favorites.favorites.map((item) => {
-                const hasRating = item.ratingCount > 0 && item.ratingAverage != null;
-                return (
-                  <Pressable
-                    accessibilityRole="button"
-                    key={item.id}
-                    onPress={() =>
-                      router.push({
-                        pathname: "/product/[id]",
-                        params: { id: item.id, outletId: item.outletId },
-                      })
-                    }
-                    style={({ pressed }) => [
-                      styles.card,
-                      {
-                        backgroundColor: theme.colors.surface,
-                        borderColor: theme.colors.border,
-                        shadowColor: theme.colors.shadow,
-                        opacity: pressed ? 0.82 : 1,
-                      },
-                    ]}
-                  >
-                    {item.imageUrl ? (
-                      <Image source={{ uri: item.imageUrl }} style={[styles.image, { backgroundColor: theme.colors.surfaceAccent }]} />
-                    ) : (
-                      <View style={[styles.imageFallback, { backgroundColor: theme.colors.surfaceAccent }]}>
-                        <NitipIcon color={theme.colors.primary} name="food" size={26} />
-                      </View>
-                    )}
-
-                    <View style={styles.cardCopy}>
+          <View style={styles.list}>
+            {favorites.favorites.map((item) => {
+              const hasRating = item.ratingCount > 0 && item.ratingAverage != null;
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  key={item.id}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/product/[id]",
+                      params: { id: item.id, outletId: item.outletId },
+                    })
+                  }
+                  style={[
+                    styles.favoriteCard,
+                    {
+                      backgroundColor: theme.colors.surface,
+                      borderColor: theme.colors.border,
+                      shadowColor: theme.colors.shadow,
+                    },
+                  ]}
+                >
+                  <View style={styles.cardTop}>
+                    <View style={styles.cardIdentity}>
                       <Text numberOfLines={2} style={[styles.productName, { color: theme.colors.text }]}>{item.name}</Text>
-                      {item.description ? (
-                        <Text numberOfLines={2} style={[styles.description, { color: theme.colors.textMuted }]}>{item.description}</Text>
-                      ) : null}
-                      <Text numberOfLines={1} style={[styles.merchant, { color: theme.colors.textMuted }]}>
-                        {item.businessName} · {item.outletName}
-                      </Text>
-                      <View style={styles.metaRow}>
-                        <Text style={[styles.price, { color: theme.colors.primary }]}>{formatRupiah(item.price)}</Text>
-                        <Text style={[styles.rating, { color: theme.colors.textMuted }]}>
-                          ★ {hasRating ? `${item.ratingAverage?.toFixed(1)} (${item.ratingCount})` : copy.unrated}
-                        </Text>
-                      </View>
+                      <Text numberOfLines={1} style={[styles.businessName, { color: theme.colors.textMuted }]}>{item.businessName}</Text>
+                      <Text numberOfLines={1} style={[styles.outletName, { color: theme.colors.textMuted }]}>{item.outletName}</Text>
                     </View>
 
                     <Pressable
@@ -143,14 +115,32 @@ export default function FavoritesScreen() {
                         event.stopPropagation();
                         favorites.removeProduct(item.id);
                       }}
-                      style={[styles.removeButton, { backgroundColor: theme.colors.surfaceAccent }]}
+                      style={[styles.favoriteButton, { backgroundColor: theme.colors.dangerSurface }]}
                     >
-                      <NitipIcon color={theme.colors.danger} name="favorite" size={17} variant="filled" />
+                      <NitipIcon color={theme.colors.danger} name="favorite" size={18} variant="filled" />
                     </Pressable>
-                  </Pressable>
-                );
-              })}
-            </View>
+                  </View>
+
+                  <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+
+                  <View style={styles.priceRow}>
+                    <Text style={[styles.rating, { color: theme.colors.textMuted }]}>
+                      ★ {hasRating ? `${item.ratingAverage?.toFixed(1)} (${item.ratingCount})` : copy.unrated}
+                    </Text>
+                    <Text style={[styles.price, { color: theme.colors.text }]}>{formatRupiah(item.price)}</Text>
+                  </View>
+
+                  {item.description ? (
+                    <Text numberOfLines={2} style={[styles.description, { color: theme.colors.textMuted }]}>{item.description}</Text>
+                  ) : null}
+
+                  <View style={styles.detailRow}>
+                    <Text style={[styles.detailText, { color: theme.colors.primary }]}>{copy.details}</Text>
+                    <NitipIcon color={theme.colors.textMuted} name="next" size={15} />
+                  </View>
+                </Pressable>
+              );
+            })}
           </View>
         )}
       </ScrollView>
@@ -161,31 +151,23 @@ export default function FavoritesScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { paddingHorizontal: 20 },
-  headerIcon: {
-    alignItems: "center",
-    borderRadius: 20,
-    borderWidth: 1,
-    height: 40,
-    justifyContent: "center",
-    width: 40,
-  },
   stateCard: {
     alignItems: "center",
     borderRadius: 20,
     borderWidth: 1,
-    marginTop: 18,
+    marginTop: 14,
     padding: 24,
   },
   emptyIcon: {
     alignItems: "center",
-    borderRadius: 28,
-    height: 56,
+    borderRadius: 24,
+    height: 48,
     justifyContent: "center",
     marginBottom: 14,
-    width: 56,
+    width: 48,
   },
   stateTitle: { fontSize: 14, fontWeight: "900", textAlign: "center" },
-  stateBody: { fontSize: 10, lineHeight: 16, marginTop: 10 },
+  stateBody: { fontSize: 10, lineHeight: 16, marginTop: 8 },
   stateBodyCentered: { fontSize: 10, lineHeight: 17, marginTop: 8, textAlign: "center" },
   primaryButton: {
     alignItems: "center",
@@ -198,30 +180,33 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   primaryButtonText: { color: "#FFFFFF", fontSize: 11, fontWeight: "900" },
-  listSection: { marginTop: 20 },
-  sectionTitle: { fontSize: 15, fontWeight: "900" },
-  list: { gap: 10, marginTop: 12 },
-  card: {
-    alignItems: "center",
+  list: { gap: 10, marginTop: 14 },
+  favoriteCard: {
     borderRadius: 20,
     borderWidth: 1,
     elevation: 2,
-    flexDirection: "row",
-    minHeight: 118,
-    padding: 11,
-    position: "relative",
+    padding: 16,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 7,
   },
-  image: { borderRadius: 16, height: 92, width: 92 },
-  imageFallback: { alignItems: "center", borderRadius: 16, height: 92, justifyContent: "center", width: 92 },
-  cardCopy: { flex: 1, minWidth: 0, paddingLeft: 13, paddingRight: 32 },
-  productName: { fontSize: 12, fontWeight: "900", lineHeight: 16 },
-  description: { fontSize: 9, lineHeight: 14, marginTop: 4 },
-  merchant: { fontSize: 8, lineHeight: 12, marginTop: 5 },
-  metaRow: { alignItems: "center", flexDirection: "row", gap: 10, marginTop: 8 },
-  price: { fontSize: 11, fontWeight: "900" },
-  rating: { flex: 1, fontSize: 8, textAlign: "right" },
-  removeButton: { alignItems: "center", borderRadius: 18, height: 36, justifyContent: "center", position: "absolute", right: 10, top: 10, width: 36 },
+  cardTop: { alignItems: "flex-start", flexDirection: "row", gap: 12, justifyContent: "space-between" },
+  cardIdentity: { flex: 1, minWidth: 0 },
+  productName: { fontSize: 13, fontWeight: "900", lineHeight: 18 },
+  businessName: { fontSize: 10, fontWeight: "800", marginTop: 5 },
+  outletName: { fontSize: 9, marginTop: 2 },
+  favoriteButton: {
+    alignItems: "center",
+    borderRadius: 18,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
+  },
+  divider: { height: 1, marginVertical: 14 },
+  priceRow: { alignItems: "center", flexDirection: "row", gap: 12, justifyContent: "space-between" },
+  rating: { flex: 1, fontSize: 9 },
+  price: { fontSize: 13, fontWeight: "900" },
+  description: { fontSize: 9, lineHeight: 14, marginTop: 7 },
+  detailRow: { alignItems: "center", flexDirection: "row", justifyContent: "space-between", marginTop: 14 },
+  detailText: { fontSize: 10, fontWeight: "900" },
 });

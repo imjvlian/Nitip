@@ -3,7 +3,7 @@
     "name": "Nitip",
     "slug": "nitip-user",
     "scheme": "nitip",
-    "version": "0.12.127",
+    "version": "0.12.129",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
