@@ -1,9 +1,9 @@
 import type { MidtransNativeMethod } from "@nitip/domain/commerce";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply } from "fastify";
 
 import { env, integrationStatus, IntegrationNotConfiguredError } from "../config/env.js";
 import {
-  type MidtransApiError,
+  MidtransApiError,
   type MidtransResponse,
   verifyMidtransNotificationSignature,
 } from "../lib/midtrans.js";
@@ -31,26 +31,35 @@ function parseMethod(body: unknown): MidtransNativeMethod {
       ? String((body as { method?: unknown }).method ?? "")
       : "";
   if (!METHODS.has(value as MidtransNativeMethod)) {
-    throw new MidtransPaymentError("invalid_payment_method", 400, "Metode pembayaran tidak tersedia.");
+    throw new MidtransPaymentError(
+      "invalid_payment_method",
+      400,
+      "Metode pembayaran tidak tersedia.",
+    );
   }
   return value as MidtransNativeMethod;
 }
 
-function handleError(reply: Parameters<Parameters<FastifyInstance["post"]>[1]>[1], error: unknown) {
+function handleError(reply: FastifyReply, error: unknown) {
   if (error instanceof IntegrationNotConfiguredError) {
-    return reply.code(503).send({ error: "integration_not_configured" });
+    return reply.code(503).send({
+      error: "integration_not_configured",
+      message: "Metode pembayaran belum tersedia.",
+    });
   }
   if (error instanceof MidtransPaymentError) {
-    return reply.code(error.statusCode).send({ error: error.code, message: error.message });
+    return reply.code(error.statusCode).send({
+      error: error.code,
+      message: error.message,
+    });
   }
-  const providerError = error as Partial<MidtransApiError>;
-  if (providerError?.name === "MidtransApiError") {
+  if (error instanceof MidtransApiError) {
     return reply.code(502).send({
       error: "payment_provider_error",
       message: "Pembayaran belum dapat disiapkan. Coba lagi beberapa saat.",
     });
   }
-  throw error;
+  return null;
 }
 
 export function registerMidtransRoutes(app: FastifyInstance) {
@@ -83,12 +92,13 @@ export function registerMidtransRoutes(app: FastifyInstance) {
         if (!result) return reply.code(404).send({ error: "order_not_found" });
         return { data: result };
       } catch (error) {
-        try {
-          return handleError(reply as never, error);
-        } catch (unhandled) {
-          request.log.error({ err: unhandled }, "Midtrans charge failed");
-          return reply.code(500).send({ error: "internal_server_error", message: "Pembayaran belum dapat disiapkan." });
-        }
+        const handled = handleError(reply, error);
+        if (handled) return handled;
+        request.log.error({ err: error }, "Midtrans charge failed");
+        return reply.code(500).send({
+          error: "internal_server_error",
+          message: "Pembayaran belum dapat disiapkan.",
+        });
       }
     },
   );
@@ -99,16 +109,20 @@ export function registerMidtransRoutes(app: FastifyInstance) {
       const identity = await authenticateRequest(request, reply);
       if (!identity) return;
       try {
-        const result = await reconcileCustomerMidtransPayment(identity.uid, request.params.id);
+        const result = await reconcileCustomerMidtransPayment(
+          identity.uid,
+          request.params.id,
+        );
         if (!result) return reply.code(404).send({ error: "order_not_found" });
         return { data: result };
       } catch (error) {
-        try {
-          return handleError(reply as never, error);
-        } catch (unhandled) {
-          request.log.error({ err: unhandled }, "Midtrans reconciliation failed");
-          return reply.code(500).send({ error: "internal_server_error", message: "Status pembayaran belum dapat diperbarui." });
-        }
+        const handled = handleError(reply, error);
+        if (handled) return handled;
+        request.log.error({ err: error }, "Midtrans reconciliation failed");
+        return reply.code(500).send({
+          error: "internal_server_error",
+          message: "Status pembayaran belum dapat diperbarui.",
+        });
       }
     },
   );
@@ -122,12 +136,10 @@ export function registerMidtransRoutes(app: FastifyInstance) {
       const result = await processMidtransNotification(body);
       return { ok: true, ...result };
     } catch (error) {
-      try {
-        return handleError(reply as never, error);
-      } catch (unhandled) {
-        request.log.error({ err: unhandled }, "Midtrans notification failed");
-        return reply.code(500).send({ error: "internal_server_error" });
-      }
+      const handled = handleError(reply, error);
+      if (handled) return handled;
+      request.log.error({ err: error }, "Midtrans notification failed");
+      return reply.code(500).send({ error: "internal_server_error" });
     }
   });
 }

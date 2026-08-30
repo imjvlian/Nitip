@@ -9,14 +9,17 @@ import type {
 } from "@nitip/domain";
 import type { NitipCatalogOutlet, NitipCatalogOutletSummary, NitipPromotion } from "@nitip/domain/catalog";
 import type {
+  MidtransNativeMethod,
   NitipCheckoutQuote,
   NitipCheckoutRequest,
+  NitipMidtransChargeResult,
   NitipOrder,
   NitipOrderChatMessage,
   NitipOrderChatThread,
   NitipOrderOperations,
   NitipOrderReviews,
   NitipOrderTracking,
+  NitipPaymentConfig,
   NitipReview,
   UpsertNitipReviewInput,
 } from "@nitip/domain/commerce";
@@ -126,5 +129,9 @@ export const getOrderReviews = (user: User | null, id: string) => apiRequest<Nit
 export const upsertProductReview = (user: User | null, id: string, productId: string, input: UpsertNitipReviewInput) => apiRequest<NitipReview>(user, `/orders/${id}/reviews/products/${productId}`, { method: "PUT", body: JSON.stringify(input) });
 export const upsertDriverReview = (user: User | null, id: string, input: UpsertNitipReviewInput) => apiRequest<NitipReview>(user, `/orders/${id}/reviews/driver`, { method: "PUT", body: JSON.stringify(input) });
 export const simulateOrderPayment = (user: User | null, id: string) => apiRequest<NitipOrder>(user, `/orders/${id}/simulate-payment`, { method: "POST" });
+
+export const getPaymentConfig = (user: User | null) => apiRequest<NitipPaymentConfig>(user, "/payments/config");
 export const startDokuOrderPayment = (user: User | null, id: string) => apiRequest<NitipOrder>(user, `/orders/${id}/payment/doku`, { method: "POST" });
 export const reconcileDokuOrderPayment = (user: User | null, id: string) => apiRequest<NitipOrder>(user, `/orders/${id}/payment/doku/reconcile`, { method: "POST" });
+export const startMidtransOrderPayment = (user: User | null, id: string, method: MidtransNativeMethod) => apiRequest<NitipMidtransChargeResult>(user, `/orders/${id}/payment/midtrans`, { method: "POST", body: JSON.stringify({ method }) });
+export const reconcileMidtransOrderPayment = (user: User | null, id: string) => apiRequest<NitipMidtransChargeResult>(user, `/orders/${id}/payment/midtrans/reconcile`, { method: "POST" });

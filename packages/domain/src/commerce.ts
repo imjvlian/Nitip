@@ -58,9 +58,39 @@ export interface NitipCheckoutQuote {
 }
 
 export type StockReservationStatus = "reserved" | "committed" | "released" | "not_required";
-export type PaymentProvider = "development" | "doku";
+export type PaymentProvider = "development" | "doku" | "midtrans";
+export type PaymentProviderChoice = "doku" | "midtrans";
 export type PaymentStatus = "pending" | "paid" | "failed" | "expired" | "refunded";
 export type PaymentMethod = "simulation" | "qris" | "virtual_account" | "card" | "e_wallet" | "paylater" | "convenience_store" | "unknown";
+
+export type MidtransNativeMethod =
+  | "qris"
+  | "bca_va"
+  | "bni_va"
+  | "bri_va"
+  | "mandiri_bill"
+  | "gopay"
+  | "shopeepay";
+
+export interface NitipPaymentConfig {
+  provider: PaymentProviderChoice;
+  available: boolean;
+}
+
+export interface NitipMidtransInstruction {
+  provider: "midtrans";
+  method: MidtransNativeMethod;
+  reference: string;
+  transactionId: string | null;
+  transactionStatus: string;
+  expiresAt: string | null;
+  qrCodeUrl: string | null;
+  deeplinkUrl: string | null;
+  bank: string | null;
+  vaNumber: string | null;
+  billerCode: string | null;
+  billKey: string | null;
+}
 
 export interface NitipPaymentSnapshot {
   provider: PaymentProvider | null;
@@ -93,6 +123,11 @@ export interface NitipOrder extends NitipCheckoutQuote {
   payment?: NitipPaymentSnapshot | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface NitipMidtransChargeResult {
+  order: NitipOrder;
+  instruction: NitipMidtransInstruction;
 }
 
 export interface NitipOrderOperations {

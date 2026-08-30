@@ -2,7 +2,7 @@ import "dotenv/config";
 
 export class IntegrationNotConfiguredError extends Error {
   constructor(
-    public readonly integration: "firebase" | "mongodb" | "cloudinary" | "doku",
+    public readonly integration: "firebase" | "mongodb" | "cloudinary" | "doku" | "midtrans",
   ) {
     super(`${integration} is not configured`);
     this.name = "IntegrationNotConfiguredError";
@@ -26,9 +26,13 @@ function readCsv(name: string) {
 
 const parsedPort = Number(process.env.PORT ?? "3001");
 const nodeEnv = process.env.NODE_ENV ?? "development";
+const paymentProviderValue = read("PAYMENT_PROVIDER") ?? "doku";
 
 if (!Number.isInteger(parsedPort) || parsedPort <= 0 || parsedPort > 65535) {
   throw new Error("PORT must be a valid TCP port");
+}
+if (paymentProviderValue !== "doku" && paymentProviderValue !== "midtrans") {
+  throw new Error("PAYMENT_PROVIDER must be either doku or midtrans");
 }
 
 export const env = {
@@ -44,6 +48,7 @@ export const env = {
   cloudinaryCloudName: read("CLOUDINARY_CLOUD_NAME"),
   cloudinaryApiKey: read("CLOUDINARY_API_KEY"),
   cloudinaryApiSecret: read("CLOUDINARY_API_SECRET"),
+  paymentProvider: paymentProviderValue as "doku" | "midtrans",
   dokuBaseUrl:
     read("DOKU_BASE_URL") ??
     (nodeEnv === "production"
@@ -52,6 +57,13 @@ export const env = {
   dokuClientId: read("DOKU_CLIENT_ID"),
   dokuSecretKey: read("DOKU_SECRET_KEY"),
   dokuNotificationUrl: read("DOKU_NOTIFICATION_URL"),
+  midtransBaseUrl:
+    read("MIDTRANS_BASE_URL") ??
+    (nodeEnv === "production"
+      ? "https://api.midtrans.com"
+      : "https://api.sandbox.midtrans.com"),
+  midtransServerKey: read("MIDTRANS_SERVER_KEY"),
+  midtransNotificationUrl: read("MIDTRANS_NOTIFICATION_URL"),
   adminEmails: readCsv("ADMIN_EMAILS"),
 } as const;
 
@@ -66,4 +78,5 @@ export const integrationStatus = {
     env.cloudinaryCloudName && env.cloudinaryApiKey && env.cloudinaryApiSecret,
   ),
   doku: Boolean(env.dokuClientId && env.dokuSecretKey),
+  midtrans: Boolean(env.midtransServerKey),
 } as const;
