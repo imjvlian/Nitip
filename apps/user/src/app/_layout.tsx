@@ -15,6 +15,7 @@ import {
 import { OrderActionDock } from "../components/OrderActionDock";
 import { AuthProvider } from "../context/AuthContext";
 import { CartProvider } from "../context/CartContext";
+import { FavoritesProvider } from "../context/FavoritesContext";
 import { UserThemeProvider, useUserTheme } from "../context/ThemeContext";
 
 function AppStack() {
@@ -26,10 +27,10 @@ function AppStack() {
       ? "home"
       : pathname === "/orders"
         ? "orders"
-        : pathname === "/promos"
-          ? "promos"
-          : pathname === "/cart"
-            ? "cart"
+        : pathname === "/favorites"
+          ? "favorites"
+          : pathname === "/promos"
+            ? "promos"
             : pathname === "/profile"
               ? "profile"
               : null;
@@ -77,8 +78,9 @@ function AppStack() {
             <Stack.Screen name="login" options={{ animation: "fade" }} />
             <Stack.Screen name="home" options={{ animation: "fade" }} />
             <Stack.Screen name="orders" options={{ animation: "fade" }} />
+            <Stack.Screen name="favorites" options={{ animation: "fade" }} />
             <Stack.Screen name="promos" options={{ animation: "fade" }} />
-            <Stack.Screen name="cart" options={{ animation: "fade" }} />
+            <Stack.Screen name="cart" options={{ animation: "slide_from_right" }} />
             <Stack.Screen name="profile" options={{ animation: "fade" }} />
             <Stack.Screen name="notifications" options={{ animation: "slide_from_right" }} />
           </Stack>
@@ -112,9 +114,11 @@ export default function RootLayout() {
         <UserThemeProvider>
           <AlertPopupProvider>
             <AuthProvider>
-              <CartProvider>
-                <AppStack />
-              </CartProvider>
+              <FavoritesProvider>
+                <CartProvider>
+                  <AppStack />
+                </CartProvider>
+              </FavoritesProvider>
             </AuthProvider>
           </AlertPopupProvider>
         </UserThemeProvider>

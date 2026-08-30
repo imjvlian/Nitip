@@ -9,6 +9,7 @@ export type NitipIconName =
   | "orders"
   | "profile"
   | "cart"
+  | "favorite"
   | "promo"
   | "notification"
   | "search"
@@ -52,6 +53,7 @@ const symbols: Record<NitipIconName, NitipSymbol> = {
   orders: { ios: "receipt.fill", android: "receipt_long", web: "receipt_long" },
   profile: { ios: "person.fill", android: "person", web: "person" },
   cart: { ios: "cart.fill", android: "shopping_cart", web: "shopping_cart" },
+  favorite: { ios: "heart.fill", android: "favorite", web: "favorite" },
   promo: { ios: "tag.fill", android: "local_offer", web: "local_offer" },
   notification: { ios: "bell.fill", android: "notifications", web: "notifications" },
   search: { ios: "magnifyingglass", android: "search", web: "search" },
@@ -93,6 +95,7 @@ const symbols: Record<NitipIconName, NitipSymbol> = {
 const outlineSymbols: Partial<Record<NitipIconName, NitipSymbol>> = {
   home: { ios: "house", android: "home", web: "home" },
   orders: { ios: "receipt", android: "receipt_long", web: "receipt_long" },
+  favorite: { ios: "heart", android: "favorite_border", web: "favorite_border" },
   promo: { ios: "tag", android: "local_offer", web: "local_offer" },
   notification: { ios: "bell", android: "notifications_none", web: "notifications_none" },
   cart: { ios: "cart", android: "shopping_cart", web: "shopping_cart" },

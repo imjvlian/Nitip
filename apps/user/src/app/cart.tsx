@@ -5,13 +5,10 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppHeader } from "../components/AppHeader";
-import { ROOT_BOTTOM_NAV_HEIGHT } from "../components/BottomNavigation";
 import { NitipIcon } from "../components/NitipIcon";
 import { useAuth } from "../context/AuthContext";
 import { cartLineUnitPrice, useCart } from "../context/CartContext";
 import { useNitipTheme } from "../hooks/useNitipTheme";
-
-const CHECKOUT_BAR_SCROLL_CLEARANCE = ROOT_BOTTOM_NAV_HEIGHT + 104;
 
 export default function CartScreen() {
   const { t } = useNitipTranslation();
@@ -19,6 +16,8 @@ export default function CartScreen() {
   const cart = useCart();
   const theme = useNitipTheme();
   const insets = useSafeAreaInsets();
+  const checkoutBottomInset = Math.max(insets.bottom, 12);
+  const checkoutBarScrollClearance = 104 + checkoutBottomInset;
 
   if (!user) return <Redirect href="/login" />;
 
@@ -29,7 +28,7 @@ export default function CartScreen() {
           styles.content,
           {
             paddingTop: insets.top + 10,
-            paddingBottom: cart.items.length > 0 ? CHECKOUT_BAR_SCROLL_CLEARANCE : 32,
+            paddingBottom: cart.items.length > 0 ? checkoutBarScrollClearance : Math.max(insets.bottom + 20, 32),
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -160,7 +159,8 @@ export default function CartScreen() {
             {
               backgroundColor: theme.colors.surface,
               borderColor: theme.colors.border,
-              bottom: ROOT_BOTTOM_NAV_HEIGHT,
+              bottom: 0,
+              paddingBottom: checkoutBottomInset,
               shadowColor: theme.colors.shadow,
             },
           ]}
@@ -245,7 +245,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 14,
     left: 0,
-    paddingBottom: 12,
     paddingHorizontal: 20,
     paddingTop: 12,
     position: "absolute",

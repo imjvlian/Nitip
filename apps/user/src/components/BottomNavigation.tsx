@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useUserTheme } from "../context/ThemeContext";
 
-export type RootTab = "home" | "orders" | "promos" | "cart" | "profile";
+export type RootTab = "home" | "orders" | "favorites" | "promos" | "profile";
 export const ROOT_BOTTOM_NAV_HEIGHT = 74;
 
 const SuppressBottomNavigationContext = createContext(false);
@@ -23,15 +23,15 @@ const labels = {
   id: {
     home: "Beranda",
     orders: "Pesanan",
+    favorites: "Favorit",
     promos: "Promo",
-    cart: "Keranjang",
     profile: "Profil",
   },
   en: {
     home: "Home",
     orders: "Orders",
+    favorites: "Favorites",
     promos: "Offers",
-    cart: "Cart",
     profile: "Profile",
   },
 } as const;
@@ -39,8 +39,8 @@ const labels = {
 const tabs = [
   { key: "home", href: "/home", outline: "home-outline", filled: "home" },
   { key: "orders", href: "/orders", outline: "receipt-outline", filled: "receipt" },
+  { key: "favorites", href: "/favorites", outline: "heart-outline", filled: "heart" },
   { key: "promos", href: "/promos", outline: "pricetag-outline", filled: "pricetag" },
-  { key: "cart", href: "/cart", outline: "cart-outline", filled: "cart" },
   { key: "profile", href: "/profile", outline: "person-outline", filled: "person" },
 ] as const;
 

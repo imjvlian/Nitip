@@ -18,6 +18,7 @@ import { BackButton } from "../../components/BackButton";
 import { NitipIcon } from "../../components/NitipIcon";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
+import { useFavorites } from "../../context/FavoritesContext";
 import { useNitipTheme } from "../../hooks/useNitipTheme";
 import { getCatalogOutlet } from "../../lib/api";
 
@@ -42,6 +43,8 @@ const COPY = {
     noExtraCharge: "Gratis",
     selected: "dipilih",
     unrated: "Belum ada rating",
+    saveFavorite: "Simpan ke favorit",
+    removeFavorite: "Hapus dari favorit",
   },
   en: {
     title: "Menu details",
@@ -63,6 +66,8 @@ const COPY = {
     noExtraCharge: "Free",
     selected: "selected",
     unrated: "No ratings yet",
+    saveFavorite: "Save to favorites",
+    removeFavorite: "Remove from favorites",
   },
 } as const;
 
@@ -72,6 +77,7 @@ export default function ProductDetailScreen() {
   const { id, outletId } = useLocalSearchParams<{ id: string; outletId?: string }>();
   const { user } = useAuth();
   const cart = useCart();
+  const favorites = useFavorites();
   const theme = useNitipTheme();
   const insets = useSafeAreaInsets();
   const copy = COPY[language];
@@ -140,6 +146,7 @@ export default function ProductDetailScreen() {
   const totalPrice = unitPrice * selectedQuantity;
   const productRatingCount = product?.ratingCount ?? 0;
   const productRatingAverage = product?.ratingAverage ?? null;
+  const productFavorite = product ? favorites.isProductFavorite(product.id) : false;
 
   function toggleAddon(addonId: string) {
     setAdded(false);
@@ -187,12 +194,23 @@ export default function ProductDetailScreen() {
                 <View className="h-full w-full items-center justify-center"><View className="h-24 w-24 items-center justify-center rounded-full" style={{ backgroundColor: theme.colors.surfaceRaised }}><NitipIcon color={theme.colors.primary} name="food" size={38} /></View></View>
               )}
               <BackButton style={{ left: 12, position: "absolute", top: 12 }} />
-              {cart.itemCount > 0 ? (
-                <Pressable className="absolute right-3 top-3 h-10 min-w-10 flex-row items-center justify-center rounded-full px-3" onPress={() => router.push("/cart")} style={{ backgroundColor: "rgba(255,255,255,0.94)" }}>
-                  <NitipIcon color="#111318" name="cart" size={16} />
-                  <Text className="ml-1.5 text-[9px] font-black" style={{ color: "#111318" }}>{cart.itemCount}</Text>
+              <View className="absolute right-3 top-3 flex-row gap-2">
+                <Pressable
+                  accessibilityLabel={productFavorite ? copy.removeFavorite : copy.saveFavorite}
+                  accessibilityRole="button"
+                  className="h-10 w-10 items-center justify-center rounded-full"
+                  onPress={() => favorites.toggleProduct(catalog, product)}
+                  style={{ backgroundColor: "rgba(255,255,255,0.94)" }}
+                >
+                  <NitipIcon color={productFavorite ? "#E5484D" : "#111318"} name="favorite" size={17} variant={productFavorite ? "filled" : "outline"} />
                 </Pressable>
-              ) : null}
+                {cart.itemCount > 0 ? (
+                  <Pressable className="h-10 min-w-10 flex-row items-center justify-center rounded-full px-3" onPress={() => router.push("/cart")} style={{ backgroundColor: "rgba(255,255,255,0.94)" }}>
+                    <NitipIcon color="#111318" name="cart" size={16} />
+                    <Text className="ml-1.5 text-[9px] font-black" style={{ color: "#111318" }}>{cart.itemCount}</Text>
+                  </Pressable>
+                ) : null}
+              </View>
             </View>
 
             <View className="mx-5 rounded-[30px] p-5" style={{ backgroundColor: theme.colors.surfaceRaised, borderColor: theme.colors.border, borderWidth: 1, elevation: 6, marginTop: -30, shadowColor: theme.colors.shadow, shadowOffset: { width: 0, height: 5 }, shadowOpacity: theme.mode === "dark" ? 0.25 : 0.1, shadowRadius: 14 }}>
