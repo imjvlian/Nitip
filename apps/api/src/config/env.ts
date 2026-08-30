@@ -24,12 +24,15 @@ function readCsv(name: string) {
     .filter(Boolean);
 }
 
+function currentPaymentProvider(): "doku" | "midtrans" {
+  // New Nitip payment sessions are routed through DOKU again.
+  // Midtrans configuration is retained temporarily so existing Midtrans orders can still reconcile.
+  return "doku";
+}
+
 const parsedPort = Number(process.env.PORT ?? "3001");
 const nodeEnv = process.env.NODE_ENV ?? "development";
-
-// New Nitip payment sessions are routed through DOKU again.
-// Midtrans configuration is retained temporarily so existing Midtrans orders can still reconcile.
-const paymentProviderValue = "doku" as const;
+const paymentProviderValue = currentPaymentProvider();
 
 if (!Number.isInteger(parsedPort) || parsedPort <= 0 || parsedPort > 65535) {
   throw new Error("PORT must be a valid TCP port");
